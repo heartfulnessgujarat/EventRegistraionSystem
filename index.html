@@ -129,21 +129,30 @@
     });
   }
 
-  async function submitData() {
+
+async function submitData() {
     document.getElementById('form-content').style.display = 'none';
     document.getElementById('loader').style.display = 'block';
     const payload = { eventId, timestamp: new Date().toISOString() };
-    fieldRules.forEach(r => { payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; });
+    fieldRules.forEach(r => { 
+      payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; 
+    });
+    
     try {
+      // Step 1: Push the data to the 'registrations' folder
       await db.ref('registrations').push(payload);
-
-      // Add the [0] to tell the website to look at the first event in your list
-document.getElementById('app').innerHTML = eventConfig[0].thank_html_cache || "<h2>Registration Complete!</h2>";
-
       
-    //  document.getElementById('app').innerHTML = eventConfig.thank_html_cache || "<h2>Registration Complete!</h2>";
-    } catch (e) { alert("Error saving data."); document.getElementById('form-content').style.display = 'block'; }
+      // Step 2: Display the Thank You HTML from the FIRST event in the list
+      document.getElementById('app').innerHTML = eventConfig[0].thank_html_cache || "<h2>Registration Complete!</h2>";
+    } catch (e) { 
+      console.error(e); // This helps us see the real error in Console
+      alert("Error saving data."); 
+      document.getElementById('form-content').style.display = 'block'; 
+      document.getElementById('loader').style.display = 'none';
+    }
   }
+
+  
   init();
 </script>
 </body>
