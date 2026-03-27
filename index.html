@@ -139,34 +139,44 @@
       if (r.field_id !== 'full_name' && r.edit_behavior && r.edit_behavior.includes("Editable")) el.disabled = false;
     });
   }
-
-  async function submitData() {
+async function submitData() {
     document.getElementById('form-content').style.display = 'none';
     document.getElementById('loader').style.display = 'block';
     
-    const payload = { event_id: eventId, timestamp: new Date().toISOString() };
+    const payload = { 
+        event_id: eventId, 
+        timestamp: new Date().toISOString() 
+    };
     fieldRules.forEach(r => { 
-      payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; 
+        payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; 
     });
 
     try {
-      // 1. Save registration to Firebase
-      await db.ref('registrations').push(payload);
-      
-      // 2. Clear card and show the Thank You HTML from Google Docs
-      const thankYouHtml = (eventConfig && eventConfig.thank_html_cache) 
-                          ? eventConfig.thank_html_cache 
-                          : "<h2>Registration Complete!</h2><p>Thank you for signing up.</p>";
-      
-      document.getElementById('app').innerHTML = `<div style="text-align:left;">${thankYouHtml}</div>`;
-      
+        // 1. SAVE TO FIREBASE
+        const newRegRef = await db.ref('registrations').push(payload);
+        const regId = newRegRef.key; // Get the unique ID from Firebase
+
+        // 2. TRIGGER THE EMAIL (This pings your Google Script directly)
+        // Replace 'YOUR_SCRIPT_URL' with your Apps Script Web App URL
+        const scriptUrl = "YOUR_SCRIPT_EXEC_URL"; 
+        fetch(scriptUrl + "?action=sendEmail&regId=" + regId + "&eventId=" + eventId);
+
+        // 3. SHOW THE THANK YOU MESSAGE
+        const msg = eventConfig.thank_html_cache || "<h2>Registration Complete!</h2>";
+        document.getElementById('app').innerHTML = `<div>${msg}</div>`;
+        
     } catch (e) { 
-      console.error("Save Error:", e);
-      alert("Error saving data. Please try again."); 
-      document.getElementById('form-content').style.display = 'block'; 
-      document.getElementById('loader').style.display = 'none';
+        alert("Error saving."); 
+        document.getElementById('form-content').style.display = 'block';
+        document.getElementById('loader').style.display = 'none';
     }
-  }
+}
+
+
+
+
+
+
 
   // Initial load
   init();
