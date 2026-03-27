@@ -158,7 +158,11 @@ async function submitData() {
 
         // 2. TRIGGER THE EMAIL (This pings your Google Script directly)
         // Replace 'YOUR_SCRIPT_URL' with your Apps Script Web App URL
-        const scriptUrl = "YOUR_SCRIPT_EXEC_URL"; 
+        const scriptUrl = "https://script.google.com/macros/s/AKfycbyiSLE2llZkLYH8fo8voIxy5KEFU8CZqQJThDNYto47nn-PEqFBRxfj3W6kT26_9D0K6Q/exec"; 
+
+//https://script.google.com/macros/s/AKfycbyiSLE2llZkLYH8fo8voIxy5KEFU8CZqQJThDNYto47nn-PEqFBRxfj3W6kT26_9D0K6Q/exec
+
+      
         fetch(scriptUrl + "?action=sendEmail&regId=" + regId + "&eventId=" + eventId);
 
         // 3. SHOW THE THANK YOU MESSAGE
