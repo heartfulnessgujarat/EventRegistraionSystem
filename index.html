@@ -137,20 +137,28 @@ async function submitData() {
     fieldRules.forEach(r => { 
       payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; 
     });
-    
-    try {
-      // Step 1: Push the data to the 'registrations' folder
+
+try {
+      // 1. Push the registration data
       await db.ref('registrations').push(payload);
       
-      // Step 2: Display the Thank You HTML from the FIRST event in the list
-      document.getElementById('app').innerHTML = eventConfig[0].thank_html_cache || "<h2>Registration Complete!</h2>";
+      // 2. GET THE MESSAGE: We look up the message specifically for THIS event ID
+      // We check if eventConfig exists and has our ID
+      const currentEvent = eventConfig[eventId] || (Array.isArray(eventConfig) ? eventConfig[0] : eventConfig);
+      
+      document.getElementById('app').innerHTML = (currentEvent && currentEvent.thank_html_cache) 
+          ? currentEvent.thank_html_cache 
+          : "<h2>Registration Complete!</h2>";
+          
     } catch (e) { 
-      console.error(e); // This helps us see the real error in Console
+      console.error(e);
       alert("Error saving data."); 
       document.getElementById('form-content').style.display = 'block'; 
       document.getElementById('loader').style.display = 'none';
     }
-  }
+
+
+  
 
   
   init();
