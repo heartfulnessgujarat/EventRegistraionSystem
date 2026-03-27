@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ferrari Registration 2026</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
+    .card { width: 100%; max-width: 450px; background: white; padding: 35px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+    h2 { color: #1a237e; margin-bottom: 5px; text-align: center; }
+    .subtitle { color: #666; font-size: 14px; text-align: center; margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
+    .field-container { margin-bottom: 20px; position: relative; }
+    label { display: block; font-weight: 700; font-size: 13px; color: #1a237e; margin-bottom: 6px; }
+    input { width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+    input:disabled { background: #f8f9fa; color: #6c757d; }
+    .help-text { font-size: 11px; color: #d32f2f; margin-top: 5px; display: none; font-weight: 500; }
+    .primary-btn { width: 100%; padding: 15px; background: #1a237e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+    .dropdown { border: 1px solid #ddd; max-height: 200px; overflow-y: auto; background: white; position: absolute; width: 100%; z-index: 1000; display: none; border-radius: 0 0 8px 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .item { padding: 12px; cursor: pointer; border-bottom: 1px solid #f1f1f1; font-size: 14px; }
+    .item:hover { background: #e8eaf6; }
+    #loader { display: none; text-align: center; padding: 40px; color: #1a237e; }
+  </style>
+</head>
+<body>
+<div class="card" id="app">
+  <div id="form-content">
+    <h2 id="title">Loading...</h2>
+    <p class="subtitle" id="subtitle"></p>
+    <div id="dynamic-fields"></div>
+    <div id="btns-start" style="display:none; flex-direction:column; gap:10px;">
+      <button class="primary-btn" onclick="submitData()">Confirm Registration</button>
+      <button class="primary-btn" style="background:#455a64;" onclick="enableEdit()">I want to edit my details</button>
+    </div>
+    <button id="btn-update" class="primary-btn" style="display:none;" disabled onclick="submitData()">Update & Register</button>
+  </div>
+  <div id="loader"><h3>🏎️ Finalizing...</h3></div>
+</div>
+
+<script>
+  const firebaseConfig = { databaseURL: "https://ferrari-reg-2026-default-rtdb.asia-southeast1.firebasedatabase.app" };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const urlParams = new URLSearchParams(window.location.search);
+  const eventId = (urlParams.get('id') || 'EVT001').toUpperCase();
+  let fieldRules = [], masterData = [], locData = [], eventConfig = {};
+
+  async function init() {
+    const configSnap = await db.ref('config/eventConfig').once('value');
+    const configs = Object.values(configSnap.val() || {});
+    eventConfig = configs.find(c => String(c.event_id).toUpperCase() === eventId) || { title: "Registration" };
+    document.getElementById('title').textContent = eventConfig.title;
+    document.getElementById('subtitle').textContent = eventConfig.subtitle || "";
+    const rulesSnap = await db.ref('config/fieldRules').once('value');
+    fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
+    renderForm();
+  }
+
+  function renderForm() {
+    const container = document.getElementById('dynamic-fields');
+    fieldRules.forEach(r => {
+      const div = document.createElement('div');
+      div.className = 'field-container';
+      div.id = `cont-${r.field_id}`;
+      div.style.display = (r.initial_state === 'Visible') ? 'block' : 'none';
+      div.innerHTML = `<label>${r.display_label || r.field_id}</label>
+        <input type="text" id="inp-${r.field_id}" oninput="handleSearch('${r.field_id}', this.value)" disabled autocomplete="off">
+        <div class="help-text" id="help-${r.field_id}">${r.field_help_text || ''}</div>
+        <div class="dropdown" id="res-${r.field_id}"></div>`;
+      container.appendChild(div);
+      if (r.field_id === 'full_name') {
+        div.style.display = 'block';
+        document.getElementById('inp-full_name').disabled = false;
+      }
+    });
+  }
+
+  async function handleSearch(fId, val) {
+    const resDiv = document.getElementById(`res-${fId}`);
+    if (val.length < 3) { resDiv.style.display = 'none'; return; }
+    if (fId === 'full_name') {
+      if (masterData.length === 0) { const snap = await db.ref('masterData').once('value'); masterData = Object.values(snap.val() || {}); }
+      renderDropdown(resDiv, masterData.filter(x => x.full_name?.toLowerCase().includes(val.toLowerCase())).slice(0, 8), 'name');
+    } else if (fId === 'centre') {
+      if (locData.length === 0) { const snap = await db.ref('config/locations').once('value'); locData = Object.values(snap.val() || {}); }
+      renderDropdown(resDiv, locData.filter(x => x.centre?.toLowerCase().includes(val.toLowerCase())).slice(0, 8), 'loc');
+    }
+  }
+
+  function renderDropdown(div, list, type) {
+    div.innerHTML = '';
+    if (list.length > 0) {
+      div.style.display = 'block';
+      list.forEach(item => {
+        const d = document.createElement('div');
+        d.className = 'item';
+        d.textContent = type === 'loc' ? item.centre : item.full_name;
+        d.onclick = () => type === 'loc' ? selectLocation(item) : selectParticipant(item);
+        div.appendChild(d);
+      });
+    }
+  }
+
+  function selectParticipant(p) {
+    fieldRules.forEach(r => {
+      const el = document.getElementById(`inp-${r.field_id}`);
+      if (el) { el.value = p[r.field_id] || ''; if (r.initial_state !== 'Hidden') document.getElementById(`cont-${r.field_id}`).style.display = 'block'; }
+    });
+    document.getElementById('res-full_name').style.display = 'none';
+    document.getElementById('btns-start').style.display = 'flex';
+  }
+
+  function selectLocation(l) {
+    document.getElementById('inp-centre').value = l.centre;
+    if(document.getElementById('inp-district')) document.getElementById('inp-district').value = l.district || '';
+    if(document.getElementById('inp-zone')) document.getElementById('inp-zone').value = l.zone || '';
+    document.getElementById('res-centre').style.display = 'none';
+  }
+
+  function enableEdit() {
+    document.getElementById('btns-start').style.display = 'none';
+    document.getElementById('btn-update').style.display = 'block';
+    document.getElementById('btn-update').disabled = false;
+    fieldRules.forEach(r => {
+      const el = document.getElementById(`inp-${r.field_id}`);
+      if (document.getElementById(`help-${r.field_id}`)) document.getElementById(`help-${r.field_id}`).style.display = 'block';
+      if (r.field_id !== 'full_name' && r.edit_behavior.includes("Editable")) el.disabled = false;
+    });
+  }
+
+  async function submitData() {
+    document.getElementById('form-content').style.display = 'none';
+    document.getElementById('loader').style.display = 'block';
+    const payload = { eventId, timestamp: new Date().toISOString() };
+    fieldRules.forEach(r => { payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; });
+    try {
+      await db.ref('registrations').push(payload);
+      document.getElementById('app').innerHTML = eventConfig.thank_html_cache || "<h2>Registration Complete!</h2>";
+    } catch (e) { alert("Error saving data."); document.getElementById('form-content').style.display = 'block'; }
+  }
+  init();
+</script>
+</body>
+</html>
