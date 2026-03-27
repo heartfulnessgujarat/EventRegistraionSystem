@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ferrari Registration 2026</title>
+  <title>Event Registration 2026</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
   <style>
@@ -47,18 +47,29 @@
   let fieldRules = [], masterData = [], locData = [], eventConfig = {};
 
   async function init() {
-    const configSnap = await db.ref('config/eventConfig').once('value');
-    const configs = Object.values(configSnap.val() || {});
-    eventConfig = configs.find(c => String(c.event_id).toUpperCase() === eventId) || { title: "Registration" };
-    document.getElementById('title').textContent = eventConfig.title;
-    document.getElementById('subtitle').textContent = eventConfig.subtitle || "";
-    const rulesSnap = await db.ref('config/fieldRules').once('value');
-    fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
-    renderForm();
+    try {
+      const configSnap = await db.ref('config/eventConfig').once('value');
+      const allConfigs = configSnap.val() || {};
+      
+      // Look for the specific Event ID in the configuration
+      eventConfig = allConfigs[eventId] || Object.values(allConfigs).find(c => String(c.event_id).toUpperCase() === eventId) || { title: "Registration" };
+      
+      document.getElementById('title').textContent = eventConfig.title || "Registration";
+      document.getElementById('subtitle').textContent = eventConfig.subtitle || "";
+      
+      const rulesSnap = await db.ref('config/fieldRules').once('value');
+      fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
+      
+      renderForm();
+    } catch (e) {
+      console.error("Init Error:", e);
+      document.getElementById('title').textContent = "Error Loading Form";
+    }
   }
 
   function renderForm() {
     const container = document.getElementById('dynamic-fields');
+    container.innerHTML = ''; // Clear previous fields
     fieldRules.forEach(r => {
       const div = document.createElement('div');
       div.className = 'field-container';
@@ -125,42 +136,39 @@
     fieldRules.forEach(r => {
       const el = document.getElementById(`inp-${r.field_id}`);
       if (document.getElementById(`help-${r.field_id}`)) document.getElementById(`help-${r.field_id}`).style.display = 'block';
-      if (r.field_id !== 'full_name' && r.edit_behavior.includes("Editable")) el.disabled = false;
+      if (r.field_id !== 'full_name' && r.edit_behavior && r.edit_behavior.includes("Editable")) el.disabled = false;
     });
   }
 
-
-async function submitData() {
+  async function submitData() {
     document.getElementById('form-content').style.display = 'none';
     document.getElementById('loader').style.display = 'block';
-    const payload = { eventId, timestamp: new Date().toISOString() };
+    
+    const payload = { event_id: eventId, timestamp: new Date().toISOString() };
     fieldRules.forEach(r => { 
       payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; 
     });
 
-try {
-      // 1. Push the registration data
+    try {
+      // 1. Save registration to Firebase
       await db.ref('registrations').push(payload);
       
-      // 2. GET THE MESSAGE: We look up the message specifically for THIS event ID
-      // We check if eventConfig exists and has our ID
-      const currentEvent = eventConfig[eventId] || (Array.isArray(eventConfig) ? eventConfig[0] : eventConfig);
+      // 2. Clear card and show the Thank You HTML from Google Docs
+      const thankYouHtml = (eventConfig && eventConfig.thank_html_cache) 
+                          ? eventConfig.thank_html_cache 
+                          : "<h2>Registration Complete!</h2><p>Thank you for signing up.</p>";
       
-      document.getElementById('app').innerHTML = (currentEvent && currentEvent.thank_html_cache) 
-          ? currentEvent.thank_html_cache 
-          : "<h2>Registration Complete!</h2>";
-          
+      document.getElementById('app').innerHTML = `<div style="text-align:left;">${thankYouHtml}</div>`;
+      
     } catch (e) { 
-      console.error(e);
-      alert("Error saving data."); 
+      console.error("Save Error:", e);
+      alert("Error saving data. Please try again."); 
       document.getElementById('form-content').style.display = 'block'; 
       document.getElementById('loader').style.display = 'none';
     }
+  }
 
-
-  
-
-  
+  // Initial load
   init();
 </script>
 </body>
