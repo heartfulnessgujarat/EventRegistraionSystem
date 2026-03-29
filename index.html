@@ -139,38 +139,53 @@
   }
 
 
-  async function submitData() {
+async function submitData() {
     document.getElementById('form-content').style.display = 'none';
     document.getElementById('loader').style.display = 'block';
     
-    const payload = { event_id: eventId.toUpperCase(), timestamp: new Date().toISOString() };
-    fieldRules.forEach(r => { payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; });
+    // 1. Prepare Payload
+    const payload = { 
+        event_id: eventId.toUpperCase(), 
+        timestamp: new Date().toISOString() 
+    };
+    fieldRules.forEach(r => { 
+        payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; 
+    });
 
     try {
+        // 2. SAVE TO FIREBASE
         const newRegRef = await db.ref('registrations').push(payload);
         const regId = newRegRef.key;
 
-        // Trigger Email
-        const scriptUrl = "https://script.google.com/macros/s/AKfycbyF91x6ToAw8c1E8Vl4b3zccG60Efxwciv6ctaiGfzVDU6v5luzlSQttlrtV7ftodlJKQ/exec"; 
+        // 3. TRIGGER EMAIL (The Surgical Fix)
+        // REPLACE THE URL BELOW WITH YOUR LATEST DEPLOYMENT URL
+        const scriptUrl = "https://script.google.com/macros/s/AKfycbyiSLE2llZkLYH8fo8voIxy5KEFU8CZqQJThDNYto47nn-PEqFBRxfj3W6kT26_9D0K6Q/exec"; 
+        
+        const finalTriggerUrl = `${scriptUrl}?action=sendEmail&regId=${regId}&eventId=${eventId.toUpperCase()}`;
+        
+        // We use 'no-cors' to ensure the browser doesn't block the request
+        fetch(finalTriggerUrl, { mode: 'no-cors' });
 
-
-      // https://script.google.com/macros/s/AKfycbyF91x6ToAw8c1E8Vl4b3zccG60Efxwciv6ctaiGfzVDU6v5luzlSQttlrtV7ftodlJKQ/exec
-      
-        fetch(`${scriptUrl}?action=sendEmail&regId=${regId}&eventId=${eventId.toUpperCase()}`);
-
-        // FETCH FROM THE NEW STORAGE PATH
+        // 4. FETCH THE THANK YOU MESSAGE
         const snap = await db.ref(`htmlStorage/${eventId.toUpperCase()}/thank`).once('value');
         const finalHtml = snap.val();
 
         if (finalHtml && finalHtml !== "SYNCED DIRECTLY TO FIREBASE") {
-            document.getElementById('app').innerHTML = `<div>${finalHtml}</div>`;
+            document.getElementById('app').innerHTML = `<div style="width:100%;">${finalHtml}</div>`;
         } else {
-            document.getElementById('app').innerHTML = "<h2>Success! Check Email.</h2>";
+            document.getElementById('app').innerHTML = "<h2>Registration Successful!</h2><p>Check your email for confirmation.</p>";
         }
-    } catch (e) { alert("Error."); }
+        
+    } catch (e) { 
+        console.error("Submission Error:", e);
+        alert("Error during registration. Please try again."); 
+        document.getElementById('form-content').style.display = 'block';
+        document.getElementById('loader').style.display = 'none';
+    }
 }
 
- 
+
+
   
   init();
 </script>
