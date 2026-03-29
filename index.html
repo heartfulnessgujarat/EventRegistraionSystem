@@ -151,7 +151,11 @@
         const regId = newRegRef.key;
 
         // Trigger Email
-        const scriptUrl = "https://script.google.com/macros/s/AKfycbyiSLE2llZkLYH8fo8voIxy5KEFU8CZqQJThDNYto47nn-PEqFBRxfj3W6kT26_9D0K6Q/exec"; 
+        const scriptUrl = "https://script.google.com/macros/s/AKfycby5QAJ3ZNofQe1LUO29BP3d0nwLqt5jqPjcDZ3iV3gaHYL1Cpo3EiQ_kjal2GLO7f5kOg/exec"; 
+
+
+      //  https://script.google.com/macros/s/AKfycby5QAJ3ZNofQe1LUO29BP3d0nwLqt5jqPjcDZ3iV3gaHYL1Cpo3EiQ_kjal2GLO7f5kOg/exec 
+      
         fetch(`${scriptUrl}?action=sendEmail&regId=${regId}&eventId=${eventId.toUpperCase()}`);
 
         // FETCH FROM THE NEW STORAGE PATH
