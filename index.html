@@ -153,40 +153,26 @@ async function submitData() {
 
     try {
         // 1. SAVE REGISTRATION
-        await db.ref('registrations').push(payload);
+        const newRegRef = await db.ref('registrations').push(payload);
+        const regId = newRegRef.key; // We MUST get this ID
 
-        // 2. TRIGGER EMAIL (Non-blocking)
+        // 2. TRIGGER EMAIL (Corrected with regId)
         const scriptUrl = "https://script.google.com/macros/s/AKfycbyiSLE2llZkLYH8fo8voIxy5KEFU8CZqQJThDNYto47nn-PEqFBRxfj3W6kT26_9D0K6Q/exec"; 
-        fetch(scriptUrl + "?action=sendEmail&eventId=" + eventId);
+        fetch(scriptUrl + "?action=sendEmail&regId=" + regId + "&eventId=" + eventId);
 
         // 3. FETCH THE THANK YOU MESSAGE
-        // We use a clean path and a fallback
         const snap = await db.ref(`config/eventConfig/${eventId}/thank_html_cache`).once('value');
-        let finalMsg = snap.val();
-
-        if (!finalMsg || finalMsg === "SYNCED DIRECTLY TO FIREBASE") {
-            // Check if it's stored in lowercase by mistake
-            const snap2 = await db.ref(`config/eventConfig/${eventId.toLowerCase()}/thank_html_cache`).once('value');
-            finalMsg = snap2.val();
-        }
-
-        // If still nothing, use a generic message
-        if (!finalMsg || finalMsg === "SYNCED DIRECTLY TO FIREBASE") {
-            finalMsg = "<h3>Registration Successful!</h3><p>Check your email for details.</p>";
-        }
+        let finalMsg = snap.val() || "<h3>Registration Successful!</h3>";
 
         document.getElementById('app').innerHTML = `<div style="width:100%;">${finalMsg}</div>`;
         
     } catch (e) { 
-        console.error(e);
-        alert("Error during submission."); 
+        alert("Error saving."); 
         document.getElementById('form-content').style.display = 'block';
         document.getElementById('loader').style.display = 'none';
     }
 }
 
-  
- 
 
 
   init();
