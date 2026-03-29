@@ -159,8 +159,9 @@ async function submitData() {
 
         // 3. TRIGGER EMAIL (The Surgical Fix)
         // REPLACE THE URL BELOW WITH YOUR LATEST DEPLOYMENT URL
-        const scriptUrl = "https://script.google.com/macros/s/AKfycbyiSLE2llZkLYH8fo8voIxy5KEFU8CZqQJThDNYto47nn-PEqFBRxfj3W6kT26_9D0K6Q/exec"; 
-        
+        const scriptUrl = "https://script.google.com/macros/s/AKfycbx1jvT50aj6AGNc2gIu62VwprCXCczpTaKrq58I6AG5v_X7H41XCXctcgaMaRZNXdz5dg/exec"; 
+
+      // https://script.google.com/macros/s/AKfycbx1jvT50aj6AGNc2gIu62VwprCXCczpTaKrq58I6AG5v_X7H41XCXctcgaMaRZNXdz5dg/exec
         const finalTriggerUrl = `${scriptUrl}?action=sendEmail&regId=${regId}&eventId=${eventId.toUpperCase()}`;
         
         // We use 'no-cors' to ensure the browser doesn't block the request
