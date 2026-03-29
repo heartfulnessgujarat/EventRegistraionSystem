@@ -151,10 +151,10 @@
         const regId = newRegRef.key;
 
         // Trigger Email
-        const scriptUrl = "https://script.google.com/macros/s/AKfycbyhCkvmgeQQnRXE6JAX5kyrkVK-UM8ckNv31zNS0EjqczsAvfEO0V_oiTffhNNZoG6IYw/exec"; 
+        const scriptUrl = "https://script.google.com/macros/s/AKfycbyF91x6ToAw8c1E8Vl4b3zccG60Efxwciv6ctaiGfzVDU6v5luzlSQttlrtV7ftodlJKQ/exec"; 
 
-      // https://script.google.com/macros/s/AKfycbyhCkvmgeQQnRXE6JAX5kyrkVK-UM8ckNv31zNS0EjqczsAvfEO0V_oiTffhNNZoG6IYw/exec
- 
+
+      // https://script.google.com/macros/s/AKfycbyF91x6ToAw8c1E8Vl4b3zccG60Efxwciv6ctaiGfzVDU6v5luzlSQttlrtV7ftodlJKQ/exec
       
         fetch(`${scriptUrl}?action=sendEmail&regId=${regId}&eventId=${eventId.toUpperCase()}`);
 
