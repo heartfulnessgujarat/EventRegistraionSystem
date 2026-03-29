@@ -138,6 +138,9 @@
     });
   }
 
+
+
+
 async function submitData() {
     document.getElementById('form-content').style.display = 'none';
     document.getElementById('loader').style.display = 'block';
@@ -151,29 +154,34 @@ async function submitData() {
     });
 
     try {
-        // 1. SAVE TO FIREBASE
+        // 1. SAVE REGISTRATION
         const newRegRef = await db.ref('registrations').push(payload);
         const regId = newRegRef.key;
 
-        // 2. TRIGGER THE EMAIL
+        // 2. TRIGGER EMAIL
         const scriptUrl = "https://script.google.com/macros/s/AKfycbyiSLE2llZkLYH8fo8voIxy5KEFU8CZqQJThDNYto47nn-PEqFBRxfj3W6kT26_9D0K6Q/exec"; 
         fetch(scriptUrl + "?action=sendEmail&regId=" + regId + "&eventId=" + eventId);
 
-        // 3. SHOW THE THANK YOU MESSAGE (Smart Redirect logic)
-        let msg = eventConfig.thank_html_cache || "<h2>Registration Complete!</h2>";
+        // 3. FETCH THE FULL HTML DIRECTLY
+        // We go straight to the source to get the Base64 Image
+        let finalMsg = "<h2>Registration Complete!</h2>";
         
-        // --- NEW LOGIC START ---
-        // If the message is the placeholder, fetch the REAL large HTML directly from the subpath
-        if (msg === "SYNCED DIRECTLY TO FIREBASE") {
-            try {
-                const directSnap = await db.ref(`config/eventConfig/${eventId}/thank_html_cache`).once('value');
-                const betterMsg = directSnap.val();
-                if (betterMsg) msg = betterMsg;
-            } catch (err) { console.error("Direct fetch failed", err); }
+        try {
+            // This path matches exactly where the Google Script pushes the data
+            const directSnap = await db.ref('config/eventConfig').child(eventId).child('thank_html_cache').once('value');
+            const retrievedHtml = directSnap.val();
+            
+            if (retrievedHtml && retrievedHtml !== "SYNCED DIRECTLY TO FIREBASE") {
+                finalMsg = retrievedHtml;
+            } else {
+                // Fallback if the direct path is empty
+                finalMsg = eventConfig.thank_html_cache || "<h2>Thank you for registering!</h2>";
+            }
+        } catch (err) {
+            console.error("Direct fetch failed:", err);
         }
-        // --- NEW LOGIC END ---
 
-        document.getElementById('app').innerHTML = `<div>${msg}</div>`;
+        document.getElementById('app').innerHTML = `<div>${finalMsg}</div>`;
         
     } catch (e) { 
         alert("Error saving."); 
@@ -181,6 +189,7 @@ async function submitData() {
         document.getElementById('loader').style.display = 'none';
     }
 }
+
 
   init();
 </script>
