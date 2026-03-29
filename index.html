@@ -139,7 +139,6 @@
   }
 
 
-
 async function submitData() {
     document.getElementById('form-content').style.display = 'none';
     document.getElementById('loader').style.display = 'block';
@@ -154,50 +153,40 @@ async function submitData() {
 
     try {
         // 1. SAVE REGISTRATION
-        const newRegRef = await db.ref('registrations').push(payload);
-        const regId = newRegRef.key;
+        await db.ref('registrations').push(payload);
 
-        // 2. TRIGGER EMAIL
+        // 2. TRIGGER EMAIL (Non-blocking)
         const scriptUrl = "https://script.google.com/macros/s/AKfycbyiSLE2llZkLYH8fo8voIxy5KEFU8CZqQJThDNYto47nn-PEqFBRxfj3W6kT26_9D0K6Q/exec"; 
-        fetch(scriptUrl + "?action=sendEmail&regId=" + regId + "&eventId=" + eventId);
+        fetch(scriptUrl + "?action=sendEmail&eventId=" + eventId);
 
-        // 3. FETCH THE FULL HTML (The "Self-Healing" logic)
-        let finalMsg = "<h2>Registration Complete!</h2>";
-        
-        // Strategy: Try the direct path first
-        const path1 = `config/eventConfig/${eventId}/thank_html_cache`;
-        const snap = await db.ref(path1).once('value');
-        let retrievedHtml = snap.val();
+        // 3. FETCH THE THANK YOU MESSAGE
+        // We use a clean path and a fallback
+        const snap = await db.ref(`config/eventConfig/${eventId}/thank_html_cache`).once('value');
+        let finalMsg = snap.val();
 
-        // If path1 failed or gave us the placeholder, try path2 (case-insensitive check)
-        if (!retrievedHtml || retrievedHtml === "SYNCED DIRECTLY TO FIREBASE") {
-            const path2 = `config/eventConfig/${eventId.toLowerCase()}/thank_html_cache`;
-            const snap2 = await db.ref(path2).once('value');
-            retrievedHtml = snap2.val();
+        if (!finalMsg || finalMsg === "SYNCED DIRECTLY TO FIREBASE") {
+            // Check if it's stored in lowercase by mistake
+            const snap2 = await db.ref(`config/eventConfig/${eventId.toLowerCase()}/thank_html_cache`).once('value');
+            finalMsg = snap2.val();
         }
 
-        // Apply the result
-        if (retrievedHtml && retrievedHtml !== "SYNCED DIRECTLY TO FIREBASE") {
-            finalMsg = retrievedHtml;
-        } else {
-            // Last resort: use what we already have in the initial config load
-            finalMsg = (eventConfig && eventConfig.thank_html_cache !== "SYNCED DIRECTLY TO FIREBASE") 
-                        ? eventConfig.thank_html_cache 
-                        : "<h3>Thank you! Your registration is successful.</h3>";
+        // If still nothing, use a generic message
+        if (!finalMsg || finalMsg === "SYNCED DIRECTLY TO FIREBASE") {
+            finalMsg = "<h3>Registration Successful!</h3><p>Check your email for details.</p>";
         }
 
         document.getElementById('app').innerHTML = `<div style="width:100%;">${finalMsg}</div>`;
         
     } catch (e) { 
-        console.error("Submission error:", e);
-        alert("Error saving."); 
+        console.error(e);
+        alert("Error during submission."); 
         document.getElementById('form-content').style.display = 'block';
         document.getElementById('loader').style.display = 'none';
     }
 }
 
-
   
+ 
 
 
   init();
