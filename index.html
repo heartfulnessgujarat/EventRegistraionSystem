@@ -139,12 +139,12 @@
   }
 
 
-async function submitData() {
+  async function submitData() {
     document.getElementById('form-content').style.display = 'none';
     document.getElementById('loader').style.display = 'block';
     
     const payload = { 
-        event_id: eventId, 
+        event_id: eventId.toUpperCase(), 
         timestamp: new Date().toISOString() 
     };
     fieldRules.forEach(r => { 
@@ -152,29 +152,34 @@ async function submitData() {
     });
 
     try {
-        // 1. SAVE REGISTRATION
+        // 1. SAVE TO FIREBASE
         const newRegRef = await db.ref('registrations').push(payload);
-        const regId = newRegRef.key; // We MUST get this ID
+        const regId = newRegRef.key;
 
-        // 2. TRIGGER EMAIL (Corrected with regId)
+        // 2. TRIGGER EMAIL (Now using the correct Event ID case)
         const scriptUrl = "https://script.google.com/macros/s/AKfycbyiSLE2llZkLYH8fo8voIxy5KEFU8CZqQJThDNYto47nn-PEqFBRxfj3W6kT26_9D0K6Q/exec"; 
-        fetch(scriptUrl + "?action=sendEmail&regId=" + regId + "&eventId=" + eventId);
+        fetch(`${scriptUrl}?action=sendEmail&regId=${regId}&eventId=${eventId.toUpperCase()}`);
 
-        // 3. FETCH THE THANK YOU MESSAGE
-        const snap = await db.ref(`config/eventConfig/${eventId}/thank_html_cache`).once('value');
-        let finalMsg = snap.val() || "<h3>Registration Successful!</h3>";
+        // 3. FORCE FETCH THE REAL THANK YOU HTML
+        // We do NOT use the 'eventConfig' variable here because it's outdated.
+        const thankSnap = await db.ref(`config/eventConfig/${eventId.toUpperCase()}/thank_html_cache`).once('value');
+        const finalHtml = thankSnap.val();
 
-        document.getElementById('app').innerHTML = `<div style="width:100%;">${finalMsg}</div>`;
+        if (finalHtml && finalHtml !== "SYNCED DIRECTLY TO FIREBASE") {
+            document.getElementById('app').innerHTML = `<div>${finalHtml}</div>`;
+        } else {
+            document.getElementById('app').innerHTML = "<h2>Registration Successful!</h2><p>Check your email for confirmation.</p>";
+        }
         
     } catch (e) { 
-        alert("Error saving."); 
+        console.error(e);
+        alert("Registration Error. Please try again."); 
         document.getElementById('form-content').style.display = 'block';
         document.getElementById('loader').style.display = 'none';
     }
 }
 
-
-
+  
   init();
 </script>
 </body>
