@@ -50,8 +50,6 @@
     try {
       const configSnap = await db.ref('config/eventConfig').once('value');
       const allConfigs = configSnap.val() || {};
-      
-      // Look for the specific Event ID in the configuration
       eventConfig = allConfigs[eventId] || Object.values(allConfigs).find(c => String(c.event_id).toUpperCase() === eventId) || { title: "Registration" };
       
       document.getElementById('title').textContent = eventConfig.title || "Registration";
@@ -69,7 +67,7 @@
 
   function renderForm() {
     const container = document.getElementById('dynamic-fields');
-    container.innerHTML = ''; // Clear previous fields
+    container.innerHTML = '';
     fieldRules.forEach(r => {
       const div = document.createElement('div');
       div.className = 'field-container';
@@ -139,6 +137,7 @@
       if (r.field_id !== 'full_name' && r.edit_behavior && r.edit_behavior.includes("Editable")) el.disabled = false;
     });
   }
+
 async function submitData() {
     document.getElementById('form-content').style.display = 'none';
     document.getElementById('loader').style.display = 'block';
@@ -154,19 +153,26 @@ async function submitData() {
     try {
         // 1. SAVE TO FIREBASE
         const newRegRef = await db.ref('registrations').push(payload);
-        const regId = newRegRef.key; // Get the unique ID from Firebase
+        const regId = newRegRef.key;
 
-        // 2. TRIGGER THE EMAIL (This pings your Google Script directly)
-        // Replace 'YOUR_SCRIPT_URL' with your Apps Script Web App URL
+        // 2. TRIGGER THE EMAIL
         const scriptUrl = "https://script.google.com/macros/s/AKfycbyiSLE2llZkLYH8fo8voIxy5KEFU8CZqQJThDNYto47nn-PEqFBRxfj3W6kT26_9D0K6Q/exec"; 
-
-//https://script.google.com/macros/s/AKfycbyiSLE2llZkLYH8fo8voIxy5KEFU8CZqQJThDNYto47nn-PEqFBRxfj3W6kT26_9D0K6Q/exec
-
-      
         fetch(scriptUrl + "?action=sendEmail&regId=" + regId + "&eventId=" + eventId);
 
-        // 3. SHOW THE THANK YOU MESSAGE
-        const msg = eventConfig.thank_html_cache || "<h2>Registration Complete!</h2>";
+        // 3. SHOW THE THANK YOU MESSAGE (Smart Redirect logic)
+        let msg = eventConfig.thank_html_cache || "<h2>Registration Complete!</h2>";
+        
+        // --- NEW LOGIC START ---
+        // If the message is the placeholder, fetch the REAL large HTML directly from the subpath
+        if (msg === "SYNCED DIRECTLY TO FIREBASE") {
+            try {
+                const directSnap = await db.ref(`config/eventConfig/${eventId}/thank_html_cache`).once('value');
+                const betterMsg = directSnap.val();
+                if (betterMsg) msg = betterMsg;
+            } catch (err) { console.error("Direct fetch failed", err); }
+        }
+        // --- NEW LOGIC END ---
+
         document.getElementById('app').innerHTML = `<div>${msg}</div>`;
         
     } catch (e) { 
@@ -176,13 +182,6 @@ async function submitData() {
     }
 }
 
-
-
-
-
-
-
-  // Initial load
   init();
 </script>
 </body>
