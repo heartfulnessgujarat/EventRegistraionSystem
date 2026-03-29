@@ -143,42 +143,30 @@
     document.getElementById('form-content').style.display = 'none';
     document.getElementById('loader').style.display = 'block';
     
-    const payload = { 
-        event_id: eventId.toUpperCase(), 
-        timestamp: new Date().toISOString() 
-    };
-    fieldRules.forEach(r => { 
-        payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; 
-    });
+    const payload = { event_id: eventId.toUpperCase(), timestamp: new Date().toISOString() };
+    fieldRules.forEach(r => { payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; });
 
     try {
-        // 1. SAVE TO FIREBASE
         const newRegRef = await db.ref('registrations').push(payload);
         const regId = newRegRef.key;
 
-        // 2. TRIGGER EMAIL (Now using the correct Event ID case)
+        // Trigger Email
         const scriptUrl = "https://script.google.com/macros/s/AKfycbyiSLE2llZkLYH8fo8voIxy5KEFU8CZqQJThDNYto47nn-PEqFBRxfj3W6kT26_9D0K6Q/exec"; 
         fetch(`${scriptUrl}?action=sendEmail&regId=${regId}&eventId=${eventId.toUpperCase()}`);
 
-        // 3. FORCE FETCH THE REAL THANK YOU HTML
-        // We do NOT use the 'eventConfig' variable here because it's outdated.
-        const thankSnap = await db.ref(`config/eventConfig/${eventId.toUpperCase()}/thank_html_cache`).once('value');
-        const finalHtml = thankSnap.val();
+        // FETCH FROM THE NEW STORAGE PATH
+        const snap = await db.ref(`htmlStorage/${eventId.toUpperCase()}/thank`).once('value');
+        const finalHtml = snap.val();
 
         if (finalHtml && finalHtml !== "SYNCED DIRECTLY TO FIREBASE") {
             document.getElementById('app').innerHTML = `<div>${finalHtml}</div>`;
         } else {
-            document.getElementById('app').innerHTML = "<h2>Registration Successful!</h2><p>Check your email for confirmation.</p>";
+            document.getElementById('app').innerHTML = "<h2>Success! Check Email.</h2>";
         }
-        
-    } catch (e) { 
-        console.error(e);
-        alert("Registration Error. Please try again."); 
-        document.getElementById('form-content').style.display = 'block';
-        document.getElementById('loader').style.display = 'none';
-    }
+    } catch (e) { alert("Error."); }
 }
 
+ 
   
   init();
 </script>
