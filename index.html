@@ -163,4 +163,34 @@
         await db.ref('registrations/' + regId).set(payload);
 
         // --- 4. TRIGGER EMAIL SCRIPT (With 5-Second Delay) ---
-        const scriptUrl = "
+        const scriptUrl = "https://script.google.com/macros/s/AKfycbx1jvT50aj6AGNc2gIu62VwprCXCczpTaKrq58I6AG5v_X7H41XCXctcgaMaRZNXdz5dg/exec"; 
+        const finalTriggerUrl = `${scriptUrl}?action=sendEmail&regId=${regId}&eventId=${eventId.toUpperCase()}`;
+        
+        // Execute the 5-second timer
+        setTimeout(() => {
+           fetch(finalTriggerUrl, { mode: 'no-cors' });
+           console.log("Email script triggered after 5 seconds for ID: " + regId);
+        }, 5000);
+
+        // --- 5. FETCH THANK YOU CONTENT ---
+        const snap = await db.ref(`htmlStorage/${eventId.toUpperCase()}/thank`).once('value');
+        const finalHtml = snap.val();
+
+        if (finalHtml && finalHtml !== "SYNCED DIRECTLY TO FIREBASE") {
+            document.getElementById('app').innerHTML = `<div style="width:100%;">${finalHtml}</div>`;
+        } else {
+            document.getElementById('app').innerHTML = `<h2>Registration Successful!</h2><p>ID: ${regId}</p><p>Check your email for confirmation.</p>`;
+        }
+        
+    } catch (e) { 
+        console.error("Submission Error:", e);
+        alert("Error during registration. Please try again."); 
+        document.getElementById('form-content').style.display = 'block';
+        document.getElementById('loader').style.display = 'none';
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>
