@@ -138,43 +138,48 @@
     });
   }
 
-
-async function submitData() {
+  async function submitData() {
     document.getElementById('form-content').style.display = 'none';
     document.getElementById('loader').style.display = 'block';
     
-    // 1. Prepare Payload
+    // --- 1. GENERATE REGISTRATION ID (Your Formula) ---
+    const now = new Date();
+    const timestampStr = now.toISOString().replace(/[-T:Z.]/g, "").slice(0, 10); // Date + Time string
+    const randomNum = Math.floor(100 + Math.random() * 900); // 3 digit random
+    const regId = `${eventId.toUpperCase()}REG${timestampStr}${randomNum}`;
+
+    // --- 2. PREPARE PAYLOAD ---
     const payload = { 
+        registration_id: regId, // FORCING THE ID AS A FIELD
         event_id: eventId.toUpperCase(), 
-        timestamp: new Date().toISOString() 
+        timestamp: now.toISOString() 
     };
     fieldRules.forEach(r => { 
         payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; 
     });
 
     try {
-        // 2. SAVE TO FIREBASE
-        const newRegRef = await db.ref('registrations').push(payload);
-        const regId = newRegRef.key;
+        // --- 3. SAVE TO FIREBASE (Using your custom ID as the Key) ---
+        await db.ref('registrations/' + regId).set(payload);
 
-        // 3. TRIGGER EMAIL (The Surgical Fix)
-        // REPLACE THE URL BELOW WITH YOUR LATEST DEPLOYMENT URL
+        // --- 4. TRIGGER EMAIL SCRIPT ---
+        // REPLACE THIS URL with your latest Web App URL from Google Script!
         const scriptUrl = "https://script.google.com/macros/s/AKfycbx1jvT50aj6AGNc2gIu62VwprCXCczpTaKrq58I6AG5v_X7H41XCXctcgaMaRZNXdz5dg/exec"; 
-
-      // https://script.google.com/macros/s/AKfycbx1jvT50aj6AGNc2gIu62VwprCXCczpTaKrq58I6AG5v_X7H41XCXctcgaMaRZNXdz5dg/exec
         const finalTriggerUrl = `${scriptUrl}?action=sendEmail&regId=${regId}&eventId=${eventId.toUpperCase()}`;
         
-        // We use 'no-cors' to ensure the browser doesn't block the request
-        fetch(finalTriggerUrl, { mode: 'no-cors' });
+        // Wait 2 seconds before calling email to ensure DB is written
+        setTimeout(() => {
+           fetch(finalTriggerUrl, { mode: 'no-cors' });
+        }, 2000);
 
-        // 4. FETCH THE THANK YOU MESSAGE
+        // --- 5. FETCH THANK YOU CONTENT ---
         const snap = await db.ref(`htmlStorage/${eventId.toUpperCase()}/thank`).once('value');
         const finalHtml = snap.val();
 
         if (finalHtml && finalHtml !== "SYNCED DIRECTLY TO FIREBASE") {
             document.getElementById('app').innerHTML = `<div style="width:100%;">${finalHtml}</div>`;
         } else {
-            document.getElementById('app').innerHTML = "<h2>Registration Successful!</h2><p>Check your email for confirmation.</p>";
+            document.getElementById('app').innerHTML = `<h2>Registration Successful!</h2><p>ID: ${regId}</p><p>Check your email for confirmation.</p>`;
         }
         
     } catch (e) { 
@@ -183,11 +188,8 @@ async function submitData() {
         document.getElementById('form-content').style.display = 'block';
         document.getElementById('loader').style.display = 'none';
     }
-}
+  }
 
-
-
-  
   init();
 </script>
 </body>
