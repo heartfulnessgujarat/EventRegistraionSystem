@@ -173,7 +173,7 @@
         setTimeout(() => {
            fetch(finalTriggerUrl, { mode: 'no-cors' });
            console.log("Email script triggered after 5 seconds for ID: " + regId);
-        }, 5000);
+        }, 500);
 
         // --- 5. FETCH THANK YOU CONTENT ---
         const snap = await db.ref(`htmlStorage/${eventId.toUpperCase()}/thank`).once('value');
