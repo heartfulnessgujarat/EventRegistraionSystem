@@ -53,32 +53,22 @@
   const eventId = (urlParams.get('id') || 'EVT001').toUpperCase();
   let fieldRules = [], masterData = [], locData = [], eventConfig = {};
 
-
 async function init() {
     try {
-      // 1. Fetch Config from Firebase
       const configSnap = await db.ref('config/eventConfig').once('value');
       const allConfigs = configSnap.val() || {};
-      
-      // 2. Identify the specific event
       eventConfig = allConfigs[eventId] || Object.values(allConfigs).find(c => String(c.event_id).toUpperCase() === eventId) || { title: "Registration" };
       
-      // --- THE FIX: Update the Title and Subtitle immediately ---
-      // This overwrites the "Loading registration form..." message
-      const titleEl = document.getElementById('title');
-      const subtitleEl = document.getElementById('subtitle');
+      // --- THE CRITICAL FIX ---
+      // 1. Use .innerHTML so that <br> creates a new line instead of showing as text
+      // 2. This immediately overwrites the "Loading registration form..." message
+      document.getElementById('title').innerHTML = eventConfig.title || "Registration";
+      document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
       
-      titleEl.textContent = eventConfig.title || "Event Registration";
-      subtitleEl.textContent = eventConfig.subtitle || "";
-      
-      // 3. Fetch Field Rules
       const rulesSnap = await db.ref('config/fieldRules').once('value');
-      const allRules = rulesSnap.val() || {};
-      fieldRules = Object.values(allRules).filter(r => String(r.event_id).toUpperCase() === eventId);
+      fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
       
-      // 4. Build the form
       renderForm();
-      
     } catch (e) {
       console.error("Init Error:", e);
       document.getElementById('title').textContent = "Error Loading Form";
