@@ -20,16 +20,18 @@
     .dropdown { border: 1px solid #ddd; max-height: 200px; overflow-y: auto; background: white; position: absolute; width: 100%; z-index: 1000; display: none; border-radius: 0 0 8px 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
     .item { padding: 12px; cursor: pointer; border-bottom: 1px solid #f1f1f1; font-size: 14px; }
     .item:hover { background: #e8eaf6; }
-    #loader { display: none; text-align: center; padding: 40px; color: #1a237e; }
+    #loader, #loading-init { text-align: center; padding: 40px; color: #1a237e; }
   </style>
 </head>
 <body>
 <div class="card" id="app">
-  <div id="form-content">
-    // <h2 id="title">Loading...</h2>
+  
+  <div id="loading-init">
+    <h2>Loading registration form. Please wait…</h2>
+  </div>
 
-
-    
+  <div id="form-content" style="display:none;">
+    <h2 id="title"></h2>
     <p class="subtitle" id="subtitle"></p>
     <div id="dynamic-fields"></div>
     <div id="btns-start" style="display:none; flex-direction:column; gap:10px;">
@@ -39,9 +41,9 @@
     <button id="btn-update" class="primary-btn" style="display:none;" disabled onclick="submitData()">Update & Register</button>
   </div>
 
-  <h2 id="title">Loading registration form. Please wait…</h2>
-  
-<div id="loader"><h3>Processing your registration. Please wait…</h3></div>
+  <div id="loader" style="display:none;">
+    <h3>Processing your registration. Please wait…</h3>
+  </div>
   
 </div>
 
@@ -53,15 +55,13 @@
   const eventId = (urlParams.get('id') || 'EVT001').toUpperCase();
   let fieldRules = [], masterData = [], locData = [], eventConfig = {};
 
-async function init() {
+  async function init() {
     try {
       const configSnap = await db.ref('config/eventConfig').once('value');
       const allConfigs = configSnap.val() || {};
       eventConfig = allConfigs[eventId] || Object.values(allConfigs).find(c => String(c.event_id).toUpperCase() === eventId) || { title: "Registration" };
       
-      // --- THE CRITICAL FIX ---
-      // 1. Use .innerHTML so that <br> creates a new line instead of showing as text
-      // 2. This immediately overwrites the "Loading registration form..." message
+      // Update the real title and subtitle using innerHTML
       document.getElementById('title').innerHTML = eventConfig.title || "Registration";
       document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
       
@@ -69,14 +69,16 @@ async function init() {
       fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
       
       renderForm();
+
+      // THE SWAP: Hide loading, Show form
+      document.getElementById('loading-init').style.display = 'none';
+      document.getElementById('form-content').style.display = 'block';
+
     } catch (e) {
       console.error("Init Error:", e);
-      document.getElementById('title').textContent = "Error Loading Form";
+      document.getElementById('loading-init').innerHTML = "<h2>Error Loading Form</h2>";
     }
   }
-
-
-
 
   function renderForm() {
     const container = document.getElementById('dynamic-fields');
@@ -155,13 +157,11 @@ async function init() {
     document.getElementById('form-content').style.display = 'none';
     document.getElementById('loader').style.display = 'block';
     
-    // --- 1. GENERATE REGISTRATION ID ---
     const now = new Date();
     const timestampStr = now.toISOString().replace(/[-T:Z.]/g, "").slice(0, 10);
     const randomNum = Math.floor(100 + Math.random() * 900);
     const regId = `${eventId.toUpperCase()}REG${timestampStr}${randomNum}`;
 
-    // --- 2. PREPARE PAYLOAD ---
     const payload = { 
         registration_id: regId, 
         event_id: eventId.toUpperCase(), 
@@ -172,19 +172,12 @@ async function init() {
     });
 
     try {
-        // --- 3. SAVE TO FIREBASE ---
         await db.ref('registrations/' + regId).set(payload);
-
-        // --- 4. TRIGGER EMAIL SCRIPT (With 5-Second Delay) ---
         const scriptUrl = "https://script.google.com/macros/s/AKfycbwMjXRuxlelz20lb_Sul5Vz49u0WkFPI4mIpL3ZDdDFNK53_aaRuoneyxMHK8hmL63PcQ/exec"; 
-
         const finalTriggerUrl = `${scriptUrl}?action=sendEmail&regId=${regId}&eventId=${eventId.toUpperCase()}`;
-
-
- fetch(finalTriggerUrl, { mode: 'no-cors' });
- console.log("Instant email trigger sent for ID: " + regId);
-            
-        // --- 5. FETCH THANK YOU CONTENT ---
+        
+        fetch(finalTriggerUrl, { mode: 'no-cors' });
+        
         const snap = await db.ref(`htmlStorage/${eventId.toUpperCase()}/thank`).once('value');
         const finalHtml = snap.val();
 
