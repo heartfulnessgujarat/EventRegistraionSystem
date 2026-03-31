@@ -57,28 +57,29 @@
 
 async function init() {
     try {
+      // 1. Fetch Config from Firebase
       const configSnap = await db.ref('config/eventConfig').once('value');
       const allConfigs = configSnap.val() || {};
       
-      // 1. Get the config
+      // 2. Identify the specific event
       eventConfig = allConfigs[eventId] || Object.values(allConfigs).find(c => String(c.event_id).toUpperCase() === eventId) || { title: "Registration" };
       
-      // 2. Set the Title and Subtitle
-      document.getElementById('title').textContent = eventConfig.title || "Registration";
-      document.getElementById('subtitle').textContent = eventConfig.subtitle || "";
+      // --- THE FIX: Update the Title and Subtitle immediately ---
+      // This overwrites the "Loading registration form..." message
+      const titleEl = document.getElementById('title');
+      const subtitleEl = document.getElementById('subtitle');
+      
+      titleEl.textContent = eventConfig.title || "Event Registration";
+      subtitleEl.textContent = eventConfig.subtitle || "";
       
       // 3. Fetch Field Rules
       const rulesSnap = await db.ref('config/fieldRules').once('value');
       const allRules = rulesSnap.val() || {};
       fieldRules = Object.values(allRules).filter(r => String(r.event_id).toUpperCase() === eventId);
       
-      // --- THE FIX: Hide the "Loading..." message before rendering ---
-      // This ensures the "Loading registration form..." text disappears
-      if (eventConfig.title) {
-         // If we have a real title, the loading phase is over
-      }
-
+      // 4. Build the form
       renderForm();
+      
     } catch (e) {
       console.error("Init Error:", e);
       document.getElementById('title').textContent = "Error Loading Form";
