@@ -162,11 +162,14 @@
     const randomNum = Math.floor(100 + Math.random() * 900);
     const regId = `${eventId.toUpperCase()}REG${timestampStr}${randomNum}`;
 
-    const payload = { 
+
+const payload = { 
         registration_id: regId, 
         event_id: eventId.toUpperCase(), 
         timestamp: now.toISOString() 
     };
+
+    
     fieldRules.forEach(r => { 
         payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; 
     });
