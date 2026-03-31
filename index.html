@@ -142,16 +142,29 @@
     document.getElementById('res-centre').style.display = 'none';
   }
 
-  function enableEdit() {
+function enableEdit() {
     document.getElementById('btns-start').style.display = 'none';
     document.getElementById('btn-update').style.display = 'block';
     document.getElementById('btn-update').disabled = false;
+    
     fieldRules.forEach(r => {
       const el = document.getElementById(`inp-${r.field_id}`);
-      if (document.getElementById(`help-${r.field_id}`)) document.getElementById(`help-${r.field_id}`).style.display = 'block';
-      if (r.field_id !== 'full_name' && r.edit_behavior && r.edit_behavior.includes("Editable")) el.disabled = false;
+      if (document.getElementById(`help-${r.field_id}`)) {
+        document.getElementById(`help-${r.field_id}`).style.display = 'block';
+      }
+      
+      // THE FIX: Only make it editable if the rule says "Editable"
+      // This will now respect your "ReadOnly" setting for full_name
+      if (r.edit_behavior && r.edit_behavior.includes("Editable")) {
+        el.disabled = false;
+      } else {
+        el.disabled = true; // Stay locked if set to ReadOnly
+      }
     });
   }
+
+
+  
 
   async function submitData() {
     document.getElementById('form-content').style.display = 'none';
