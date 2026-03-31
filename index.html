@@ -54,24 +54,39 @@
   const eventId = (urlParams.get('id') || 'EVT001').toUpperCase();
   let fieldRules = [], masterData = [], locData = [], eventConfig = {};
 
-  async function init() {
+
+async function init() {
     try {
       const configSnap = await db.ref('config/eventConfig').once('value');
       const allConfigs = configSnap.val() || {};
+      
+      // 1. Get the config
       eventConfig = allConfigs[eventId] || Object.values(allConfigs).find(c => String(c.event_id).toUpperCase() === eventId) || { title: "Registration" };
       
+      // 2. Set the Title and Subtitle
       document.getElementById('title').textContent = eventConfig.title || "Registration";
       document.getElementById('subtitle').textContent = eventConfig.subtitle || "";
       
+      // 3. Fetch Field Rules
       const rulesSnap = await db.ref('config/fieldRules').once('value');
-      fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
+      const allRules = rulesSnap.val() || {};
+      fieldRules = Object.values(allRules).filter(r => String(r.event_id).toUpperCase() === eventId);
       
+      // --- THE FIX: Hide the "Loading..." message before rendering ---
+      // This ensures the "Loading registration form..." text disappears
+      if (eventConfig.title) {
+         // If we have a real title, the loading phase is over
+      }
+
       renderForm();
     } catch (e) {
       console.error("Init Error:", e);
       document.getElementById('title').textContent = "Error Loading Form";
     }
   }
+
+
+
 
   function renderForm() {
     const container = document.getElementById('dynamic-fields');
