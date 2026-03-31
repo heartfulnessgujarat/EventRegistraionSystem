@@ -177,16 +177,10 @@
       // https://script.google.com/macros/s/AKfycbwMjXRuxlelz20lb_Sul5Vz49u0WkFPI4mIpL3ZDdDFNK53_aaRuoneyxMHK8hmL63PcQ/exec
         const finalTriggerUrl = `${scriptUrl}?action=sendEmail&regId=${regId}&eventId=${eventId.toUpperCase()}`;
 
-// to add the timer, remove the following lines and add the "execute the 0.5 / 5 sec timer but we also need to update code.gs "
+
  fetch(finalTriggerUrl, { mode: 'no-cors' });
  console.log("Instant email trigger sent for ID: " + regId);
-      
-        // Execute the 5-second timer
-//        setTimeout(() => {
-  //         fetch(finalTriggerUrl, { mode: 'no-cors' });
-    //       console.log("Email script triggered after 5 seconds for ID: " + regId);
-      //  }, 500);
-
+            
         // --- 5. FETCH THANK YOU CONTENT ---
         const snap = await db.ref(`htmlStorage/${eventId.toUpperCase()}/thank`).once('value');
         const finalHtml = snap.val();
