@@ -188,8 +188,6 @@ async function init() {
         // --- 4. TRIGGER EMAIL SCRIPT (With 5-Second Delay) ---
         const scriptUrl = "https://script.google.com/macros/s/AKfycbwMjXRuxlelz20lb_Sul5Vz49u0WkFPI4mIpL3ZDdDFNK53_aaRuoneyxMHK8hmL63PcQ/exec"; 
 
-
-      // https://script.google.com/macros/s/AKfycbwMjXRuxlelz20lb_Sul5Vz49u0WkFPI4mIpL3ZDdDFNK53_aaRuoneyxMHK8hmL63PcQ/exec
         const finalTriggerUrl = `${scriptUrl}?action=sendEmail&regId=${regId}&eventId=${eventId.toUpperCase()}`;
 
 
