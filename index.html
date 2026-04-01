@@ -163,41 +163,44 @@
   }
 
 
-function triggerSendCode(fId) {
-    // 1. Capture the email from the input field
-    const emailField = document.getElementById('inp-email');
-    const targetEmail = emailField ? emailField.value.trim() : "";
+  function triggerSendCode(fId) {
+    // 1. AUTO-DETECT: Find the email field even if the ID is slightly different
+    let targetEmail = "";
+    const emailInputs = document.querySelectorAll('input[id^="inp-"]');
+    
+    emailInputs.forEach(input => {
+      // Check if the ID contains 'email' (case insensitive)
+      if (input.id.toLowerCase().includes('email')) {
+        targetEmail = input.value.trim();
+      }
+    });
+
     const vBtn = document.getElementById(`vbtn-${fId}`);
 
-    // 2. Safety Check: If email is empty, stop here and tell the user
+    // 2. Safety Check: Stop if no email is found
     if (!targetEmail || targetEmail === "") {
-        alert("Error: No email address found. Please ensure the email field is filled correctly before requesting a code.");
+        alert("Verification Error: The system cannot find an email address to send the code to. Please ensure your email field is filled.");
+        vBtn.disabled = false;
+        vBtn.innerText = "Click here to Send Verification Code";
         return; 
     }
 
-    // 3. Generate a random 6-digit number
     generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
-    
-    // 4. Update UI to show progress
-    vBtn.innerText = "Sending code to " + targetEmail + "...";
+    vBtn.innerText = "Sending to " + targetEmail + "...";
     vBtn.disabled = true;
 
-    // 5. CALL THE GOOGLE SCRIPT
     google.script.run
       .withSuccessHandler(function() {
           vBtn.style.display = 'none';
           document.getElementById(`vgroup-${fId}`).style.display = 'flex';
-          console.log("Verification sent to: " + targetEmail);
       })
       .withFailureHandler(function(err) {
-          alert("Email Error: " + err.message);
+          alert("Google Script Error: " + err.message);
           vBtn.innerText = "Click here to Send Verification Code";
           vBtn.disabled = false;
       })
       .sendVerificationEmail(targetEmail, generatedCode, fId.toUpperCase());
   }
-
-
 
 
   function confirmCode(fId) {
