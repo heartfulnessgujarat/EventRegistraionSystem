@@ -316,53 +316,54 @@ function validateField(id, value, rule) {
   }
 
 
+
 function checkAllValidations() {
     let allValid = true;
     
     fieldRules.forEach(r => {
       const input = document.getElementById(`inp-${r.field_id}`);
       const container = document.getElementById(`cont-${r.field_id}`);
-      const errorDiv = document.getElementById(`err-${r.field_id}`); // Finds the box
+      const errorDiv = document.getElementById(`err-${r.field_id}`);
+      const vBtn = document.getElementById(`vbtn-${r.field_id}`); // Find the yellow button
       
       if (container && container.style.display === 'block' && input) {
         let isValid = validateField(r.field_id, input.value, r.field_validation);
 
-        // Special check for Centre dropdown
-        if (r.field_id === 'centre') {
-            const dropdown = document.getElementById('res-centre');
-            if (dropdown && dropdown.style.display === 'block') isValid = false;
-            if (input.value.trim() === "") isValid = false;
+        // --- VERIFICATION BUTTON LOGIC ---
+        // Only show the button if: 1. Edit is active 2. Field is Mobile/Email 3. Value changed
+        if (document.getElementById('btn-update').style.display === 'block' && (r.field_id === 'mobile' || r.field_id === 'email')) {
+            const isChanged = input.value.trim() !== (originalValues ? originalValues[r.field_id] : "");
+            if (isChanged && isValid && vBtn) {
+                vBtn.style.display = 'block';
+            } else if (vBtn) {
+                vBtn.style.display = 'none';
+            }
         }
 
-        // --- ERROR TEXT LOGIC ---
         if (!isValid && input.value.trim() !== "") {
             if (errorDiv) {
-                // Fetch from your Google Sheet column "error_msg"
-                errorDiv.textContent = r.error_msg || r.Error_Msg || "Invalid Entry"; 
+                errorDiv.textContent = r.error_msg || "Invalid Entry"; 
                 errorDiv.style.display = 'block';
             }
+            if (vBtn) vBtn.style.display = 'none'; // Hide button if there's an error
         } else {
             if (errorDiv) errorDiv.style.display = 'none';
         }
 
-        // --- YOUR RED BORDER (DON'T TOUCH) ---
         input.style.border = isValid ? '1px solid #ced4da' : '2px solid red';
         if (!isValid) allValid = false;
       }
     });
 
-    // Update the button states
     const regBtn = document.getElementById('btn-register');
     const updBtn = document.getElementById('btn-update');
     
-    [regBtn, updBtn].forEach(btn => {
-        if (btn) {
-            btn.disabled = !allValid;
-            btn.style.opacity = allValid ? "1" : "0.5";
-            btn.style.cursor = allValid ? "pointer" : "not-allowed";
-        }
-    });
+    // Final Block: Update button stays disabled until verification is handled (we will refine this next)
+    if (updBtn) {
+        updBtn.disabled = !allValid;
+    }
 }
+
 
 
   
