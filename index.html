@@ -16,19 +16,15 @@
     label { display: block; font-weight: 700; font-size: 13px; color: #1a237e; margin-bottom: 6px; }
     input { width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
     input:disabled { background: #f8f9fa; color: #6c757d; }
-    
     .status-area { min-height: 20px; margin-top: 5px; }
     .error-msg-text { color: #d32f2f; font-size: 12px; font-weight: bold; display: none; }
-    
     .primary-btn { width: 100%; padding: 15px; background: #1a237e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-    
     .verify-btn { background: #fbc02d; color: #000; border: none; padding: 12px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; display: none; width: 100%; }
     .v-input-group { display: none; margin-top: 10px; gap: 8px; background: #fff9c4; padding: 10px; border-radius: 8px; border: 1px solid #fbc02d; align-items: center; }
     .v-input { flex: 1; padding: 10px !important; text-align: center; letter-spacing: 4px; font-weight: bold; background: white !important; border: 1px solid #fbc02d !important; }
     .v-confirm-btn { background: #1a237e; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; }
     .v-success { color: #2e7d32; font-size: 13px; font-weight: bold; display: none; margin-top: 8px; padding: 10px; border: 1px solid #2e7d32; border-radius: 6px; background: #e8f5e9; text-align: center; }
-
-    .dropdown { border: 1px solid #ddd; max-height: 200px; overflow-y: auto; background: white; position: absolute; width: 100%; z-index: 1000; display: none; border-radius: 0 0 8px 8px; }
+    .dropdown { border: 1px solid #ddd; max-height: 200px; overflow-y: auto; background: white; position: absolute; width: 100%; z-index: 1000; display: none; border-radius: 0 0 8px 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
     .item { padding: 12px; cursor: pointer; border-bottom: 1px solid #f1f1f1; font-size: 14px; }
     .item:hover { background: #e8eaf6; }
     #loader, #loading-init { text-align: center; padding: 40px; color: #1a237e; }
@@ -36,17 +32,15 @@
 </head>
 <body>
 <div class="card" id="app">
-  <div id="loading-init"><h2>Loading Registration Form...</h2></div>
+  <div id="loading-init"><h2>Loading Form...</h2></div>
   <div id="form-content" style="display:none;">
     <h2 id="title"></h2>
     <p class="subtitle" id="subtitle"></p>
     <div id="dynamic-fields"></div>
-
     <div id="btns-start" style="display:none; flex-direction:column; gap:10px;">
       <button id="btn-register" class="primary-btn" disabled onclick="submitData()">Confirm Registration</button>
       <button type="button" class="primary-btn" style="background:#455a64;" onclick="enableEdit()">I want to edit my details</button>
     </div>
-
     <button id="btn-update" class="primary-btn" style="display:none;" disabled onclick="submitData()">Update & Register</button>
   </div>
   <div id="loader" style="display:none;"><h3>Processing...</h3></div>
@@ -59,21 +53,23 @@
   const urlParams = new URLSearchParams(window.location.search);
   const eventId = (urlParams.get('id') || 'EVT001').toUpperCase();
   
-  let fieldRules = [], masterData = [];
+  let fieldRules = [], masterData = [], centreData = [];
   let originalValues = { mobile: '', email: '' }; 
   let verificationState = { mobile: true, email: true }; 
-  let generatedCode = null; 
-  let isEditModeActive = false; 
+  let generatedCode = null, isEditModeActive = false; 
 
   async function init() {
     try {
-      const configSnap = await db.ref('config/eventConfig').once('value');
-      const allConfigs = configSnap.val() || {};
-      const eventConfig = allConfigs[eventId] || { title: "Registration" };
+      const [configSnap, rulesSnap, masterSnap] = await Promise.all([
+        db.ref('config/eventConfig').once('value'),
+        db.ref('config/fieldRules').once('value'),
+        db.ref('masterData').once('value')
+      ]);
+      const eventConfig = (configSnap.val() || {})[eventId] || { title: "Registration" };
       document.getElementById('title').innerText = eventConfig.title;
       document.getElementById('subtitle').innerText = eventConfig.subtitle || "";
-      const rulesSnap = await db.ref('config/fieldRules').once('value');
       fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
+      masterData = Object.values(masterSnap.val() || {});
       renderForm();
       document.getElementById('loading-init').style.display = 'none';
       document.getElementById('form-content').style.display = 'block';
@@ -91,12 +87,10 @@
       div.innerHTML = `
         <label>${r.display_label || r.field_id}</label>
         <input type="text" id="inp-${r.field_id}" oninput="handleInput('${r.field_id}', this.value)" disabled autocomplete="off">
-        
         <div class="status-area">
             <div class="error-msg-text" id="err-${r.field_id}"></div>
             <button id="vbtn-${r.field_id}" class="verify-btn" onclick="triggerSendCode('${r.field_id}')">Click here to Send Verification Code</button>
         </div>
-
         <div id="vgroup-${r.field_id}" class="v-input-group">
           <input type="text" id="vcode-${r.field_id}" class="v-input" placeholder="6-digit Code" maxlength="6">
           <button type="button" class="v-confirm-btn" onclick="confirmCode('${r.field_id}')">Verify</button>
@@ -108,48 +102,36 @@
     });
   }
 
-  // --- ADDED MISSING FUNCTIONS BELOW ---
-
   function handleInput(fId, val) {
-    if(fId === 'full_name') handleSearch(val);
+    if(fId === 'full_name') handleSearch(val, 'full_name');
+    if(fId === 'centre') handleSearch(val, 'centre');
     checkAllValidations();
   }
 
-  function triggerSendCode(fId) {
-    generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const targetEmail = document.getElementById('inp-email').value;
-    const vBtn = document.getElementById(`vbtn-${fId}`);
+  function handleSearch(val, type) {
+    if (val.length < 2) return;
+    const resDiv = document.getElementById(`res-${type}`);
+    resDiv.innerHTML = ''; resDiv.style.display = 'block';
     
-    vBtn.innerText = "Sending code to " + targetEmail + "...";
-    vBtn.disabled = true;
-
-    google.script.run
-      .withSuccessHandler(function() {
-          vBtn.style.display = 'none';
-          document.getElementById(`vgroup-${fId}`).style.display = 'flex';
-      })
-      .withFailureHandler(function(err) {
-          alert("Email Error: " + err.message);
-          vBtn.innerText = "Click here to Send Verification Code";
-          vBtn.disabled = false;
-      })
-      .sendVerificationEmail(targetEmail, generatedCode, fId.toUpperCase());
+    const filtered = masterData.filter(x => (x[type] || '').toLowerCase().includes(val.toLowerCase())).slice(0,8);
+    filtered.forEach(item => {
+      const d = document.createElement('div'); d.className = 'item';
+      d.textContent = item[type];
+      d.onclick = () => {
+        if(type === 'full_name') selectParticipant(item);
+        if(type === 'centre') selectCentre(item);
+        resDiv.style.display = 'none';
+      };
+      resDiv.appendChild(d);
+    });
   }
 
-  function confirmCode(fId) {
-    const entered = document.getElementById(`vcode-${fId}`).value;
-    if (entered === generatedCode) {
-      verificationState[fId] = "DONE";
-      document.getElementById(`vgroup-${fId}`).style.display = 'none';
-      document.getElementById(`vsuccess-${fId}`).style.display = 'block';
-      document.getElementById(`inp-${fId}`).disabled = true;
-      checkAllValidations();
-    } else {
-      alert("Verification Code is incorrect. Please check your email.");
-    }
+  function selectCentre(item) {
+    document.getElementById('inp-centre').value = item.centre || '';
+    if(document.getElementById('inp-zone')) document.getElementById('inp-zone').value = item.zone || '';
+    if(document.getElementById('inp-district')) document.getElementById('inp-district').value = item.district || '';
+    checkAllValidations();
   }
-
-  // --- END OF ADDED FUNCTIONS ---
 
   function selectParticipant(p) {
     isEditModeActive = false;
@@ -158,8 +140,7 @@
     fieldRules.forEach(r => {
       const el = document.getElementById(`inp-${r.field_id}`);
       if (el) { 
-          el.value = p[r.field_id] || ''; 
-          el.disabled = true; 
+          el.value = p[r.field_id] || ''; el.disabled = true; 
           document.getElementById(`vbtn-${r.field_id}`).style.display = 'none';
           document.getElementById(`vsuccess-${r.field_id}`).style.display = 'none';
           if (r.initial_state !== 'Hidden') document.getElementById(`cont-${r.field_id}`).style.display = 'block'; 
@@ -167,7 +148,6 @@
     });
     document.getElementById('btns-start').style.display = 'flex';
     document.getElementById('btn-update').style.display = 'none';
-    document.getElementById('res-full_name').style.display = 'none';
     checkAllValidations();
   }
 
@@ -182,44 +162,63 @@
     checkAllValidations();
   }
 
+  function triggerSendCode(fId) {
+    generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const targetEmail = document.getElementById('inp-email').value;
+    const vBtn = document.getElementById(`vbtn-${fId}`);
+    vBtn.innerText = "Sending code to " + targetEmail + "...";
+    vBtn.disabled = true;
+
+    google.script.run
+      .withSuccessHandler(() => {
+          vBtn.style.display = 'none';
+          document.getElementById(`vgroup-${fId}`).style.display = 'flex';
+      })
+      .withFailureHandler(err => {
+          alert("Email Error: " + err.message);
+          vBtn.innerText = "Click here to Send Verification Code";
+          vBtn.disabled = false;
+      })
+      .sendVerificationEmail(targetEmail, generatedCode, fId.toUpperCase());
+  }
+
+  function confirmCode(fId) {
+    if (document.getElementById(`vcode-${fId}`).value === generatedCode) {
+      verificationState[fId] = "DONE";
+      document.getElementById(`vgroup-${fId}`).style.display = 'none';
+      document.getElementById(`vsuccess-${fId}`).style.display = 'block';
+      document.getElementById(`inp-${fId}`).disabled = true;
+      checkAllValidations();
+    } else { alert("Verification Code is incorrect."); }
+  }
+
   function checkAllValidations() {
     let allValid = true;
     fieldRules.forEach(r => {
       const input = document.getElementById(`inp-${r.field_id}`);
       const vBtn = document.getElementById(`vbtn-${r.field_id}`);
       const errDiv = document.getElementById(`err-${r.field_id}`);
-
       if (input && document.getElementById(`cont-${r.field_id}`).style.display === 'block') {
         let val = input.value.trim();
         let isValid = validateField(r.field_id, val, r.field_validation);
-        
         if (!isValid && val !== "") {
-            errDiv.innerText = (r.field_id === 'mobile') ? "Must be exactly 10 digits" : "Invalid Email format";
-            errDiv.style.display = 'block';
-            vBtn.style.display = 'none'; 
-            input.style.border = '2px solid red';
-            allValid = false;
+            errDiv.innerText = (r.field_id === 'mobile') ? "Must be 10 digits" : "Invalid format";
+            errDiv.style.display = 'block'; vBtn.style.display = 'none';
+            input.style.border = '2px solid red'; allValid = false;
         } else {
-            errDiv.style.display = 'none';
-            input.style.border = '1px solid #ced4da';
-            
+            errDiv.style.display = 'none'; input.style.border = '1px solid #ced4da';
             if (r.field_id === 'mobile' || r.field_id === 'email') {
                 const isChanged = val !== originalValues[r.field_id];
-                const isPassedFirstLayer = isValid && val !== "";
-                
-                if (isEditModeActive && isChanged && isPassedFirstLayer && verificationState[r.field_id] === true) {
-                    vBtn.style.display = 'block';
-                    verificationState[r.field_id] = false; 
+                if (isEditModeActive && isChanged && isValid && val !== "" && verificationState[r.field_id] === true) {
+                    vBtn.style.display = 'block'; verificationState[r.field_id] = false; 
                 } else if (!isChanged || !isEditModeActive || verificationState[r.field_id] === "DONE") {
-                    vBtn.style.display = 'none';
-                    if (!isChanged) verificationState[r.field_id] = true;
+                    vBtn.style.display = 'none'; if (!isChanged) verificationState[r.field_id] = true;
                 }
             }
         }
         if (!isValid) allValid = false;
       }
     });
-
     const isReady = allValid && verificationState.mobile !== false && verificationState.email !== false;
     document.getElementById('btn-update').disabled = !isReady;
     document.getElementById('btn-register').disabled = !allValid;
@@ -227,22 +226,10 @@
 
   function validateField(id, value, rule) {
     if (!rule || rule === 'NULL') return true;
-    const v = value.trim();
-    if (v === "") return false;
-    if (rule === 'MOB') return /^[6-9]\d{9}$/.test(v); 
+    const v = value.trim(); if (v === "") return false;
+    if (rule === 'MOB') return /^[6-9]\d{9}$/.test(v);
     if (rule === 'EMAIL') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
     return true;
-  }
-
-  async function handleSearch(val) {
-    if (val.length < 3) return;
-    if (masterData.length === 0) { const snap = await db.ref('masterData').once('value'); masterData = Object.values(snap.val() || {}); }
-    const resDiv = document.getElementById('res-full_name');
-    resDiv.innerHTML = ''; resDiv.style.display = 'block';
-    masterData.filter(x => x.full_name?.toLowerCase().includes(val.toLowerCase())).slice(0,8).forEach(item => {
-      const d = document.createElement('div'); d.className = 'item'; d.textContent = item.full_name;
-      d.onclick = () => selectParticipant(item); resDiv.appendChild(d);
-    });
   }
 
   async function submitData() {
@@ -252,7 +239,11 @@
     const payload = { registration_id: regId, timestamp: new Date().toISOString() };
     fieldRules.forEach(r => { payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; });
     await db.ref('registrations/' + regId).set(payload);
-    document.getElementById('app').innerHTML = `<h2>Success!</h2><p>ID: ${regId}</p>`;
+    
+    // Call the original Registration success email
+    google.script.run.sendRegistrationEmail(payload.email, regId, payload.full_name);
+    
+    document.getElementById('app').innerHTML = `<h2>Success!</h2><p>Registration ID: ${regId}</p>`;
   }
   init();
 </script>
