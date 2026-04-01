@@ -172,15 +172,23 @@ function renderForm() {
   checkAllValidations();
   }
 
-
-  
-  function selectLocation(l) {
+function selectLocation(l) {
     document.getElementById('inp-centre').value = l.centre;
-    if(document.getElementById('inp-district')) document.getElementById('inp-district').value = l.district || '';
-    if(document.getElementById('inp-zone')) document.getElementById('inp-zone').value = l.zone || '';
+    if(document.getElementById('inp-district')) {
+      document.getElementById('inp-district').value = l.district || '';
+    }
+    if(document.getElementById('inp-zone')) {
+      document.getElementById('inp-zone').value = l.zone || '';
+    }
     document.getElementById('res-centre').style.display = 'none';
+    
+    // --- THE TRIGGER ---
+    // Forces the validation engine to re-scan the form now that the 
+    // Centre, District, and Zone values have been injected.
+    checkAllValidations();
   }
-
+  
+  
 function enableEdit() {
     document.getElementById('btns-start').style.display = 'none';
     document.getElementById('btn-update').style.display = 'block';
