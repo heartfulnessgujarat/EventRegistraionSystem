@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -16,10 +15,7 @@
     label { display: block; font-weight: 700; font-size: 13px; color: #1a237e; margin-bottom: 6px; }
     input { width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
     input:disabled { background: #f8f9fa; color: #6c757d; }
-    
-    /* New Error Message Style */
     .error-msg-text { color: #d32f2f; font-size: 12px; margin-top: 5px; font-weight: bold; display: none; }
-    
     .help-text { font-size: 11px; color: #666; margin-top: 5px; display: none; font-weight: 500; }
     .primary-btn { width: 100%; padding: 15px; background: #1a237e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
     .dropdown { border: 1px solid #ddd; max-height: 200px; overflow-y: auto; background: white; position: absolute; width: 100%; z-index: 1000; display: none; border-radius: 0 0 8px 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
@@ -40,11 +36,10 @@
     <p class="subtitle" id="subtitle"></p>
     <div id="dynamic-fields"></div>
 
-<div id="btns-start" style="display:none; flex-direction:column; gap:10px;">
+    <div id="btns-start" style="display:none; flex-direction:column; gap:10px;">
       <button id="btn-register" class="primary-btn" disabled onclick="submitData()">Confirm Registration</button>
       <button class="primary-btn" style="background:#455a64;" onclick="enableEdit()">I want to edit my details</button>
     </div>
-
 
     <button id="btn-update" class="primary-btn" style="display:none;" disabled onclick="submitData()">Update & Register</button>
   </div>
@@ -56,19 +51,21 @@
 </div>
 
 <script>
-
-const firebaseConfig = { databaseURL: "https://ferrari-reg-2026-default-rtdb.asia-southeast1.firebasedatabase.app" };
+  // 1. CONFIG & GLOBALS
+  const firebaseConfig = { databaseURL: "https://ferrari-reg-2026-default-rtdb.asia-southeast1.firebasedatabase.app" };
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  // --- ADD THESE 3 LINES IF THEY ARE MISSING ---
+  const urlParams = new URLSearchParams(window.location.search);
+  const eventId = (urlParams.get('id') || 'EVT001').toUpperCase();
+
+  let fieldRules = [], masterData = [], locData = [], eventConfig = {};
   let verificationStates = { email: false, mobile: false };
   let generatedCodes = { email: "", mobile: "" };
   let originalValues = {}; 
-    const urlParams = new URLSearchParams(window.location.search);
-  
-  const eventId = (urlParams.get('id') || 'EVT001').toUpperCase();
-  let fieldRules = [], masterData = [], locData = [], eventConfig = {};
+
+  // 2. INITIALIZATION
+  window.onload = init;
 
   async function init() {
     try {
@@ -76,7 +73,6 @@ const firebaseConfig = { databaseURL: "https://ferrari-reg-2026-default-rtdb.asi
       const allConfigs = configSnap.val() || {};
       eventConfig = allConfigs[eventId] || Object.values(allConfigs).find(c => String(c.event_id).toUpperCase() === eventId) || { title: "Registration" };
       
-      // Update the real title and subtitle using innerHTML
       document.getElementById('title').innerHTML = eventConfig.title || "Registration";
       document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
       
@@ -85,18 +81,18 @@ const firebaseConfig = { databaseURL: "https://ferrari-reg-2026-default-rtdb.asi
       
       renderForm();
 
-      // THE SWAP: Hide loading, Show form
       document.getElementById('loading-init').style.display = 'none';
       document.getElementById('form-content').style.display = 'block';
 
+      checkAllValidations();
     } catch (e) {
       console.error("Init Error:", e);
       document.getElementById('loading-init').innerHTML = "<h2>Error Loading Form</h2>";
     }
   }
 
-
-function renderForm() {
+  // 3. CORE FORM RENDERING
+  function renderForm() {
     const container = document.getElementById('dynamic-fields');
     container.innerHTML = '';
     
@@ -107,17 +103,14 @@ function renderForm() {
       div.style.display = (r.initial_state === 'Visible') ? 'block' : 'none';
       
       const labelText = r.display_label || r.Display_Label || r.field_id;
-      
-      // Setup UI for Email and Mobile fields
       const isVerifyField = (r.field_id === 'email' || r.field_id === 'mobile');
       
-      // FIXED: Added backticks around the HTML string below
       const verificationHtml = isVerifyField ? `
         <div id="v-wrapper-${r.field_id}" style="display:none;">
           <button id="vbtn-${r.field_id}" type="button" class="primary-btn" 
                   style="background:#f3cc12; color:black; margin-top:10px; font-size:13px;" 
                   onclick="triggerSendCode('${r.field_id}')">
-            Click here to send verification code to [loading...]
+            Click here to verify change
           </button>
         </div>
         <div id="vgroup-${r.field_id}" style="display:none; gap:10px; margin-top:10px;">
@@ -130,324 +123,4 @@ function renderForm() {
 
       div.innerHTML = `
         <label>${labelText}</label>
-        <input type="text" id="inp-${r.field_id}" 
-               oninput="handleSearch('${r.field_id}', this.value); checkAllValidations();"
-               disabled autocomplete="off">
-        ${verificationHtml}
-        <div class="error-msg-text" id="err-${r.field_id}"></div>
-        <div class="help-text" id="help-${r.field_id}">${r.field_help_text || ''}</div>
-        <div class="dropdown" id="res-${r.field_id}"></div>`;
-        
-      container.appendChild(div);
-      
-      if (r.field_id === 'full_name') {
-        div.style.display = 'block';
-        document.getElementById('inp-full_name').disabled = false;
-      }
-    });
-}
-
-
-
-
-  
-
-  async function handleSearch(fId, val) {
-    const resDiv = document.getElementById(`res-${fId}`);
-    if (val.length < 3) { resDiv.style.display = 'none'; return; }
-    if (fId === 'full_name') {
-      if (masterData.length === 0) { const snap = await db.ref('masterData').once('value'); masterData = Object.values(snap.val() || {}); }
-      renderDropdown(resDiv, masterData.filter(x => x.full_name?.toLowerCase().includes(val.toLowerCase())).slice(0, 8), 'name');
-    } else if (fId === 'centre') {
-      if (locData.length === 0) { const snap = await db.ref('config/locations').once('value'); locData = Object.values(snap.val() || {}); }
-      renderDropdown(resDiv, locData.filter(x => x.centre?.toLowerCase().includes(val.toLowerCase())).slice(0, 8), 'loc');
-    }
-  }
-
-  function renderDropdown(div, list, type) {
-    div.innerHTML = '';
-    if (list.length > 0) {
-      div.style.display = 'block';
-      list.forEach(item => {
-        const d = document.createElement('div');
-        d.className = 'item';
-        d.textContent = type === 'loc' ? item.centre : item.full_name;
-        d.onclick = () => type === 'loc' ? selectLocation(item) : selectParticipant(item);
-        div.appendChild(d);
-      });
-    }
-  }
-
-
-let originalValues = {}; // Top of script
-
-function selectParticipant(p) {
-    fieldRules.forEach(r => {
-        const el = document.getElementById(`inp-${r.field_id}`);
-        if (el) { 
-            el.value = p[r.field_id] || ''; 
-            originalValues[r.field_id] = el.value; // Store the "Database" value
-            
-            if (r.field_id === 'full_name') el.disabled = true; 
-            if (r.initial_state !== 'Hidden') {
-                document.getElementById(`cont-${r.field_id}`).style.display = 'block';
-            }
-        }
-    });
-    document.getElementById('res-full_name').style.display = 'none';
-    document.getElementById('btns-start').style.display = 'flex';
-    checkAllValidations();
-}
-
-
-function selectLocation(l) {
-    document.getElementById('inp-centre').value = l.centre;
-    if(document.getElementById('inp-district')) {
-      document.getElementById('inp-district').value = l.district || '';
-    }
-    if(document.getElementById('inp-zone')) {
-      document.getElementById('inp-zone').value = l.zone || '';
-    }
-    document.getElementById('res-centre').style.display = 'none';
-    
-    // --- THE TRIGGER ---
-    // Forces the validation engine to re-scan the form now that the 
-    // Centre, District, and Zone values have been injected.
-    checkAllValidations();
-  }
-  
-  
-function enableEdit() {
-    document.getElementById('btns-start').style.display = 'none';
-    document.getElementById('btn-update').style.display = 'block';
-    document.getElementById('btn-update').disabled = false;
-    
-    fieldRules.forEach(r => {
-      const el = document.getElementById(`inp-${r.field_id}`);
-      if (document.getElementById(`help-${r.field_id}`)) {
-        document.getElementById(`help-${r.field_id}`).style.display = 'block';
-      }
-      
-      // THE FIX: Only make it editable if the rule says "Editable"
-      // This will now respect your "ReadOnly" setting for full_name
-      if (r.edit_behavior && r.edit_behavior.includes("Editable")) {
-        el.disabled = false;
-      } else {
-        el.disabled = true; // Stay locked if set to ReadOnly
-      }
-    });
-  }
-
-
-  
-
-  async function submitData() {
-    document.getElementById('form-content').style.display = 'none';
-    document.getElementById('loader').style.display = 'block';
-    
-    const now = new Date();
-    const timestampStr = now.toISOString().replace(/[-T:Z.]/g, "").slice(0, 10);
-    const randomNum = Math.floor(100 + Math.random() * 900);
-    const regId = `${eventId.toUpperCase()}REG${timestampStr}${randomNum}`;
-
-
-const payload = { 
-        registration_id: regId, 
-        event_id: eventId.toUpperCase(), 
-        timestamp: now.toISOString() 
-    };
-
-    
-    fieldRules.forEach(r => { 
-        payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; 
-    });
-
-    try {
-        await db.ref('registrations/' + regId).set(payload);
-        const scriptUrl = "https://script.google.com/macros/s/AKfycbwkU3kI8yzR2kENRStLaX1i32roJdVBjm8yQcW_b9WI35OL-7qCLlKstTrSxQ8mM69iqw/exec"; 
-
-      
-        const finalTriggerUrl = `${scriptUrl}?action=sendEmail&regId=${regId}&eventId=${eventId.toUpperCase()}`;
-        
-        fetch(finalTriggerUrl, { mode: 'no-cors' });
-        
-        const snap = await db.ref(`htmlStorage/${eventId.toUpperCase()}/thank`).once('value');
-        const finalHtml = snap.val();
-
-        if (finalHtml && finalHtml !== "SYNCED DIRECTLY TO FIREBASE") {
-            document.getElementById('app').innerHTML = `<div style="width:100%;">${finalHtml}</div>`;
-        } else {
-            document.getElementById('app').innerHTML = `<h2>Registration Successful!</h2><p>ID: ${regId}</p><p>Check your email for confirmation.</p>`;
-        }
-        
-    } catch (e) { 
-        console.error("Submission Error:", e);
-        alert("Error during registration. Please try again."); 
-        document.getElementById('form-content').style.display = 'block';
-        document.getElementById('loader').style.display = 'none';
-    }
-  }
-
-  init();
-
-
-function validateField(id, value, rule) {
-    if (!rule || rule === 'NULL') return true;
-    const val = value.trim();
-    if (val === "") return false;
-
-    // 1. MOB (Indian Mobile)
-    if (rule === 'MOB') return /^[6-9]\d{9}$/.test(val);
-
-    // 2. PIN (Indian Pincode)
-    if (rule === 'PIN') return /^\d{6}$/.test(val);
-
-    // 3. EMAIL
-    if (rule === 'EMAIL') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
-
-    // 4. NUM:XTOY (Integers)
-    if (rule.startsWith('NUM:')) {
-      const range = rule.replace('NUM:', '').split('TO');
-      const num = parseInt(val);
-      return !isNaN(num) && num >= parseInt(range[0]) && num <= parseInt(range[1]) && /^\d+$/.test(val);
-    }
-
-    // 5. NUMF:XTOY (Fractions)
-    if (rule.startsWith('NUMF:')) {
-      const range = rule.replace('NUMF:', '').split('TO');
-      const num = parseFloat(val);
-      return !isNaN(num) && num >= parseFloat(range[0]) && num <= parseFloat(range[1]);
-    }
-
-    return true;
-  }
-
-// --- GLOBAL STATES TO TRACK VERIFICATION ---
-let verificationStates = { email: false, mobile: false };
-let generatedCodes = { email: "", mobile: "" };
-
-
-
-// Add a global to store the original values from Master Data
-let originalValues = {}; 
-
-// Update your selectParticipant function to save the originals
-function selectParticipant(p) {
-    fieldRules.forEach(r => {
-        const el = document.getElementById(`inp-${r.field_id}`);
-        if (el) { 
-            el.value = p[r.field_id] || ''; 
-            originalValues[r.field_id] = el.value; // SAVE ORIGINAL HERE
-            if (r.field_id === 'full_name') el.disabled = true; 
-            if (r.initial_state !== 'Hidden') {
-                document.getElementById(`cont-${r.field_id}`).style.display = 'block';
-            }
-        }
-    });
-    document.getElementById('res-full_name').style.display = 'none';
-    document.getElementById('btns-start').style.display = 'flex';
-    checkAllValidations();
-}
-
-
-function checkAllValidations() {
-
-// GUARD: If fieldRules is empty or null, exit immediately
-    if (!fieldRules || fieldRules.length === 0) return; 
-    let allValid = true;
-    let verificationPending = false;
-         
-    
-    fieldRules.forEach(r => {
-        const input = document.getElementById(`inp-${r.field_id}`);
-        const container = document.getElementById(`cont-${r.field_id}`);
-        
-        if (container && container.style.display === 'block' && input) {
-            // LAYER 1: REGEX (Always check this)
-            let isValid = validateField(r.field_id, input.value, r.field_validation);
-            
-            // Border Logic
-            input.style.border = isValid ? '1px solid #ced4da' : '2px solid red';
-            if (!isValid) allValid = false;
-
-            // LAYER 2: SENSITIVE FIELDS (Email & Mobile)
-            if (r.field_id === 'email' || r.field_id === 'mobile') {
-                const wrapper = document.getElementById(`v-wrapper-${r.field_id}`);
-                const isEditable = !input.disabled;
-                const isChanged = (input.value !== originalValues[r.field_id]);
-                const isVerified = verificationStates[r.field_id];
-
-                if (isEditable && isChanged && !isVerified) {
-                    // USER MODIFIED EMAIL/MOBILE - LOCK THE BUTTON
-                    if (isValid) {
-                        wrapper.style.display = 'block';
-                        const vBtn = document.getElementById(`vbtn-${r.field_id}`);
-                        vBtn.innerText = "Click here to verify change of " + r.field_id + " to " + input.value;
-                    }
-                    verificationPending = true; 
-                } else {
-                    // No change or already verified - Hide the yellow button
-                    if (wrapper) wrapper.style.display = 'none';
-                }
-            }
-        }
-    });
-
-    // FINAL BUTTON LOGIC
-    const updBtn = document.getElementById('btn-update');
-    if (updBtn) {
-        // Button is clickable ONLY if:
-        // 1. All fields pass Regex (allValid)
-        // 2. No sensitive changes are waiting for a code (verificationPending)
-        const canSubmit = allValid && !verificationPending;
-        updBtn.disabled = !canSubmit;
-        updBtn.style.opacity = canSubmit ? "1" : "0.5";
-        updBtn.style.cursor = canSubmit ? "pointer" : "not-allowed";
-    }
-}
-
-
-async function triggerSendCode(fId) {
-    const inputVal = document.getElementById(`inp-${fId}`).value.trim();
-    const emailField = document.getElementById('inp-email').value.trim();
-    
-    // Logic: If verifying Mobile, send to current Email. If verifying Email, send to New Email.
-    const targetEmail = (fId === 'email') ? inputVal : emailField;
-    
-    if (!targetEmail) { alert("Valid email required for verification."); return; }
-
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    generatedCodes[fId] = code;
-
-    alert("Verification code has been sent to " + targetEmail);
-
-    document.getElementById(`v-wrapper-${fId}`).style.display = 'none'; 
-    document.getElementById(`vgroup-${fId}`).style.display = 'flex';
-
-    const scriptUrl = "https://script.google.com/macros/s/AKfycbwwF8ZbE_Mp3TfcRIIK3IGn9bMw7MIbrURkqzLlfkYWU5twkhMYiDYeh_DPiBt2yTyu/exec";
-    const finalUrl = `${scriptUrl}?action=verifyExternal&email=${encodeURIComponent(targetEmail)}&code=${code}&fId=${fId.toUpperCase()}`;
-
-    fetch(finalUrl, { mode: 'no-cors' });
-}
-
-
-  
-function verifyCodeInput(fId) {
-    const userCode = document.getElementById(`vcode-${fId}`).value.trim();
-    if (userCode === generatedCodes[fId]) {
-        // Mark as verified
-        verificationStates[fId] = true;
-        
-        // UI Updates
-        document.getElementById(`vstatus-${fId}`).innerHTML = "✅ Verified";
-        document.getElementById(`vgroup-${fId}`).style.display = 'none';
-        
-        // Re-run validations to unlock the "Register" button
-        checkAllValidations(); 
-    } else {
-        alert("Incorrect code. Please check your " + fId + " and try again.");
-    }
-}  
-</script>
-</body>
-</html>
+        <input
