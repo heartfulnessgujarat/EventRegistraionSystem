@@ -258,7 +258,9 @@ const payload = {
 
     try {
         await db.ref('registrations/' + regId).set(payload);
-        const scriptUrl = "https://script.google.com/macros/s/AKfycbwwF8ZbE_Mp3TfcRIIK3IGn9bMw7MIbrURkqzLlfkYWU5twkhMYiDYeh_DPiBt2yTyu/exec"; 
+        const scriptUrl = "https://script.google.com/macros/s/AKfycbw-Ew4Tue9W4Sn1wNmURbOhzCainqGoIw8dHRJEhe6MBvM4q7c9eT2JhJ3hjY9FHyhmcg/exec"; 
+
+      //https://script.google.com/macros/s/AKfycbw-Ew4Tue9W4Sn1wNmURbOhzCainqGoIw8dHRJEhe6MBvM4q7c9eT2JhJ3hjY9FHyhmcg/exec
 
         const finalTriggerUrl = `${scriptUrl}?action=sendEmail&regId=${regId}&eventId=${eventId.toUpperCase()}`;
         
