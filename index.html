@@ -23,10 +23,10 @@
     .primary-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
     /* Verification UI */
-    .verify-btn { background: #fbc02d; color: #000; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; margin-top: 8px; display: none; }
-    .v-input-group { display: none; margin-top: 10px; gap: 10px; align-items: center; background: #fff9c4; padding: 10px; border-radius: 8px; }
-    .v-input { width: 120px !important; padding: 8px !important; text-align: center; letter-spacing: 4px; font-weight: bold; }
-    .v-success { color: #2e7d32; font-size: 13px; font-weight: bold; display: none; margin-top: 8px; padding: 5px; border: 1px solid #2e7d32; border-radius: 4px; background: #e8f5e9; text-align: center; }
+    .verify-btn { background: #fbc02d; color: #000; border: none; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; margin-top: 8px; display: none; width: 100%; }
+    .v-input-group { display: none; margin-top: 10px; gap: 10px; align-items: center; background: #fff9c4; padding: 10px; border-radius: 8px; border: 1px solid #fbc02d; }
+    .v-input { width: 100% !important; padding: 8px !important; text-align: center; letter-spacing: 4px; font-weight: bold; background: white !important; }
+    .v-success { color: #2e7d32; font-size: 13px; font-weight: bold; display: none; margin-top: 8px; padding: 8px; border: 1px solid #2e7d32; border-radius: 4px; background: #e8f5e9; text-align: center; }
 
     .dropdown { border: 1px solid #ddd; max-height: 200px; overflow-y: auto; background: white; position: absolute; width: 100%; z-index: 1000; display: none; border-radius: 0 0 8px 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
     .item { padding: 12px; cursor: pointer; border-bottom: 1px solid #f1f1f1; font-size: 14px; }
@@ -36,15 +36,17 @@
 </head>
 <body>
 <div class="card" id="app">
-  <div id="loading-init"><h2>Loading registration form...</h2></div>
+  <div id="loading-init"><h2>Loading form...</h2></div>
   <div id="form-content" style="display:none;">
     <h2 id="title"></h2>
     <p class="subtitle" id="subtitle"></p>
     <div id="dynamic-fields"></div>
+
     <div id="btns-start" style="display:none; flex-direction:column; gap:10px;">
       <button id="btn-register" class="primary-btn" disabled onclick="submitData()">Confirm Registration</button>
-      <button class="primary-btn" style="background:#455a64;" onclick="enableEdit()">I want to edit my details</button>
+      <button type="button" class="primary-btn" style="background:#455a64;" onclick="enableEdit()">I want to edit my details</button>
     </div>
+
     <button id="btn-update" class="primary-btn" style="display:none;" disabled onclick="submitData()">Update & Register</button>
   </div>
   <div id="loader" style="display:none;"><h3>Processing...</h3></div>
@@ -61,7 +63,7 @@
   let originalValues = {}; 
   let verificationState = { mobile: true, email: true }; 
   let generatedCode = null; 
-  let isEditModeActive = false; // Flag for the button
+  let isEditModeActive = false; 
 
   async function init() {
     try {
@@ -90,12 +92,16 @@
       div.innerHTML = `
         <label>${labelText}</label>
         <input type="text" id="inp-${r.field_id}" oninput="handleSearch('${r.field_id}', this.value); checkAllValidations();" disabled autocomplete="off">
+        
         <button id="vbtn-${r.field_id}" class="verify-btn" onclick="triggerSendCode('${r.field_id}')">Click here to Send Verification Code</button>
+        
         <div id="vgroup-${r.field_id}" class="v-input-group">
-          <input type="text" id="vcode-${r.field_id}" class="v-input" placeholder="000000" maxlength="6">
-          <button class="primary-btn" style="width:auto; padding:8px 15px; margin:0; font-size:12px;" onclick="confirmCode('${r.field_id}')">Verify</button>
+          <input type="text" id="vcode-${r.field_id}" class="v-input" placeholder="Enter 6-digit Code" maxlength="6">
+          <button type="button" class="primary-btn" style="width:auto; padding:8px 15px; margin:0; font-size:12px;" onclick="confirmCode('${r.field_id}')">Verify</button>
         </div>
+
         <div id="vsuccess-${r.field_id}" class="v-success">✓ Verified & Updated</div>
+
         <div class="error-msg-text" id="err-${r.field_id}"></div>
         <div class="help-text" id="help-${r.field_id}">${r.field_help_text || ''}</div>
         <div class="dropdown" id="res-${r.field_id}"></div>`;
@@ -105,18 +111,19 @@
   }
 
   function selectParticipant(p) {
+    isEditModeActive = false; // Reset edit mode
+    originalValues = { mobile: p.mobile || '', email: p.email || '' };
+    verificationState = { mobile: true, email: true };
+
     fieldRules.forEach(r => {
       const el = document.getElementById(`inp-${r.field_id}`);
       if (el) { 
         el.value = p[r.field_id] || ''; 
-        if (r.field_id === 'full_name') el.disabled = true;
+        el.disabled = true; // Lock everything initially
         if (r.initial_state !== 'Hidden') document.getElementById(`cont-${r.field_id}`).style.display = 'block';
       }
     });
-    originalValues['mobile'] = p.mobile || '';
-    originalValues['email'] = p.email || '';
-    verificationState = { mobile: true, email: true };
-    isEditModeActive = false; // Reset on new selection
+
     document.getElementById('res-full_name').style.display = 'none';
     document.getElementById('btns-start').style.display = 'flex';
     document.getElementById('btn-update').style.display = 'none';
@@ -127,38 +134,8 @@
     isEditModeActive = true;
     document.getElementById('btns-start').style.display = 'none';
     document.getElementById('btn-update').style.display = 'block';
+    
     fieldRules.forEach(r => {
       const el = document.getElementById(`inp-${r.field_id}`);
       if (document.getElementById(`help-${r.field_id}`)) document.getElementById(`help-${r.field_id}`).style.display = 'block';
-      if (r.edit_behavior && r.edit_behavior.includes("Editable")) el.disabled = false;
-    });
-    checkAllValidations();
-  }
-
-  function checkAllValidations() {
-    let allValid = true;
-    fieldRules.forEach(r => {
-      const input = document.getElementById(`inp-${r.field_id}`);
-      const container = document.getElementById(`cont-${r.field_id}`);
-      const vBtn = document.getElementById(`vbtn-${r.field_id}`);
-      const errorDiv = document.getElementById(`err-${r.field_id}`);
-      
-      if (container && container.style.display === 'block' && input) {
-        let val = input.value.trim();
-        let isValid = validateField(r.field_id, val, r.field_validation);
-
-        if (r.field_id === 'mobile' || r.field_id === 'email') {
-           const original = originalValues[r.field_id] || "";
-           const isChanged = val !== original;
-           if (isEditModeActive && isChanged && isValid && verificationState[r.field_id] === true) {
-               if (vBtn) vBtn.style.display = 'block';
-               verificationState[r.field_id] = false; 
-           } 
-           if (!isChanged || !isEditModeActive || verificationState[r.field_id] === "DONE") {
-               if (vBtn) vBtn.style.display = 'none';
-               if (!isChanged) verificationState[r.field_id] = true;
-           }
-        }
-
-        if (!isValid && val !== "") {
-            if (errorDiv) { errorDiv.textContent = r.error_msg || "Invalid Format"; errorDiv.style.display = 'block';
+      if (r
