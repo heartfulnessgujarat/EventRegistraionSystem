@@ -112,7 +112,9 @@
   const urlParams = new URLSearchParams(window.location.search);
   const eventId = (urlParams.get('id') || 'EVT001').toUpperCase();
   let fieldRules = [], masterData = [], locData = [], eventConfig = {};
-
+let originalValues = {}; // Stores the data before editing
+  let verificationState = { mobile: true, email: true }; // Locks/Unlocks the form
+  let generatedCode = null; // Stores the 6-digit code
   async function init() {
     try {
       const configSnap = await db.ref('config/eventConfig').once('value');
