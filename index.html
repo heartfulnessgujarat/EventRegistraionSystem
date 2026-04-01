@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -109,24 +110,7 @@ function renderForm() {
                autocomplete="off">
         
         <div class="error-msg-text" id="err-${r.field_id}"></div>
-
-        <button id="vbtn-${r.field_id}" class="primary-btn" 
-                style="display:none; background:#fbc02d; color:black; font-size:12px; padding:8px;" 
-                onclick="triggerSendCode('${r.field_id}')">
-                Click here to Send Verification Code
-        </button>
-
-        <div id="vgroup-${r.field_id}" style="display:none; margin-top:10px; gap:5px; align-items:center;">
-          <input type="text" id="vcode-${r.field_id}" placeholder="6-digit code" 
-                 style="flex:1; text-align:center; letter-spacing:3px; border:2px solid #fbc02d;">
-          <button class="primary-btn" style="width:auto; margin:0; padding:10px;" 
-                  onclick="confirmCode('${r.field_id}')">Verify</button>
-        </div>
-
-        <div id="vsuccess-${r.field_id}" 
-             style="display:none; color:green; font-weight:bold; font-size:12px; margin-top:5px;">
-             ✓ Verified
-        </div>
+        
         <div class="help-text" id="help-${r.field_id}">${r.field_help_text || ''}</div>
         <div class="dropdown" id="res-${r.field_id}"></div>`;
         
@@ -141,7 +125,7 @@ function renderForm() {
 
 
 
-
+  
 
   
 
@@ -258,9 +242,7 @@ const payload = {
 
     try {
         await db.ref('registrations/' + regId).set(payload);
-        const scriptUrl = "https://script.google.com/macros/s/AKfycbw-Ew4Tue9W4Sn1wNmURbOhzCainqGoIw8dHRJEhe6MBvM4q7c9eT2JhJ3hjY9FHyhmcg/exec"; 
-
-      //https://script.google.com/macros/s/AKfycbw-Ew4Tue9W4Sn1wNmURbOhzCainqGoIw8dHRJEhe6MBvM4q7c9eT2JhJ3hjY9FHyhmcg/exec
+        const scriptUrl = "https://script.google.com/macros/s/AKfycbwwF8ZbE_Mp3TfcRIIK3IGn9bMw7MIbrURkqzLlfkYWU5twkhMYiDYeh_DPiBt2yTyu/exec"; 
 
         const finalTriggerUrl = `${scriptUrl}?action=sendEmail&regId=${regId}&eventId=${eventId.toUpperCase()}`;
         
@@ -318,113 +300,54 @@ function validateField(id, value, rule) {
   }
 
 
-
 function checkAllValidations() {
     let allValid = true;
     
     fieldRules.forEach(r => {
       const input = document.getElementById(`inp-${r.field_id}`);
       const container = document.getElementById(`cont-${r.field_id}`);
-      const errorDiv = document.getElementById(`err-${r.field_id}`);
-      const vBtn = document.getElementById(`vbtn-${r.field_id}`); // Find the yellow button
+      const errorDiv = document.getElementById(`err-${r.field_id}`); // Finds the box
       
       if (container && container.style.display === 'block' && input) {
         let isValid = validateField(r.field_id, input.value, r.field_validation);
-// let isValid = validateField(...);
-       // --- VERIFICATION BUTTON LOGIC (FIXED) ---
-        const isEditModeActive = document.getElementById('btn-update').style.display === 'block';
-        
-        if (isEditModeActive && (r.field_id === 'mobile' || r.field_id === 'email')) {
-            const vBtn = document.getElementById(`vbtn-${r.field_id}`);
-            const currentVal = input.value.trim();
-            const originalVal = (originalValues && originalValues[r.field_id]) ? originalValues[r.field_id].toString().trim() : "";
-            
-            // Logic: Only show if value is different AND valid AND not empty
-            if (currentVal !== originalVal && isValid && currentVal !== "") {
-                if (vBtn) vBtn.style.display = 'block';
-            } else {
-                if (vBtn) vBtn.style.display = 'none';
-            }
+
+        // Special check for Centre dropdown
+        if (r.field_id === 'centre') {
+            const dropdown = document.getElementById('res-centre');
+            if (dropdown && dropdown.style.display === 'block') isValid = false;
+            if (input.value.trim() === "") isValid = false;
         }
 
+        // --- ERROR TEXT LOGIC ---
         if (!isValid && input.value.trim() !== "") {
             if (errorDiv) {
-                errorDiv.textContent = r.error_msg || "Invalid Entry"; 
+                // Fetch from your Google Sheet column "error_msg"
+                errorDiv.textContent = r.error_msg || r.Error_Msg || "Invalid Entry"; 
                 errorDiv.style.display = 'block';
             }
-            if (vBtn) vBtn.style.display = 'none'; // Hide button if there's an error
         } else {
             if (errorDiv) errorDiv.style.display = 'none';
         }
 
+        // --- YOUR RED BORDER (DON'T TOUCH) ---
         input.style.border = isValid ? '1px solid #ced4da' : '2px solid red';
         if (!isValid) allValid = false;
       }
     });
 
+    // Update the button states
     const regBtn = document.getElementById('btn-register');
     const updBtn = document.getElementById('btn-update');
     
-    // Final Block: Update button stays disabled until verification is handled (we will refine this next)
-    if (updBtn) {
-        updBtn.disabled = !allValid;
-    }
+    [regBtn, updBtn].forEach(btn => {
+        if (btn) {
+            btn.disabled = !allValid;
+            btn.style.opacity = allValid ? "1" : "0.5";
+            btn.style.cursor = allValid ? "pointer" : "not-allowed";
+        }
+    });
 }
 
-let generatedCode = "";
-let originalValues = {}; // To track changes
-
-// Capture original values when participant is selected
-const oldSelectParticipant = selectParticipant;
-selectParticipant = function(p) {
-    originalValues = { mobile: p.mobile || "", email: p.email || "" };
-    oldSelectParticipant(p);
-};
-
-function triggerSendCode(fId) {
-    const emailInput = document.getElementById('inp-email');
-    const targetEmail = emailInput ? emailInput.value.trim() : "";
-    const vBtn = document.getElementById(`vbtn-${fId}`);
-    
-    if (!targetEmail) { alert("Please enter an email address first."); return; }
-
-    generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
-    
-    // UPDATED TEXT AS REQUESTED
-    vBtn.innerText = "Sending verification code to " + targetEmail + "...";
-    vBtn.disabled = true;
-
-    // USE YOUR EXISTING GOOGLE SCRIPT URL
-    const scriptUrl = "https://script.google.com/macros/s/AKfycbwwF8ZbE_Mp3TfcRIIK3IGn9bMw7MIbrURkqzLlfkYWU5twkhMYiDYeh_DPiBt2yTyu/exec";
-    const finalUrl = `${scriptUrl}?action=verifyExternal&email=${encodeURIComponent(targetEmail)}&code=${generatedCode}&fId=${fId.toUpperCase()}`;
-
-    fetch(finalUrl, { mode: 'no-cors' })
-      .then(() => {
-          // Visual transition to the code input
-          setTimeout(() => {
-              vBtn.style.display = 'none';
-              document.getElementById(`vgroup-${fId}`).style.display = 'flex';
-          }, 1500);
-      })
-      .catch(err => {
-          alert("Error: " + err);
-          vBtn.disabled = false;
-          vBtn.innerText = "Retry Sending";
-      });
-}
-
-
-function confirmCode(fId) {
-    const inputCode = document.getElementById(`vcode-${fId}`).value;
-    if (inputCode === generatedCode) {
-        document.getElementById(`vgroup-${fId}`).style.display = 'none';
-        document.getElementById(`vsuccess-${fId}`).style.display = 'block';
-        document.getElementById(`inp-${fId}`).disabled = true; // Lock the field after verification
-        checkAllValidations();
-    } else {
-        alert("Incorrect code. Please try again.");
-    }
-}
 
   
 </script>
