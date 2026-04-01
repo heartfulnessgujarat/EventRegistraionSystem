@@ -10,15 +10,13 @@
 
   <style>
     body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
-    .card { width: 100%; max-width: 450px; background: white; padding: 35px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+    .card { width: 100%; max-width: 450px; background: white; padding: 35px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); min-height: 200px; }
     h2 { color: #1a237e; margin-bottom: 5px; text-align: center; }
     .subtitle { color: #666; font-size: 14px; text-align: center; margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
     .field-container { margin-bottom: 20px; position: relative; }
     label { display: block; font-weight: 700; font-size: 13px; color: #1a237e; margin-bottom: 6px; }
     input { width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
     input:disabled { background: #f8f9fa; color: #6c757d; }
-    .error-msg-text { color: #d32f2f; font-size: 12px; margin-top: 5px; font-weight: bold; display: none; }
-    .help-text { font-size: 11px; color: #666; margin-top: 5px; display: none; font-weight: 500; }
     .primary-btn { width: 100%; padding: 15px; background: #1a237e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
     .primary-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .dropdown { border: 1px solid #ddd; max-height: 200px; overflow-y: auto; background: white; position: absolute; width: 100%; z-index: 1000; display: none; border-radius: 0 0 8px 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
@@ -31,7 +29,7 @@
 
 <div class="card" id="app">
   <div id="loading-init">
-    <h2>Loading registration form...</h2>
+    <h2 id="load-status">Loading application...</h2>
   </div>
 
   <div id="form-content" style="display:none;">
@@ -53,35 +51,40 @@
 </div>
 
 <script>
-  // 1. CONFIG & GLOBALS
-  const firebaseConfig = { databaseURL: "https://ferrari-reg-2026-default-rtdb.asia-southeast1.firebasedatabase.app" };
-  
-  // Safety check for Firebase
-  if (typeof firebase !== 'undefined') {
-    firebase.initializeApp(firebaseConfig);
-  } else {
-    console.error("Firebase failed to load. Check your internet or Script URL.");
-  }
-  
-  const db = firebase.database();
+  // 1. GLOBALS
+  let db, eventConfig, fieldRules = [], masterData = [], originalValues = {};
+  let verificationStates = { email: false, mobile: false }, generatedCodes = { email: "", mobile: "" };
+
   const urlParams = new URLSearchParams(window.location.search);
   const eventId = (urlParams.get('id') || 'EVT001').toUpperCase();
 
-  let fieldRules = [], masterData = [], locData = [], eventConfig = {};
-  let verificationStates = { email: false, mobile: false };
-  let generatedCodes = { email: "", mobile: "" };
-  let originalValues = {};
-
-  // 2. INITIALIZATION
-  window.onload = init;
+  // 2. SAFE STARTUP
+  window.addEventListener('load', function() {
+    console.log("Window loaded, checking Firebase...");
+    if (typeof firebase !== 'undefined') {
+      try {
+        const firebaseConfig = { databaseURL: "https://ferrari-reg-2026-default-rtdb.asia-southeast1.firebasedatabase.app" };
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+        init(); // Only run init if Firebase is ready
+      } catch (err) {
+        document.getElementById('load-status').innerText = "Firebase Config Error.";
+        console.error(err);
+      }
+    } else {
+      document.getElementById('load-status').innerText = "Critical: Firebase Library not found.";
+    }
+  });
 
   async function init() {
     try {
+      document.getElementById('load-status').innerText = "Fetching event rules...";
+      
       const configSnap = await db.ref('config/eventConfig').once('value');
       const allConfigs = configSnap.val() || {};
-      eventConfig = allConfigs[eventId] || Object.values(allConfigs).find(c => String(c.event_id).toUpperCase() === eventId) || { title: "Registration" };
+      eventConfig = allConfigs[eventId] || { title: "Registration" };
       
-      document.getElementById('title').innerText = eventConfig.title || "Registration";
+      document.getElementById('title').innerText = eventConfig.title;
       document.getElementById('subtitle').innerText = eventConfig.subtitle || "";
       
       const rulesSnap = await db.ref('config/fieldRules').once('value');
@@ -93,7 +96,7 @@
       document.getElementById('form-content').style.display = 'block';
     } catch (e) {
       console.error("Init Error:", e);
-      document.getElementById('loading-init').innerHTML = "<h2>Configuration Error</h2>";
+      document.getElementById('load-status').innerText = "Error connecting to Database.";
     }
   }
 
@@ -108,26 +111,11 @@
       div.id = `cont-${r.field_id}`;
       div.style.display = (r.initial_state === 'Visible') ? 'block' : 'none';
       
-      const isVerifyField = (r.field_id === 'email' || r.field_id === 'mobile');
-      
       div.innerHTML = `
         <label>${r.display_label || r.field_id}</label>
         <input type="text" id="inp-${r.field_id}" 
                oninput="handleSearch('${r.field_id}', this.value); checkAllValidations();"
                disabled autocomplete="off">
-        ${isVerifyField ? `
-          <div id="v-wrapper-${r.field_id}" style="display:none;">
-            <button type="button" class="primary-btn" style="background:#f3cc12; color:black;" onclick="triggerSendCode('${r.field_id}')">
-              Verify Change
-            </button>
-          </div>
-          <div id="vgroup-${r.field_id}" style="display:none; gap:10px; margin-top:10px;">
-            <input type="text" id="vcode-${r.field_id}" placeholder="6-digit code">
-            <button type="button" class="primary-btn" style="width:auto;" onclick="verifyCodeInput('${r.field_id}')">Verify</button>
-          </div>
-          <div id="vstatus-${r.field_id}" style="color:green; font-weight:bold; margin-top:5px;"></div>
-        ` : ''}
-        <div class="error-msg-text" id="err-${r.field_id}">Invalid entry</div>
         <div class="dropdown" id="res-${r.field_id}"></div>`;
         
       container.appendChild(div);
@@ -137,18 +125,22 @@
     });
   }
 
-  // 4. LOGIC FUNCTIONS
+  // 4. SEARCH & SELECTION
   async function handleSearch(fId, val) {
     const resDiv = document.getElementById(`res-${fId}`);
     if (val.length < 3) { resDiv.style.display = 'none'; return; }
     
     if (fId === 'full_name') {
-      if (masterData.length === 0) { const snap = await db.ref('masterData').once('value'); masterData = Object.values(snap.val() || {}); }
-      renderDropdown(resDiv, masterData.filter(x => x.full_name?.toLowerCase().includes(val.toLowerCase())).slice(0, 5), 'name');
+      if (masterData.length === 0) {
+        const snap = await db.ref('masterData').once('value');
+        masterData = Object.values(snap.val() || {});
+      }
+      const filtered = masterData.filter(x => x.full_name?.toLowerCase().includes(val.toLowerCase())).slice(0, 5);
+      renderDropdown(resDiv, filtered);
     }
   }
 
-  function renderDropdown(div, list, type) {
+  function renderDropdown(div, list) {
     div.innerHTML = '';
     if (list.length > 0) {
       div.style.display = 'block';
@@ -188,62 +180,26 @@
 
   function checkAllValidations() {
     let allValid = true;
-    let needsVerify = false;
-
     fieldRules.forEach(r => {
       const input = document.getElementById(`inp-${r.field_id}`);
-      if (input && !input.disabled) {
-        if (input.value.trim() === "") allValid = false;
-        
-        if ((r.field_id === 'email' || r.field_id === 'mobile') && input.value !== originalValues[r.field_id]) {
-          if (!verificationStates[r.field_id]) {
-            document.getElementById(`v-wrapper-${r.field_id}`).style.display = 'block';
-            needsVerify = true;
-          }
-        }
-      }
+      if (input && !input.disabled && input.value.trim() === "") allValid = false;
     });
-
-    document.getElementById('btn-register').disabled = !allValid || needsVerify;
-    document.getElementById('btn-update').disabled = !allValid || needsVerify;
-  }
-
-  async function triggerSendCode(fId) {
-    const target = document.getElementById(`inp-${fId}`).value;
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    generatedCodes[fId] = code;
-    alert("Verification code sent to your registered contact.");
-    document.getElementById(`v-wrapper-${fId}`).style.display = 'none';
-    document.getElementById(`vgroup-${fId}`).style.display = 'flex';
-    
-    // Hidden background call to your Apps Script
-    const scriptUrl = "https://script.google.com/macros/s/AKfycbwwF8ZbE_Mp3TfcRIIK3IGn9bMw7MIbrURkqzLlfkYWU5twkhMYiDYeh_DPiBt2yTyu/exec";
-    fetch(`${scriptUrl}?action=verifyExternal&email=${encodeURIComponent(target)}&code=${code}&fId=${fId.toUpperCase()}`, { mode: 'no-cors' });
-  }
-
-  function verifyCodeInput(fId) {
-    if (document.getElementById(`vcode-${fId}`).value === generatedCodes[fId]) {
-      verificationStates[fId] = true;
-      document.getElementById(`vstatus-${fId}`).innerText = "Verified!";
-      document.getElementById(`vgroup-${fId}`).style.display = 'none';
-      checkAllValidations();
-    } else {
-      alert("Invalid code.");
-    }
+    document.getElementById('btn-register').disabled = !allValid;
+    document.getElementById('btn-update').disabled = !allValid;
   }
 
   async function submitData() {
     document.getElementById('form-content').style.display = 'none';
     document.getElementById('loader').style.display = 'block';
     const regId = "REG-" + Date.now();
-    const payload = { registration_id: regId };
+    const payload = { registration_id: regId, timestamp: new Date().toISOString() };
     fieldRules.forEach(r => { payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; });
 
     try {
       await db.ref('registrations/' + regId).set(payload);
-      document.getElementById('app').innerHTML = "<h2>Registration Successful!</h2><p>ID: " + regId + "</p>";
+      document.getElementById('app').innerHTML = "<h2>Success!</h2><p>ID: " + regId + "</p>";
     } catch (e) {
-      alert("Error saving data.");
+      alert("Submission failed.");
       document.getElementById('form-content').style.display = 'block';
       document.getElementById('loader').style.display = 'none';
     }
