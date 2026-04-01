@@ -16,58 +16,14 @@
     label { display: block; font-weight: 700; font-size: 13px; color: #1a237e; margin-bottom: 6px; }
     input { width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
     input:disabled { background: #f8f9fa; color: #6c757d; }
-    
-    /* Error Message Style */
     .error-msg-text { color: #d32f2f; font-size: 12px; margin-top: 5px; font-weight: bold; display: none; }
-    
     .help-text { font-size: 11px; color: #666; margin-top: 5px; display: none; font-weight: 500; }
     .primary-btn { width: 100%; padding: 15px; background: #1a237e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
     
-    /* --- NEW VERIFICATION UI STYLES --- */
-    .verify-btn {
-      background: #fbc02d;
-      color: #000;
-      border: none;
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: bold;
-      cursor: pointer;
-      margin-top: 8px;
-      display: none; 
-      transition: background 0.3s;
-    }
-    .verify-btn:hover { background: #f9a825; }
-
-    .v-input-group { 
-      display: none; 
-      margin-top: 10px; 
-      gap: 10px; 
-      align-items: center; 
-      background: #fff9c4; 
-      padding: 10px; 
-      border-radius: 8px;
-    }
-    .v-input { 
-      width: 120px !important; 
-      padding: 8px !important; 
-      font-size: 16px !important; 
-      text-align: center; 
-      letter-spacing: 4px; 
-      font-weight: bold;
-    }
-    .v-success { 
-      color: #2e7d32; 
-      font-size: 13px; 
-      font-weight: bold; 
-      display: none; 
-      margin-top: 8px; 
-      padding: 5px;
-      border: 1px solid #2e7d32;
-      border-radius: 4px;
-      background: #e8f5e9;
-      text-align: center;
-    }
+    .verify-btn { background: #fbc02d; color: #000; border: none; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; margin-top: 8px; display: none; width: 100%; }
+    .v-input-group { display: none; margin-top: 10px; gap: 10px; align-items: center; background: #fff9c4; padding: 10px; border-radius: 8px; border: 1px solid #fbc02d; }
+    .v-input { width: 100% !important; padding: 8px !important; text-align: center; letter-spacing: 4px; font-weight: bold; background: white !important; }
+    .v-success { color: #2e7d32; font-size: 13px; font-weight: bold; display: none; margin-top: 8px; padding: 8px; border: 1px solid #2e7d32; border-radius: 4px; background: #e8f5e9; text-align: center; }
 
     .dropdown { border: 1px solid #ddd; max-height: 200px; overflow-y: auto; background: white; position: absolute; width: 100%; z-index: 1000; display: none; border-radius: 0 0 8px 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
     .item { padding: 12px; cursor: pointer; border-bottom: 1px solid #f1f1f1; font-size: 14px; }
@@ -77,10 +33,7 @@
 </head>
 <body>
 <div class="card" id="app">
-  <div id="loading-init">
-    <h2>Loading registration form. Please wait…</h2>
-  </div>
-
+  <div id="loading-init"><h2>Loading form...</h2></div>
   <div id="form-content" style="display:none;">
     <h2 id="title"></h2>
     <p class="subtitle" id="subtitle"></p>
@@ -88,15 +41,12 @@
 
     <div id="btns-start" style="display:none; flex-direction:column; gap:10px;">
       <button id="btn-register" class="primary-btn" disabled onclick="submitData()">Confirm Registration</button>
-      <button class="primary-btn" style="background:#455a64;" onclick="enableEdit()">I want to edit my details</button>
+      <button type="button" class="primary-btn" style="background:#455a64;" onclick="enableEdit()">I want to edit my details</button>
     </div>
 
     <button id="btn-update" class="primary-btn" style="display:none;" disabled onclick="submitData()">Update & Register</button>
   </div>
-
-  <div id="loader" style="display:none;">
-    <h3>Processing your registration. Please wait…</h3>
-  </div>
+  <div id="loader" style="display:none;"><h3>Processing...</h3></div>
 </div>
 
 <script>
@@ -106,30 +56,25 @@
   const urlParams = new URLSearchParams(window.location.search);
   const eventId = (urlParams.get('id') || 'EVT001').toUpperCase();
   
-  let fieldRules = [], masterData = [], locData = [], eventConfig = {};
-  let originalValues = {}; 
+  let fieldRules = [], masterData = [], eventConfig = {};
+  let originalValues = { mobile: '', email: '' }; 
   let verificationState = { mobile: true, email: true }; 
   let generatedCode = null; 
-
-  // --- THE FIX: We need this flag to track if the button was clicked ---
   let isEditModeActive = false; 
 
   async function init() {
     try {
       const configSnap = await db.ref('config/eventConfig').once('value');
       const allConfigs = configSnap.val() || {};
-      eventConfig = allConfigs[eventId] || Object.values(allConfigs).find(c => String(c.event_id).toUpperCase() === eventId) || { title: "Registration" };
-      document.getElementById('title').innerHTML = eventConfig.title || "Registration";
+      eventConfig = allConfigs[eventId] || { title: "Registration" };
+      document.getElementById('title').innerHTML = eventConfig.title;
       document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
       const rulesSnap = await db.ref('config/fieldRules').once('value');
       fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
       renderForm();
       document.getElementById('loading-init').style.display = 'none';
       document.getElementById('form-content').style.display = 'block';
-    } catch (e) {
-      console.error("Init Error:", e);
-      document.getElementById('loading-init').innerHTML = "<h2>Error Loading Form</h2>";
-    }
+    } catch (e) { console.error(e); }
   }
 
   function renderForm() {
@@ -140,173 +85,79 @@
       div.className = 'field-container';
       div.id = `cont-${r.field_id}`;
       div.style.display = (r.initial_state === 'Visible') ? 'block' : 'none';
-      const labelText = r.display_label || r.Display_Label || r.field_id;
+      const labelText = r.display_label || r.field_id;
       div.innerHTML = `
         <label>${labelText}</label>
         <input type="text" id="inp-${r.field_id}" oninput="handleSearch('${r.field_id}', this.value); checkAllValidations();" disabled autocomplete="off">
         <button id="vbtn-${r.field_id}" class="verify-btn" onclick="triggerSendCode('${r.field_id}')">Click here to Send Verification Code</button>
         <div id="vgroup-${r.field_id}" class="v-input-group">
-          <input type="text" id="vcode-${r.field_id}" class="v-input" placeholder="000000" maxlength="6">
-          <button class="primary-btn" style="width:auto; padding:8px 15px; margin:0; font-size:12px;" onclick="confirmCode('${r.field_id}')">Verify</button>
+          <input type="text" id="vcode-${r.field_id}" class="v-input" placeholder="6-digit Code" maxlength="6">
+          <button type="button" class="primary-btn" style="width:auto; padding:8px 15px; margin:0;" onclick="confirmCode('${r.field_id}')">Verify</button>
         </div>
         <div id="vsuccess-${r.field_id}" class="v-success">✓ Verified & Updated</div>
         <div class="error-msg-text" id="err-${r.field_id}"></div>
-        <div class="help-text" id="help-${r.field_id}">${r.field_help_text || ''}</div>
         <div class="dropdown" id="res-${r.field_id}"></div>`;
       container.appendChild(div);
-      if (r.field_id === 'full_name') {
-        div.style.display = 'block';
-        document.getElementById('inp-full_name').disabled = false;
-      }
+      if (r.field_id === 'full_name') { div.style.display = 'block'; document.getElementById('inp-full_name').disabled = false; }
     });
   }
 
   function selectParticipant(p) {
-    isEditModeActive = false; // Reset when new person selected
+    isEditModeActive = false;
+    originalValues = { mobile: p.mobile || '', email: p.email || '' };
+    verificationState = { mobile: true, email: true };
     fieldRules.forEach(r => {
       const el = document.getElementById(`inp-${r.field_id}`);
-      if (el) { 
-        el.value = p[r.field_id] || ''; 
-        if (r.field_id === 'full_name') { el.disabled = true; }
-        if (r.initial_state !== 'Hidden') { document.getElementById(`cont-${r.field_id}`).style.display = 'block'; }
-      }
+      if (el) { el.value = p[r.field_id] || ''; el.disabled = true; 
+      if (r.initial_state !== 'Hidden') document.getElementById(`cont-${r.field_id}`).style.display = 'block'; }
     });
-    document.getElementById('res-full_name').style.display = 'none';
     document.getElementById('btns-start').style.display = 'flex';
-    originalValues['mobile'] = p.mobile || '';
-    originalValues['email'] = p.email || '';
-    verificationState = { mobile: true, email: true };
+    document.getElementById('btn-update').style.display = 'none';
+    document.getElementById('res-full_name').style.display = 'none';
     checkAllValidations();
   }
 
   function enableEdit() {
-    isEditModeActive = true; // --- THE KEY: Set to true when button clicked ---
+    isEditModeActive = true;
     document.getElementById('btns-start').style.display = 'none';
     document.getElementById('btn-update').style.display = 'block';
-    document.getElementById('btn-update').disabled = false;
     fieldRules.forEach(r => {
       const el = document.getElementById(`inp-${r.field_id}`);
-      if (document.getElementById(`help-${r.field_id}`)) { document.getElementById(`help-${r.field_id}`).style.display = 'block'; }
-      if (r.edit_behavior && r.edit_behavior.includes("Editable")) { el.disabled = false; } else { el.disabled = true; }
+      if (r.edit_behavior && r.edit_behavior.includes("Editable")) el.disabled = false;
     });
-    checkAllValidations(); // Re-check now that mode is active
+    checkAllValidations();
   }
 
   function checkAllValidations() {
     let allValid = true;
-    
-    // --- THE FIX: Use our new flag instead of checking for a checkbox ---
-    const isEditMode = isEditModeActive;
-
     fieldRules.forEach(r => {
       const input = document.getElementById(`inp-${r.field_id}`);
-      const container = document.getElementById(`cont-${r.field_id}`);
       const vBtn = document.getElementById(`vbtn-${r.field_id}`);
-      const errorDiv = document.getElementById(`err-${r.field_id}`);
-      
-      if (container && container.style.display === 'block' && input) {
+      if (input && document.getElementById(`cont-${r.field_id}`).style.display === 'block') {
         let val = input.value.trim();
         let isValid = validateField(r.field_id, val, r.field_validation);
-
         if (r.field_id === 'mobile' || r.field_id === 'email') {
-           const original = originalValues[r.field_id] || "";
-           const isChanged = val !== original;
-           
-           if (isEditMode && isChanged && isValid && verificationState[r.field_id] === true) {
-               if (vBtn) vBtn.style.display = 'block';
+           const isChanged = val !== (originalValues[r.field_id] || "");
+           if (isEditModeActive && isChanged && isValid && verificationState[r.field_id] === true) {
+               vBtn.style.display = 'block';
                verificationState[r.field_id] = false; 
-           } 
-           
-           if (!isChanged || !isEditMode) {
-               if (vBtn) vBtn.style.display = 'none';
+           } else if (!isChanged || !isEditModeActive || verificationState[r.field_id] === "DONE") {
+               vBtn.style.display = 'none';
                if (!isChanged) verificationState[r.field_id] = true;
            }
         }
-
-        if (!isValid && val !== "") {
-            if (errorDiv) {
-                errorDiv.textContent = r.error_msg || r.Error_Msg || "Invalid Format";
-                errorDiv.style.display = 'block';
-            }
-            input.style.border = '2px solid red';
-            allValid = false;
-        } else {
-            if (errorDiv) errorDiv.style.display = 'none';
-            input.style.border = '1px solid #ced4da';
-        }
+        if (!isValid && val !== "") { input.style.border = '2px solid red'; allValid = false; } 
+        else { input.style.border = '1px solid #ced4da'; }
         if (!isValid) allValid = false;
       }
     });
-
-    const isFullyVerified = (verificationState.mobile !== false) && (verificationState.email !== false);
+    const isReady = allValid && verificationState.mobile !== false && verificationState.email !== false;
     const updBtn = document.getElementById('btn-update');
     const regBtn = document.getElementById('btn-register');
-    
-    [updBtn, regBtn].forEach(btn => {
-        if (btn) {
-            const canSubmit = allValid && isFullyVerified;
-            btn.disabled = !canSubmit;
-            btn.style.opacity = canSubmit ? "1" : "0.5";
-            btn.style.cursor = canSubmit ? "pointer" : "not-allowed";
-        }
-    });
+    [updBtn, regBtn].forEach(b => { if(b){ b.disabled = !isReady; b.style.opacity = isReady ? "1" : "0.5"; } });
   }
 
-  // Placeholder for the trigger function (You'll need your Google Script code for this)
-  function triggerSendCode(fId) { alert("Code sending logic triggered for " + fId); }
-  function confirmCode(fId) { alert("Code verification logic triggered for " + fId); }
-
-  function validateField(id, value, rule) {
-    if (!rule || rule === 'NULL') return true;
-    const val = value.trim();
-    if (val === "") return false;
-    if (rule === 'MOB') return /^[6-9]\d{9}$/.test(val);
-    if (rule === 'PIN') return /^\d{6}$/.test(val);
-    if (rule === 'EMAIL') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
-    return true;
-  }
-
-  async function handleSearch(fId, val) {
-    const resDiv = document.getElementById(`res-${fId}`);
-    if (val.length < 3) { resDiv.style.display = 'none'; return; }
-    if (fId === 'full_name') {
-      if (masterData.length === 0) { const snap = await db.ref('masterData').once('value'); masterData = Object.values(snap.val() || {}); }
-      renderDropdown(resDiv, masterData.filter(x => x.full_name?.toLowerCase().includes(val.toLowerCase())).slice(0, 8), 'name');
-    }
-  }
-
-  function renderDropdown(div, list, type) {
-    div.innerHTML = '';
-    if (list.length > 0) {
-      div.style.display = 'block';
-      list.forEach(item => {
-        const d = document.createElement('div');
-        d.className = 'item';
-        d.textContent = item.full_name;
-        d.onclick = () => selectParticipant(item);
-        div.appendChild(d);
-      });
-    }
-  }
-
-  async function submitData() {
-    document.getElementById('form-content').style.display = 'none';
-    document.getElementById('loader').style.display = 'block';
-    const now = new Date();
-    const regId = `REG-${Date.now()}`;
-    const payload = { registration_id: regId, timestamp: now.toISOString() };
-    fieldRules.forEach(r => { payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; });
-    try {
-      await db.ref('registrations/' + regId).set(payload);
-      document.getElementById('app').innerHTML = `<h2>Success!</h2><p>ID: ${regId}</p>`;
-    } catch (e) {
-      alert("Error during registration.");
-      document.getElementById('form-content').style.display = 'block';
-      document.getElementById('loader').style.display = 'none';
-    }
-  }
-
-  init();
-</script>
-</body>
-</html>
+  function triggerSendCode(fId) {
+    generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const targetEmail = document.getElementById('inp-email').value;
+    document.
