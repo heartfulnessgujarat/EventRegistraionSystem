@@ -300,36 +300,41 @@ function validateField(id, value, rule) {
 function checkAllValidations() {
     let allValid = true;
     
+    // 1. Check every visible field against its specific rule (MOB, PIN, etc.)
     fieldRules.forEach(r => {
       const input = document.getElementById(`inp-${r.field_id}`);
       const container = document.getElementById(`cont-${r.field_id}`);
       
-      if (container && container.style.display === 'block' && input) {
-        // We fetch the rule directly from the fieldRules object
+      if (container && container.style.display === 'block') {
         const isValid = validateField(r.field_id, input.value, r.field_validation);
         
         // Visual Feedback
         input.style.border = isValid ? '1px solid #ced4da' : '2px solid red';
-        input.style.backgroundColor = isValid ? 'white' : '#fff0f0';
         
         if (!isValid) allValid = false;
       }
     });
+
+    // 2. STRICTOR CHECK: Ensure Centre, District, and Zone are NOT EMPTY
+    // This handles your requirement that all three must be updated.
+    ['centre', 'district', 'zone'].forEach(id => {
+        const el = document.getElementById(`inp-${id}`);
+        if (el && el.value.trim() === "") {
+            allValid = false; 
+            // Optional: turn border red if they try to register with empty location info
+            if (el.offsetParent !== null) el.style.border = '2px solid red'; 
+        }
+    });
     
-    // --- FORCE LOCK ALL PRIMARY BUTTONS ---
-    const allButtons = document.querySelectorAll('.primary-btn');
-    allButtons.forEach(btn => {
-      // Only lock the Register/Update buttons, leave the "Edit" button alone
+    // 3. Lock/Unlock Buttons
+    const buttons = document.querySelectorAll('.primary-btn');
+    buttons.forEach(btn => {
       if (btn.innerText.includes("Register") || btn.innerText.includes("Confirm")) {
           btn.disabled = !allValid;
           btn.style.opacity = allValid ? "1" : "0.5";
-          btn.style.cursor = allValid ? "pointer" : "not-allowed";
       }
     });
 }
-
-
-
 
 
 
