@@ -138,9 +138,7 @@
     }
   }
 
-
 function renderForm() {
-    console.log("Form Rendered with Verification UI"); // Check for this in F12
     const container = document.getElementById('dynamic-fields');
     container.innerHTML = '';
     
@@ -182,57 +180,7 @@ function renderForm() {
         document.getElementById('inp-full_name').disabled = false;
       }
     });
-}
-
-
-  
-function renderForm() {
-    const container = document.getElementById('dynamic-fields');
-    container.innerHTML = '';
-    
-    fieldRules.forEach(r => {
-      const div = document.createElement('div');
-      div.className = 'field-container';
-      div.id = `cont-${r.field_id}`;
-      div.style.display = (r.initial_state === 'Visible') ? 'block' : 'none';
-      
-      const labelText = r.display_label || r.Display_Label || r.field_id;
-      
-      div.innerHTML = `
-        <label>${labelText}</label>
-        <input type="text" 
-               id="inp-${r.field_id}" 
-               oninput="handleSearch('${r.field_id}', this.value); checkAllValidations();"
-               disabled 
-               autocomplete="off">
-        
-        <button id="vbtn-${r.field_id}" class="verify-btn" onclick="triggerSendCode('${r.field_id}')">
-          Click here to Send Verification Code
-        </button>
-        
-        <div id="vgroup-${r.field_id}" class="v-input-group">
-          <input type="text" id="vcode-${r.field_id}" class="v-input" placeholder="000000" maxlength="6">
-          <button class="primary-btn" style="width:auto; padding:8px 15px; margin:0; font-size:12px;" onclick="confirmCode('${r.field_id}')">Verify</button>
-        </div>
-
-        <div id="vsuccess-${r.field_id}" class="v-success">✓ Verified & Updated</div>
-
-        <div class="error-msg-text" id="err-${r.field_id}"></div>
-        <div class="help-text" id="help-${r.field_id}">${r.field_help_text || ''}</div>
-        
-        <div class="dropdown" id="res-${r.field_id}"></div>`;
-        
-      container.appendChild(div);
-      
-      if (r.field_id === 'full_name') {
-        div.style.display = 'block';
-        document.getElementById('inp-full_name').disabled = false;
-      }
-    });
-}
-  
-
-  
+}  
 
   async function handleSearch(fId, val) {
     const resDiv = document.getElementById(`res-${fId}`);
