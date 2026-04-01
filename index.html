@@ -162,25 +162,43 @@
     checkAllValidations();
   }
 
-  function triggerSendCode(fId) {
-    generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const targetEmail = document.getElementById('inp-email').value;
+
+function triggerSendCode(fId) {
+    // 1. Capture the email from the input field
+    const emailField = document.getElementById('inp-email');
+    const targetEmail = emailField ? emailField.value.trim() : "";
     const vBtn = document.getElementById(`vbtn-${fId}`);
+
+    // 2. Safety Check: If email is empty, stop here and tell the user
+    if (!targetEmail || targetEmail === "") {
+        alert("Error: No email address found. Please ensure the email field is filled correctly before requesting a code.");
+        return; 
+    }
+
+    // 3. Generate a random 6-digit number
+    generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // 4. Update UI to show progress
     vBtn.innerText = "Sending code to " + targetEmail + "...";
     vBtn.disabled = true;
 
+    // 5. CALL THE GOOGLE SCRIPT
     google.script.run
-      .withSuccessHandler(() => {
+      .withSuccessHandler(function() {
           vBtn.style.display = 'none';
           document.getElementById(`vgroup-${fId}`).style.display = 'flex';
+          console.log("Verification sent to: " + targetEmail);
       })
-      .withFailureHandler(err => {
+      .withFailureHandler(function(err) {
           alert("Email Error: " + err.message);
           vBtn.innerText = "Click here to Send Verification Code";
           vBtn.disabled = false;
       })
       .sendVerificationEmail(targetEmail, generatedCode, fId.toUpperCase());
   }
+
+
+
 
   function confirmCode(fId) {
     if (document.getElementById(`vcode-${fId}`).value === generatedCode) {
