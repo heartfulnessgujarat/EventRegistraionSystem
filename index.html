@@ -231,6 +231,10 @@ function renderForm() {
     document.getElementById('btns-start').style.display = 'flex';
     // Add this inside selectParticipant, at the very bottom
   checkAllValidations();
+    // Store original values to detect changes later
+  originalValues['mobile'] = p.mobile || '';
+  originalValues['email'] = p.email || '';
+  verificationState = { mobile: true, email: true }; // Reset to true for a new person
   }
 
 function selectLocation(l) {
