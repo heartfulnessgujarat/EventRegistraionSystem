@@ -51,6 +51,8 @@
 </div>
 
 <script>
+
+<script>
   // 1. CONFIG & GLOBALS
   const firebaseConfig = { databaseURL: "https://ferrari-reg-2026-default-rtdb.asia-southeast1.firebasedatabase.app" };
   firebase.initializeApp(firebaseConfig);
@@ -59,10 +61,13 @@
   const urlParams = new URLSearchParams(window.location.search);
   const eventId = (urlParams.get('id') || 'EVT001').toUpperCase();
 
+  // ADD THESE 4 LINES BELOW:
   let fieldRules = [], masterData = [], locData = [], eventConfig = {};
- 
+  let verificationStates = { email: false, mobile: false };
+  let generatedCodes = { email: "", mobile: "" };
+  let originalValues = {};
 
-  // 2. INITIALIZATION
+    // 2. INITIALIZATION
   window.onload = init;
 
   async function init() {
