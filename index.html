@@ -1,24 +1,27 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Event Registration 2026</title>
-  
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-
-  <style>
+<style>
     body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
-    .card { width: 100%; max-width: 450px; background: white; padding: 35px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); min-height: 200px; }
+    .card { width: 100%; max-width: 450px; background: white; padding: 35px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
     h2 { color: #1a237e; margin-bottom: 5px; text-align: center; }
     .subtitle { color: #666; font-size: 14px; text-align: center; margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
     .field-container { margin-bottom: 20px; position: relative; }
     label { display: block; font-weight: 700; font-size: 13px; color: #1a237e; margin-bottom: 6px; }
     input { width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
     input:disabled { background: #f8f9fa; color: #6c757d; }
+    
+    /* New Error Message Style */
+    .error-msg-text { color: #d32f2f; font-size: 12px; margin-top: 5px; font-weight: bold; display: none; }
+    
+    .help-text { font-size: 11px; color: #666; margin-top: 5px; display: none; font-weight: 500; }
     .primary-btn { width: 100%; padding: 15px; background: #1a237e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-    .primary-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .dropdown { border: 1px solid #ddd; max-height: 200px; overflow-y: auto; background: white; position: absolute; width: 100%; z-index: 1000; display: none; border-radius: 0 0 8px 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
     .item { padding: 12px; cursor: pointer; border-bottom: 1px solid #f1f1f1; font-size: 14px; }
     .item:hover { background: #e8eaf6; }
@@ -26,10 +29,10 @@
   </style>
 </head>
 <body>
-
 <div class="card" id="app">
+  
   <div id="loading-init">
-    <h2 id="load-status">Loading application...</h2>
+    <h2>Loading registration form. Please wait…</h2>
   </div>
 
   <div id="form-content" style="display:none;">
@@ -37,71 +40,56 @@
     <p class="subtitle" id="subtitle"></p>
     <div id="dynamic-fields"></div>
 
-    <div id="btns-start" style="display:none; flex-direction:column; gap:10px;">
+<div id="btns-start" style="display:none; flex-direction:column; gap:10px;">
       <button id="btn-register" class="primary-btn" disabled onclick="submitData()">Confirm Registration</button>
       <button class="primary-btn" style="background:#455a64;" onclick="enableEdit()">I want to edit my details</button>
     </div>
+
 
     <button id="btn-update" class="primary-btn" style="display:none;" disabled onclick="submitData()">Update & Register</button>
   </div>
 
   <div id="loader" style="display:none;">
-    <h3>Processing... Please wait.</h3>
+    <h3>Processing your registration. Please wait…</h3>
   </div>
+  
 </div>
 
 <script>
-  // 1. GLOBALS
-  let db, eventConfig, fieldRules = [], masterData = [], originalValues = {};
-  let verificationStates = { email: false, mobile: false }, generatedCodes = { email: "", mobile: "" };
-
+  const firebaseConfig = { databaseURL: "https://ferrari-reg-2026-default-rtdb.asia-southeast1.firebasedatabase.app" };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
   const urlParams = new URLSearchParams(window.location.search);
   const eventId = (urlParams.get('id') || 'EVT001').toUpperCase();
-
-  // 2. SAFE STARTUP
-  window.addEventListener('load', function() {
-    console.log("Window loaded, checking Firebase...");
-    if (typeof firebase !== 'undefined') {
-      try {
-        const firebaseConfig = { databaseURL: "https://ferrari-reg-2026-default-rtdb.asia-southeast1.firebasedatabase.app" };
-        firebase.initializeApp(firebaseConfig);
-        db = firebase.database();
-        init(); // Only run init if Firebase is ready
-      } catch (err) {
-        document.getElementById('load-status').innerText = "Firebase Config Error.";
-        console.error(err);
-      }
-    } else {
-      document.getElementById('load-status').innerText = "Critical: Firebase Library not found.";
-    }
-  });
+  let fieldRules = [], masterData = [], locData = [], eventConfig = {};
 
   async function init() {
     try {
-      document.getElementById('load-status').innerText = "Fetching event rules...";
-      
       const configSnap = await db.ref('config/eventConfig').once('value');
       const allConfigs = configSnap.val() || {};
-      eventConfig = allConfigs[eventId] || { title: "Registration" };
+      eventConfig = allConfigs[eventId] || Object.values(allConfigs).find(c => String(c.event_id).toUpperCase() === eventId) || { title: "Registration" };
       
-      document.getElementById('title').innerText = eventConfig.title;
-      document.getElementById('subtitle').innerText = eventConfig.subtitle || "";
+      // Update the real title and subtitle using innerHTML
+      document.getElementById('title').innerHTML = eventConfig.title || "Registration";
+      document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
       
       const rulesSnap = await db.ref('config/fieldRules').once('value');
       fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
       
       renderForm();
 
+      // THE SWAP: Hide loading, Show form
       document.getElementById('loading-init').style.display = 'none';
       document.getElementById('form-content').style.display = 'block';
+
     } catch (e) {
       console.error("Init Error:", e);
-      document.getElementById('load-status').innerText = "Error connecting to Database.";
+      document.getElementById('loading-init').innerHTML = "<h2>Error Loading Form</h2>";
     }
   }
 
-  // 3. FORM RENDERING
-  function renderForm() {
+
+function renderForm() {
     const container = document.getElementById('dynamic-fields');
     container.innerHTML = '';
     
@@ -111,100 +99,257 @@
       div.id = `cont-${r.field_id}`;
       div.style.display = (r.initial_state === 'Visible') ? 'block' : 'none';
       
+      const labelText = r.display_label || r.Display_Label || r.field_id;
+      
       div.innerHTML = `
-        <label>${r.display_label || r.field_id}</label>
-        <input type="text" id="inp-${r.field_id}" 
+        <label>${labelText}</label>
+        <input type="text" 
+               id="inp-${r.field_id}" 
                oninput="handleSearch('${r.field_id}', this.value); checkAllValidations();"
-               disabled autocomplete="off">
+               disabled 
+               autocomplete="off">
+        
+        <div class="error-msg-text" id="err-${r.field_id}"></div>
+        
+        <div class="help-text" id="help-${r.field_id}">${r.field_help_text || ''}</div>
         <div class="dropdown" id="res-${r.field_id}"></div>`;
         
       container.appendChild(div);
+      
       if (r.field_id === 'full_name') {
+        div.style.display = 'block';
         document.getElementById('inp-full_name').disabled = false;
       }
     });
-  }
+}
 
-  // 4. SEARCH & SELECTION
+
+
+  
+
+  
+
   async function handleSearch(fId, val) {
     const resDiv = document.getElementById(`res-${fId}`);
     if (val.length < 3) { resDiv.style.display = 'none'; return; }
-    
     if (fId === 'full_name') {
-      if (masterData.length === 0) {
-        const snap = await db.ref('masterData').once('value');
-        masterData = Object.values(snap.val() || {});
-      }
-      const filtered = masterData.filter(x => x.full_name?.toLowerCase().includes(val.toLowerCase())).slice(0, 5);
-      renderDropdown(resDiv, filtered);
+      if (masterData.length === 0) { const snap = await db.ref('masterData').once('value'); masterData = Object.values(snap.val() || {}); }
+      renderDropdown(resDiv, masterData.filter(x => x.full_name?.toLowerCase().includes(val.toLowerCase())).slice(0, 8), 'name');
+    } else if (fId === 'centre') {
+      if (locData.length === 0) { const snap = await db.ref('config/locations').once('value'); locData = Object.values(snap.val() || {}); }
+      renderDropdown(resDiv, locData.filter(x => x.centre?.toLowerCase().includes(val.toLowerCase())).slice(0, 8), 'loc');
     }
   }
 
-  function renderDropdown(div, list) {
+  function renderDropdown(div, list, type) {
     div.innerHTML = '';
     if (list.length > 0) {
       div.style.display = 'block';
       list.forEach(item => {
         const d = document.createElement('div');
         d.className = 'item';
-        d.textContent = item.full_name;
-        d.onclick = () => selectParticipant(item);
+        d.textContent = type === 'loc' ? item.centre : item.full_name;
+        d.onclick = () => type === 'loc' ? selectLocation(item) : selectParticipant(item);
         div.appendChild(d);
       });
     }
   }
+
 
   function selectParticipant(p) {
     fieldRules.forEach(r => {
       const el = document.getElementById(`inp-${r.field_id}`);
       if (el) { 
         el.value = p[r.field_id] || ''; 
-        originalValues[r.field_id] = el.value;
-        if (r.field_id === 'full_name') el.disabled = true;
-        document.getElementById(`cont-${r.field_id}`).style.display = 'block';
+        
+        // THE FIX: Lock the name field immediately after selection
+        if (r.field_id === 'full_name') {
+          el.disabled = true; 
+        }
+
+        if (r.initial_state !== 'Hidden') {
+          document.getElementById(`cont-${r.field_id}`).style.display = 'block';
+        }
       }
     });
     document.getElementById('res-full_name').style.display = 'none';
     document.getElementById('btns-start').style.display = 'flex';
+    // Add this inside selectParticipant, at the very bottom
+  checkAllValidations();
+  }
+
+function selectLocation(l) {
+    document.getElementById('inp-centre').value = l.centre;
+    if(document.getElementById('inp-district')) {
+      document.getElementById('inp-district').value = l.district || '';
+    }
+    if(document.getElementById('inp-zone')) {
+      document.getElementById('inp-zone').value = l.zone || '';
+    }
+    document.getElementById('res-centre').style.display = 'none';
+    
+    // --- THE TRIGGER ---
+    // Forces the validation engine to re-scan the form now that the 
+    // Centre, District, and Zone values have been injected.
     checkAllValidations();
   }
-
-  function enableEdit() {
+  
+  
+function enableEdit() {
     document.getElementById('btns-start').style.display = 'none';
     document.getElementById('btn-update').style.display = 'block';
+    document.getElementById('btn-update').disabled = false;
+    
     fieldRules.forEach(r => {
       const el = document.getElementById(`inp-${r.field_id}`);
-      if (r.edit_behavior === "Editable") el.disabled = false;
+      if (document.getElementById(`help-${r.field_id}`)) {
+        document.getElementById(`help-${r.field_id}`).style.display = 'block';
+      }
+      
+      // THE FIX: Only make it editable if the rule says "Editable"
+      // This will now respect your "ReadOnly" setting for full_name
+      if (r.edit_behavior && r.edit_behavior.includes("Editable")) {
+        el.disabled = false;
+      } else {
+        el.disabled = true; // Stay locked if set to ReadOnly
+      }
     });
   }
 
-  function checkAllValidations() {
-    let allValid = true;
-    fieldRules.forEach(r => {
-      const input = document.getElementById(`inp-${r.field_id}`);
-      if (input && !input.disabled && input.value.trim() === "") allValid = false;
-    });
-    document.getElementById('btn-register').disabled = !allValid;
-    document.getElementById('btn-update').disabled = !allValid;
-  }
+
+  
 
   async function submitData() {
     document.getElementById('form-content').style.display = 'none';
     document.getElementById('loader').style.display = 'block';
-    const regId = "REG-" + Date.now();
-    const payload = { registration_id: regId, timestamp: new Date().toISOString() };
-    fieldRules.forEach(r => { payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; });
+    
+    const now = new Date();
+    const timestampStr = now.toISOString().replace(/[-T:Z.]/g, "").slice(0, 10);
+    const randomNum = Math.floor(100 + Math.random() * 900);
+    const regId = `${eventId.toUpperCase()}REG${timestampStr}${randomNum}`;
+
+
+const payload = { 
+        registration_id: regId, 
+        event_id: eventId.toUpperCase(), 
+        timestamp: now.toISOString() 
+    };
+
+    
+    fieldRules.forEach(r => { 
+        payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; 
+    });
 
     try {
-      await db.ref('registrations/' + regId).set(payload);
-      document.getElementById('app').innerHTML = "<h2>Success!</h2><p>ID: " + regId + "</p>";
-    } catch (e) {
-      alert("Submission failed.");
-      document.getElementById('form-content').style.display = 'block';
-      document.getElementById('loader').style.display = 'none';
+        await db.ref('registrations/' + regId).set(payload);
+        const scriptUrl = "https://script.google.com/macros/s/AKfycbwwF8ZbE_Mp3TfcRIIK3IGn9bMw7MIbrURkqzLlfkYWU5twkhMYiDYeh_DPiBt2yTyu/exec"; 
+
+        const finalTriggerUrl = `${scriptUrl}?action=sendEmail&regId=${regId}&eventId=${eventId.toUpperCase()}`;
+        
+        fetch(finalTriggerUrl, { mode: 'no-cors' });
+        
+        const snap = await db.ref(`htmlStorage/${eventId.toUpperCase()}/thank`).once('value');
+        const finalHtml = snap.val();
+
+        if (finalHtml && finalHtml !== "SYNCED DIRECTLY TO FIREBASE") {
+            document.getElementById('app').innerHTML = `<div style="width:100%;">${finalHtml}</div>`;
+        } else {
+            document.getElementById('app').innerHTML = `<h2>Registration Successful!</h2><p>ID: ${regId}</p><p>Check your email for confirmation.</p>`;
+        }
+        
+    } catch (e) { 
+        console.error("Submission Error:", e);
+        alert("Error during registration. Please try again."); 
+        document.getElementById('form-content').style.display = 'block';
+        document.getElementById('loader').style.display = 'none';
     }
   }
-</script>
 
+  init();
+
+
+function validateField(id, value, rule) {
+    if (!rule || rule === 'NULL') return true;
+    const val = value.trim();
+    if (val === "") return false;
+
+    // 1. MOB (Indian Mobile)
+    if (rule === 'MOB') return /^[6-9]\d{9}$/.test(val);
+
+    // 2. PIN (Indian Pincode)
+    if (rule === 'PIN') return /^\d{6}$/.test(val);
+
+    // 3. EMAIL
+    if (rule === 'EMAIL') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+
+    // 4. NUM:XTOY (Integers)
+    if (rule.startsWith('NUM:')) {
+      const range = rule.replace('NUM:', '').split('TO');
+      const num = parseInt(val);
+      return !isNaN(num) && num >= parseInt(range[0]) && num <= parseInt(range[1]) && /^\d+$/.test(val);
+    }
+
+    // 5. NUMF:XTOY (Fractions)
+    if (rule.startsWith('NUMF:')) {
+      const range = rule.replace('NUMF:', '').split('TO');
+      const num = parseFloat(val);
+      return !isNaN(num) && num >= parseFloat(range[0]) && num <= parseFloat(range[1]);
+    }
+
+    return true;
+  }
+
+
+function checkAllValidations() {
+    let allValid = true;
+    
+    fieldRules.forEach(r => {
+      const input = document.getElementById(`inp-${r.field_id}`);
+      const container = document.getElementById(`cont-${r.field_id}`);
+      const errorDiv = document.getElementById(`err-${r.field_id}`); // Finds the box
+      
+      if (container && container.style.display === 'block' && input) {
+        let isValid = validateField(r.field_id, input.value, r.field_validation);
+
+        // Special check for Centre dropdown
+        if (r.field_id === 'centre') {
+            const dropdown = document.getElementById('res-centre');
+            if (dropdown && dropdown.style.display === 'block') isValid = false;
+            if (input.value.trim() === "") isValid = false;
+        }
+
+        // --- ERROR TEXT LOGIC ---
+        if (!isValid && input.value.trim() !== "") {
+            if (errorDiv) {
+                // Fetch from your Google Sheet column "error_msg"
+                errorDiv.textContent = r.error_msg || r.Error_Msg || "Invalid Entry"; 
+                errorDiv.style.display = 'block';
+            }
+        } else {
+            if (errorDiv) errorDiv.style.display = 'none';
+        }
+
+        // --- YOUR RED BORDER (DON'T TOUCH) ---
+        input.style.border = isValid ? '1px solid #ced4da' : '2px solid red';
+        if (!isValid) allValid = false;
+      }
+    });
+
+    // Update the button states
+    const regBtn = document.getElementById('btn-register');
+    const updBtn = document.getElementById('btn-update');
+    
+    [regBtn, updBtn].forEach(btn => {
+        if (btn) {
+            btn.disabled = !allValid;
+            btn.style.opacity = allValid ? "1" : "0.5";
+            btn.style.cursor = allValid ? "pointer" : "not-allowed";
+        }
+    });
+}
+
+
+  
+</script>
 </body>
 </html>
