@@ -382,22 +382,37 @@ selectParticipant = function(p) {
 };
 
 function triggerSendCode(fId) {
-    const emailVal = document.getElementById('inp-email').value;
+    const emailInput = document.getElementById('inp-email');
+    const targetEmail = emailInput ? emailInput.value.trim() : "";
     const vBtn = document.getElementById(`vbtn-${fId}`);
     
-    if (!emailVal) { alert("Please enter an email address first."); return; }
+    if (!targetEmail) { alert("Please enter an email address first."); return; }
 
     generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
-    vBtn.innerText = "Sending to " + emailVal + "...";
+    
+    // UPDATED TEXT AS REQUESTED
+    vBtn.innerText = "Sending verification code to " + targetEmail + "...";
     vBtn.disabled = true;
 
-    google.script.run
-      .withSuccessHandler(() => {
-          vBtn.style.display = 'none';
-          document.getElementById(`vgroup-${fId}`).style.display = 'flex';
+    // USE YOUR EXISTING GOOGLE SCRIPT URL
+    const scriptUrl = "https://script.google.com/macros/s/AKfycbwwF8ZbE_Mp3TfcRIIK3IGn9bMw7MIbrURkqzLlfkYWU5twkhMYiDYeh_DPiBt2yTyu/exec";
+    const finalUrl = `${scriptUrl}?action=verifyExternal&email=${encodeURIComponent(targetEmail)}&code=${generatedCode}&fId=${fId.toUpperCase()}`;
+
+    fetch(finalUrl, { mode: 'no-cors' })
+      .then(() => {
+          // Visual transition to the code input
+          setTimeout(() => {
+              vBtn.style.display = 'none';
+              document.getElementById(`vgroup-${fId}`).style.display = 'flex';
+          }, 1500);
       })
-      .sendVerificationEmail(emailVal, generatedCode, fId.toUpperCase());
+      .catch(err => {
+          alert("Error: " + err);
+          vBtn.disabled = false;
+          vBtn.innerText = "Retry Sending";
+      });
 }
+
 
 function confirmCode(fId) {
     const inputCode = document.getElementById(`vcode-${fId}`).value;
