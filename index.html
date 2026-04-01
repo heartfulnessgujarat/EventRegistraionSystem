@@ -83,7 +83,6 @@
     }
   }
 
-
 function renderForm() {
     const container = document.getElementById('dynamic-fields');
     container.innerHTML = '';
@@ -95,18 +94,12 @@ function renderForm() {
       div.style.display = (r.initial_state === 'Visible') ? 'block' : 'none';
       
       const labelText = r.display_label || r.Display_Label || r.field_id;
-      const validationRule = r.field_validation || 'NULL';
       
-      // Cleaned up the input string to ensure the functions trigger correctly
       div.innerHTML = `
         <label>${labelText}</label>
         <input type="text" 
                id="inp-${r.field_id}" 
-
-               // Change the oninput string to this:
-
-               oninput="handleSearch('${r.field_id}', this.value); checkAllValidations();"
-              
+               oninput="handleSearch('${r.field_id}', this.value); checkAllValidations();" 
                disabled 
                autocomplete="off">
         <div class="help-text" id="help-${r.field_id}">${r.field_help_text || ''}</div>
