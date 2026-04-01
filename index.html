@@ -142,4 +142,119 @@
       verificationState[fId] = "DONE";
       document.getElementById(`vgroup-${fId}`).style.display = 'none';
       document.getElementById(`vsuccess-${fId}`).style.display = 'block';
-      document.getElementById(`inp-${fId}`).disabled =
+      document.getElementById(`inp-${fId}`).disabled = true;
+      checkAllValidations();
+    } else {
+      alert("Verification Code is incorrect. Please check your email.");
+    }
+  }
+
+  // --- END OF ADDED FUNCTIONS ---
+
+  function selectParticipant(p) {
+    isEditModeActive = false;
+    originalValues = { mobile: String(p.mobile || '').trim(), email: String(p.email || '').trim() };
+    verificationState = { mobile: true, email: true };
+    fieldRules.forEach(r => {
+      const el = document.getElementById(`inp-${r.field_id}`);
+      if (el) { 
+          el.value = p[r.field_id] || ''; 
+          el.disabled = true; 
+          document.getElementById(`vbtn-${r.field_id}`).style.display = 'none';
+          document.getElementById(`vsuccess-${r.field_id}`).style.display = 'none';
+          if (r.initial_state !== 'Hidden') document.getElementById(`cont-${r.field_id}`).style.display = 'block'; 
+      }
+    });
+    document.getElementById('btns-start').style.display = 'flex';
+    document.getElementById('btn-update').style.display = 'none';
+    document.getElementById('res-full_name').style.display = 'none';
+    checkAllValidations();
+  }
+
+  function enableEdit() {
+    isEditModeActive = true;
+    document.getElementById('btns-start').style.display = 'none';
+    document.getElementById('btn-update').style.display = 'block';
+    fieldRules.forEach(r => {
+      const el = document.getElementById(`inp-${r.field_id}`);
+      if (r.edit_behavior && r.edit_behavior.includes("Editable")) el.disabled = false;
+    });
+    checkAllValidations();
+  }
+
+  function checkAllValidations() {
+    let allValid = true;
+    fieldRules.forEach(r => {
+      const input = document.getElementById(`inp-${r.field_id}`);
+      const vBtn = document.getElementById(`vbtn-${r.field_id}`);
+      const errDiv = document.getElementById(`err-${r.field_id}`);
+
+      if (input && document.getElementById(`cont-${r.field_id}`).style.display === 'block') {
+        let val = input.value.trim();
+        let isValid = validateField(r.field_id, val, r.field_validation);
+        
+        if (!isValid && val !== "") {
+            errDiv.innerText = (r.field_id === 'mobile') ? "Must be exactly 10 digits" : "Invalid Email format";
+            errDiv.style.display = 'block';
+            vBtn.style.display = 'none'; 
+            input.style.border = '2px solid red';
+            allValid = false;
+        } else {
+            errDiv.style.display = 'none';
+            input.style.border = '1px solid #ced4da';
+            
+            if (r.field_id === 'mobile' || r.field_id === 'email') {
+                const isChanged = val !== originalValues[r.field_id];
+                const isPassedFirstLayer = isValid && val !== "";
+                
+                if (isEditModeActive && isChanged && isPassedFirstLayer && verificationState[r.field_id] === true) {
+                    vBtn.style.display = 'block';
+                    verificationState[r.field_id] = false; 
+                } else if (!isChanged || !isEditModeActive || verificationState[r.field_id] === "DONE") {
+                    vBtn.style.display = 'none';
+                    if (!isChanged) verificationState[r.field_id] = true;
+                }
+            }
+        }
+        if (!isValid) allValid = false;
+      }
+    });
+
+    const isReady = allValid && verificationState.mobile !== false && verificationState.email !== false;
+    document.getElementById('btn-update').disabled = !isReady;
+    document.getElementById('btn-register').disabled = !allValid;
+  }
+
+  function validateField(id, value, rule) {
+    if (!rule || rule === 'NULL') return true;
+    const v = value.trim();
+    if (v === "") return false;
+    if (rule === 'MOB') return /^[6-9]\d{9}$/.test(v); 
+    if (rule === 'EMAIL') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+    return true;
+  }
+
+  async function handleSearch(val) {
+    if (val.length < 3) return;
+    if (masterData.length === 0) { const snap = await db.ref('masterData').once('value'); masterData = Object.values(snap.val() || {}); }
+    const resDiv = document.getElementById('res-full_name');
+    resDiv.innerHTML = ''; resDiv.style.display = 'block';
+    masterData.filter(x => x.full_name?.toLowerCase().includes(val.toLowerCase())).slice(0,8).forEach(item => {
+      const d = document.createElement('div'); d.className = 'item'; d.textContent = item.full_name;
+      d.onclick = () => selectParticipant(item); resDiv.appendChild(d);
+    });
+  }
+
+  async function submitData() {
+    document.getElementById('form-content').style.display = 'none';
+    document.getElementById('loader').style.display = 'block';
+    const regId = `${eventId}REG${Date.now()}`;
+    const payload = { registration_id: regId, timestamp: new Date().toISOString() };
+    fieldRules.forEach(r => { payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; });
+    await db.ref('registrations/' + regId).set(payload);
+    document.getElementById('app').innerHTML = `<h2>Success!</h2><p>ID: ${regId}</p>`;
+  }
+  init();
+</script>
+</body>
+</html>
