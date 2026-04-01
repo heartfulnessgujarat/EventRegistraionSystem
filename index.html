@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,127 +6,119 @@
   <title>Event Registration 2026</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-<style>
+  <style>
     body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
     .card { width: 100%; max-width: 450px; background: white; padding: 35px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
     h2 { color: #1a237e; margin-bottom: 5px; text-align: center; }
     .subtitle { color: #666; font-size: 14px; text-align: center; margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
     .field-container { margin-bottom: 20px; position: relative; }
-    label { display: block; font-weight: 700; font-size: 13px; color: #1a237e; margin-bottom: 6px; }
+    .label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    label { font-weight: 700; font-size: 13px; color: #1a237e; }
+    .edit-link { font-size: 11px; color: #1a237e; cursor: pointer; font-weight: bold; text-decoration: underline; display: none; }
     input { width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
     input:disabled { background: #f8f9fa; color: #6c757d; }
-    
-    /* New Error Message Style */
     .error-msg-text { color: #d32f2f; font-size: 12px; margin-top: 5px; font-weight: bold; display: none; }
-    
-    .help-text { font-size: 11px; color: #666; margin-top: 5px; display: none; font-weight: 500; }
+    .verify-panel { background: #fffde7; border: 1px solid #fbc02d; padding: 10px; border-radius: 8px; margin-top: 10px; display: none; }
+    .verify-btn { background: #fbc02d; color: #333; border: none; padding: 8px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 12px; width: 100%; margin-bottom: 10px; }
     .primary-btn { width: 100%; padding: 15px; background: #1a237e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-    .dropdown { border: 1px solid #ddd; max-height: 200px; overflow-y: auto; background: white; position: absolute; width: 100%; z-index: 1000; display: none; border-radius: 0 0 8px 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .primary-btn:disabled { opacity: 0.5; cursor: not-allowed; background: #999; }
+    .dropdown { border: 1px solid #ddd; max-height: 200px; overflow-y: auto; background: white; position: absolute; width: 100%; z-index: 1000; display: none; }
     .item { padding: 12px; cursor: pointer; border-bottom: 1px solid #f1f1f1; font-size: 14px; }
     .item:hover { background: #e8eaf6; }
-    #loader, #loading-init { text-align: center; padding: 40px; color: #1a237e; }
+    #loader { text-align: center; padding: 40px; color: #1a237e; display: none; }
   </style>
 </head>
 <body>
+
 <div class="card" id="app">
-  
-  <div id="loading-init">
-    <h2>Loading registration form. Please wait…</h2>
-  </div>
+  <div id="loading-init"><h2>Loading registration form...</h2></div>
 
   <div id="form-content" style="display:none;">
     <h2 id="title"></h2>
     <p class="subtitle" id="subtitle"></p>
     <div id="dynamic-fields"></div>
 
-<div id="btns-start" style="display:none; flex-direction:column; gap:10px;">
+    <div id="btns-start" style="display:none; flex-direction:column; gap:10px;">
       <button id="btn-register" class="primary-btn" disabled onclick="submitData()">Confirm Registration</button>
-      <button class="primary-btn" style="background:#455a64;" onclick="enableEdit()">I want to edit my details</button>
+      <button class="primary-btn" style="background:#455a64;" onclick="enableEditMode()">I want to edit my details</button>
     </div>
 
-
-    <button id="btn-update" class="primary-btn" style="display:none;" disabled onclick="submitData()">Update & Register</button>
+    <button id="btn-master-update" class="primary-btn" style="display:none;" disabled onclick="submitData()">DETAILS UPDATED, REGISTER ME</button>
   </div>
 
-  <div id="loader" style="display:none;">
-    <h3>Processing your registration. Please wait…</h3>
-  </div>
-  
+  <div id="loader"><h3>Processing...</h3></div>
 </div>
 
 <script>
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyDiwrCKB77X-Dsxh9TdYcBkD5amFsZNMTe-dgptNBSFJGlZ_XJWc_Xv5prSK2x--3g8g/exec";
   const firebaseConfig = { databaseURL: "https://ferrari-reg-2026-default-rtdb.asia-southeast1.firebasedatabase.app" };
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
-  const urlParams = new URLSearchParams(window.location.search);
-  const eventId = (urlParams.get('id') || 'EVT001').toUpperCase();
+  const eventId = (new URLSearchParams(window.location.search).get('id') || 'EVT001').toUpperCase();
+
   let fieldRules = [], masterData = [], locData = [], eventConfig = {};
+  let originalData = {}; 
+  let verificationStates = { email: false, mobile: false };
 
   async function init() {
     try {
       const configSnap = await db.ref('config/eventConfig').once('value');
-      const allConfigs = configSnap.val() || {};
-      eventConfig = allConfigs[eventId] || Object.values(allConfigs).find(c => String(c.event_id).toUpperCase() === eventId) || { title: "Registration" };
-      
-      // Update the real title and subtitle using innerHTML
-      document.getElementById('title').innerHTML = eventConfig.title || "Registration";
+      eventConfig = (configSnap.val() || {})[eventId] || { title: "Registration" };
+      document.getElementById('title').innerHTML = eventConfig.title;
       document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
       
       const rulesSnap = await db.ref('config/fieldRules').once('value');
       fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
       
       renderForm();
-
-      // THE SWAP: Hide loading, Show form
       document.getElementById('loading-init').style.display = 'none';
       document.getElementById('form-content').style.display = 'block';
-
-    } catch (e) {
-      console.error("Init Error:", e);
-      document.getElementById('loading-init').innerHTML = "<h2>Error Loading Form</h2>";
-    }
+    } catch (e) { console.error(e); }
   }
 
-
-function renderForm() {
+  function renderForm() {
     const container = document.getElementById('dynamic-fields');
     container.innerHTML = '';
-    
     fieldRules.forEach(r => {
       const div = document.createElement('div');
       div.className = 'field-container';
       div.id = `cont-${r.field_id}`;
       div.style.display = (r.initial_state === 'Visible') ? 'block' : 'none';
       
-      const labelText = r.display_label || r.Display_Label || r.field_id;
-      
+      const canEdit = ['email', 'mobile', 'centre', 'pincode'].includes(r.field_id);
+
       div.innerHTML = `
-        <label>${labelText}</label>
-        <input type="text" 
-               id="inp-${r.field_id}" 
-               oninput="handleSearch('${r.field_id}', this.value); checkAllValidations();"
-               disabled 
-               autocomplete="off">
-        
+        <div class="label-row">
+          <label>${r.display_label || r.field_id}</label>
+          ${canEdit ? `<span class="edit-link" id="edit-link-${r.field_id}" onclick="unlockField('${r.field_id}')">Edit</span>` : ''}
+        </div>
+        <input type="text" id="inp-${r.field_id}" oninput="onInputChange('${r.field_id}', this.value)" disabled autocomplete="off">
         <div class="error-msg-text" id="err-${r.field_id}"></div>
+        <div class="dropdown" id="res-${r.field_id}"></div>
         
-        <div class="help-text" id="help-${r.field_id}">${r.field_help_text || ''}</div>
-        <div class="dropdown" id="res-${r.field_id}"></div>`;
-        
+        ${(r.field_id === 'email' || r.field_id === 'mobile') ? `
+          <div class="verify-panel" id="panel-${r.field_id}">
+            <button class="verify-btn" id="vbtn-${r.field_id}" onclick="sendCode('${r.field_id}')"></button>
+            <div id="box-${r.field_id}" style="display:none;">
+              <input type="text" placeholder="Enter 6-digit code" id="code-${r.field_id}" oninput="verifyCodeInput('${r.field_id}', this.value)">
+              <div id="vmsg-${r.field_id}" style="font-size:12px; margin-top:5px; font-weight:bold;"></div>
+            </div>
+          </div>
+        ` : ''}
+      `;
       container.appendChild(div);
-      
       if (r.field_id === 'full_name') {
         div.style.display = 'block';
         document.getElementById('inp-full_name').disabled = false;
       }
     });
-}
+  }
 
-
-
-  
-
-  
+  async function onInputChange(fId, val) {
+    if (fId === 'full_name') handleSearch(fId, val);
+    if (fId === 'centre') handleSearch(fId, val);
+    checkAllValidations();
+  }
 
   async function handleSearch(fId, val) {
     const resDiv = document.getElementById(`res-${fId}`);
@@ -155,201 +146,164 @@ function renderForm() {
     }
   }
 
-
   function selectParticipant(p) {
     fieldRules.forEach(r => {
       const el = document.getElementById(`inp-${r.field_id}`);
-      if (el) { 
-        el.value = p[r.field_id] || ''; 
-        
-        // THE FIX: Lock the name field immediately after selection
-        if (r.field_id === 'full_name') {
-          el.disabled = true; 
-        }
-
-        if (r.initial_state !== 'Hidden') {
-          document.getElementById(`cont-${r.field_id}`).style.display = 'block';
-        }
+      if (el) {
+        el.value = p[r.field_id] || '';
+        originalData[r.field_id] = el.value; // Store for change detection
+        if (r.field_id === 'full_name') el.disabled = true;
+        if (r.initial_state !== 'Hidden') document.getElementById(`cont-${r.field_id}`).style.display = 'block';
       }
     });
     document.getElementById('res-full_name').style.display = 'none';
     document.getElementById('btns-start').style.display = 'flex';
-    // Add this inside selectParticipant, at the very bottom
-  checkAllValidations();
-  }
-
-function selectLocation(l) {
-    document.getElementById('inp-centre').value = l.centre;
-    if(document.getElementById('inp-district')) {
-      document.getElementById('inp-district').value = l.district || '';
-    }
-    if(document.getElementById('inp-zone')) {
-      document.getElementById('inp-zone').value = l.zone || '';
-    }
-    document.getElementById('res-centre').style.display = 'none';
-    
-    // --- THE TRIGGER ---
-    // Forces the validation engine to re-scan the form now that the 
-    // Centre, District, and Zone values have been injected.
     checkAllValidations();
   }
-  
-  
-function enableEdit() {
+
+  function selectLocation(l) {
+    document.getElementById('inp-centre').value = l.centre;
+    ['district', 'zone'].forEach(f => { if(document.getElementById(`inp-${f}`)) document.getElementById(`inp-${f}`).value = l[f] || ''; });
+    document.getElementById('res-centre').style.display = 'none';
+    checkAllValidations();
+  }
+
+  function enableEditMode() {
     document.getElementById('btns-start').style.display = 'none';
-    document.getElementById('btn-update').style.display = 'block';
-    document.getElementById('btn-update').disabled = false;
-    
+    document.getElementById('btn-master-update').style.display = 'block';
     fieldRules.forEach(r => {
-      const el = document.getElementById(`inp-${r.field_id}`);
-      if (document.getElementById(`help-${r.field_id}`)) {
-        document.getElementById(`help-${r.field_id}`).style.display = 'block';
-      }
-      
-      // THE FIX: Only make it editable if the rule says "Editable"
-      // This will now respect your "ReadOnly" setting for full_name
-      if (r.edit_behavior && r.edit_behavior.includes("Editable")) {
-        el.disabled = false;
-      } else {
-        el.disabled = true; // Stay locked if set to ReadOnly
-      }
+      const link = document.getElementById(`edit-link-${r.field_id}`);
+      if (link) link.style.display = 'inline';
     });
   }
 
+  function unlockField(fId) {
+    document.getElementById(`inp-${fId}`).disabled = false;
+    document.getElementById(`inp-${fId}`).focus();
+    // Hide the edit link after clicking
+    document.getElementById(`edit-link-${fId}`).style.display = 'none';
+  }
 
-  
+  function sendCode(type) {
+    const newEmail = document.getElementById('inp-email').value;
+    const regEmail = originalData['email'];
+    const targetEmail = (type === 'email') ? newEmail : regEmail;
+
+    document.getElementById(`vbtn-${type}`).disabled = true;
+    document.getElementById(`vbtn-${type}`).innerText = "Sending...";
+
+    fetch(`${SCRIPT_URL}?action=sendVerificationCode&email=${encodeURIComponent(targetEmail)}&eventId=${eventId}`, { mode: 'no-cors' });
+
+    setTimeout(() => {
+      document.getElementById(`panel-${type}`).style.backgroundColor = "#e3f2fd";
+      document.getElementById(`vbtn-${type}`).style.display = "none";
+      document.getElementById(`box-${type}`).style.display = "block";
+      document.getElementById(`vmsg-${type}`).innerText = `Verification Code sent to ${targetEmail}`;
+    }, 1500);
+  }
+
+  async function verifyCodeInput(type, code) {
+    if (code.length === 6) {
+      const emailForCode = (type === 'email') ? document.getElementById('inp-email').value : originalData['email'];
+      const snap = await db.ref("verificationCodes/" + emailForCode.replace(/[.#$[\]]/g, "_")).once('value');
+      const data = snap.val();
+
+      if (data && data.code === code) {
+        document.getElementById(`vmsg-${type}`).innerText = "Code Verified ✅";
+        document.getElementById(`vmsg-${type}`).style.color = "green";
+        document.getElementById(`inp-${type}`).disabled = true;
+        verificationStates[type] = true;
+      } else {
+        document.getElementById(`vmsg-${type}`).innerText = "Code is not matching ❌";
+        document.getElementById(`vmsg-${type}`).style.color = "red";
+        verificationStates[type] = false;
+      }
+      checkAllValidations();
+    }
+  }
+
+  function validateField(id, value, rule) {
+    if (!rule || rule === 'NULL' || value.trim() === "") return value.trim() !== "";
+    const val = value.trim();
+    if (rule === 'MOB') return /^[6-9]\d{9}$/.test(val);
+    if (rule === 'PIN') return /^\d{6}$/.test(val);
+    if (rule === 'EMAIL') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+    return true;
+  }
+
+  function checkAllValidations() {
+    let allValid = true;
+    let needsEmailVerification = false;
+    let needsMobileVerification = false;
+
+    fieldRules.forEach(r => {
+      const input = document.getElementById(`inp-${r.field_id}`);
+      const err = document.getElementById(`err-${r.field_id}`);
+      if (input && !input.disabled || originalData[r.field_id]) {
+        let valid = validateField(r.field_id, input.value, r.field_validation);
+        
+        // Show/Hide Errors
+        if (!valid && input.value !== "") {
+          err.innerText = r.error_msg || "Invalid Entry";
+          err.style.display = "block";
+          allValid = false;
+        } else { err.style.display = "none"; }
+
+        input.style.border = valid ? '1px solid #ced4da' : '2px solid red';
+        if (!valid) allValid = false;
+
+        // Check if Layer 2 is needed
+        if (r.field_id === 'email' && input.value !== originalData['email'] && valid) needsEmailVerification = true;
+        if (r.field_id === 'mobile' && input.value !== originalData['mobile'] && valid) needsMobileVerification = true;
+      }
+    });
+
+    // Handle Yellow Buttons
+    if (needsEmailVerification && !verificationStates.email) {
+      const p = document.getElementById('panel-email');
+      p.style.display = 'block';
+      document.getElementById('vbtn-email').innerText = `Click here to send verification code to ${document.getElementById('inp-email').value}`;
+      allValid = false;
+    } else if (!needsEmailVerification) {
+        if(document.getElementById('panel-email')) document.getElementById('panel-email').style.display = 'none';
+    }
+
+    if (needsMobileVerification && !verificationStates.mobile) {
+      const p = document.getElementById('panel-mobile');
+      p.style.display = 'block';
+      document.getElementById('vbtn-mobile').innerText = `Click here to send verification code to ${originalData['email']}`;
+      allValid = false;
+    } else if (!needsMobileVerification) {
+        if(document.getElementById('panel-mobile')) document.getElementById('panel-mobile').style.display = 'none';
+    }
+
+    const masterBtn = document.getElementById('btn-master-update');
+    const regBtn = document.getElementById('btn-register');
+    
+    if (masterBtn) {
+      masterBtn.disabled = !allValid;
+      masterBtn.style.background = allValid ? "#1a237e" : "#999";
+    }
+    if (regBtn) regBtn.disabled = !allValid;
+  }
 
   async function submitData() {
     document.getElementById('form-content').style.display = 'none';
     document.getElementById('loader').style.display = 'block';
     
-    const now = new Date();
-    const timestampStr = now.toISOString().replace(/[-T:Z.]/g, "").slice(0, 10);
-    const randomNum = Math.floor(100 + Math.random() * 900);
-    const regId = `${eventId.toUpperCase()}REG${timestampStr}${randomNum}`;
-
-
-const payload = { 
-        registration_id: regId, 
-        event_id: eventId.toUpperCase(), 
-        timestamp: now.toISOString() 
-    };
-
-    
-    fieldRules.forEach(r => { 
-        payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; 
-    });
+    const regId = `${eventId}REG${Date.now()}`;
+    const payload = { registration_id: regId, event_id: eventId, timestamp: new Date().toISOString() };
+    fieldRules.forEach(r => { payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; });
 
     try {
-        await db.ref('registrations/' + regId).set(payload);
-        const scriptUrl = "https://script.google.com/macros/s/AKfycbyDiwrCKB77X-Dsxh9TdYcBkD5amFsZNMTe-dgptNBSFJGlZ_XJWc_Xv5prSK2x--3g8g/exec"; 
-
-        const finalTriggerUrl = `${scriptUrl}?action=sendEmail&regId=${regId}&eventId=${eventId.toUpperCase()}`;
-        
-        fetch(finalTriggerUrl, { mode: 'no-cors' });
-        
-        const snap = await db.ref(`htmlStorage/${eventId.toUpperCase()}/thank`).once('value');
-        const finalHtml = snap.val();
-
-        if (finalHtml && finalHtml !== "SYNCED DIRECTLY TO FIREBASE") {
-            document.getElementById('app').innerHTML = `<div style="width:100%;">${finalHtml}</div>`;
-        } else {
-            document.getElementById('app').innerHTML = `<h2>Registration Successful!</h2><p>ID: ${regId}</p><p>Check your email for confirmation.</p>`;
-        }
-        
-    } catch (e) { 
-        console.error("Submission Error:", e);
-        alert("Error during registration. Please try again."); 
-        document.getElementById('form-content').style.display = 'block';
-        document.getElementById('loader').style.display = 'none';
-    }
+      await db.ref('registrations/' + regId).set(payload);
+      fetch(`${SCRIPT_URL}?action=sendEmail&regId=${regId}&eventId=${eventId}`, { mode: 'no-cors' });
+      const snap = await db.ref(`htmlStorage/${eventId}/thank`).once('value');
+      document.getElementById('app').innerHTML = snap.val() || "<h2>Success!</h2>";
+    } catch (e) { alert("Error"); location.reload(); }
   }
 
   init();
-
-
-function validateField(id, value, rule) {
-    if (!rule || rule === 'NULL') return true;
-    const val = value.trim();
-    if (val === "") return false;
-
-    // 1. MOB (Indian Mobile)
-    if (rule === 'MOB') return /^[6-9]\d{9}$/.test(val);
-
-    // 2. PIN (Indian Pincode)
-    if (rule === 'PIN') return /^\d{6}$/.test(val);
-
-    // 3. EMAIL
-    if (rule === 'EMAIL') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
-
-    // 4. NUM:XTOY (Integers)
-    if (rule.startsWith('NUM:')) {
-      const range = rule.replace('NUM:', '').split('TO');
-      const num = parseInt(val);
-      return !isNaN(num) && num >= parseInt(range[0]) && num <= parseInt(range[1]) && /^\d+$/.test(val);
-    }
-
-    // 5. NUMF:XTOY (Fractions)
-    if (rule.startsWith('NUMF:')) {
-      const range = rule.replace('NUMF:', '').split('TO');
-      const num = parseFloat(val);
-      return !isNaN(num) && num >= parseFloat(range[0]) && num <= parseFloat(range[1]);
-    }
-
-    return true;
-  }
-
-
-function checkAllValidations() {
-    let allValid = true;
-    
-    fieldRules.forEach(r => {
-      const input = document.getElementById(`inp-${r.field_id}`);
-      const container = document.getElementById(`cont-${r.field_id}`);
-      const errorDiv = document.getElementById(`err-${r.field_id}`); // Finds the box
-      
-      if (container && container.style.display === 'block' && input) {
-        let isValid = validateField(r.field_id, input.value, r.field_validation);
-
-        // Special check for Centre dropdown
-        if (r.field_id === 'centre') {
-            const dropdown = document.getElementById('res-centre');
-            if (dropdown && dropdown.style.display === 'block') isValid = false;
-            if (input.value.trim() === "") isValid = false;
-        }
-
-        // --- ERROR TEXT LOGIC ---
-        if (!isValid && input.value.trim() !== "") {
-            if (errorDiv) {
-                // Fetch from your Google Sheet column "error_msg"
-                errorDiv.textContent = r.error_msg || r.Error_Msg || "Invalid Entry"; 
-                errorDiv.style.display = 'block';
-            }
-        } else {
-            if (errorDiv) errorDiv.style.display = 'none';
-        }
-
-        // --- YOUR RED BORDER (DON'T TOUCH) ---
-        input.style.border = isValid ? '1px solid #ced4da' : '2px solid red';
-        if (!isValid) allValid = false;
-      }
-    });
-
-    // Update the button states
-    const regBtn = document.getElementById('btn-register');
-    const updBtn = document.getElementById('btn-update');
-    
-    [regBtn, updBtn].forEach(btn => {
-        if (btn) {
-            btn.disabled = !allValid;
-            btn.style.opacity = allValid ? "1" : "0.5";
-            btn.style.cursor = allValid ? "pointer" : "not-allowed";
-        }
-    });
-}
-
-
-  
 </script>
 </body>
 </html>
