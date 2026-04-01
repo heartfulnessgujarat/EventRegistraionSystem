@@ -321,13 +321,16 @@ let generatedCodes = { email: "", mobile: "" };
 function checkAllValidations() {
     let allValid = true;
     
+    // Get the element that is currently focused (the one the user is typing in)
+    const activeElement = document.activeElement;
+    
     fieldRules.forEach(r => {
       const input = document.getElementById(`inp-${r.field_id}`);
       const container = document.getElementById(`cont-${r.field_id}`);
       const errorDiv = document.getElementById(`err-${r.field_id}`);
       
       if (container && container.style.display === 'block' && input) {
-        // --- LAYER 1: REGEX VALIDATION (From Google Sheet) ---
+        // --- LAYER 1: REGEX VALIDATION ---
         let isValid = validateField(r.field_id, input.value, r.field_validation);
 
         // Special check for Centre dropdown
@@ -337,38 +340,43 @@ function checkAllValidations() {
             if (input.value.trim() === "") isValid = false;
         }
 
-        // --- ERROR TEXT LOGIC ---
+        // Error Text and Red Border Logic
         if (!isValid && input.value.trim() !== "") {
             if (errorDiv) {
-                errorDiv.textContent = r.error_msg || r.Error_Msg || "Invalid Entry"; 
+                errorDiv.textContent = r.error_msg || "Invalid Entry"; 
                 errorDiv.style.display = 'block';
             }
+            input.style.border = '2px solid red';
         } else {
             if (errorDiv) errorDiv.style.display = 'none';
+            input.style.border = '1px solid #ced4da';
         }
 
-        // --- RED BORDER LOGIC ---
-        input.style.border = isValid ? '1px solid #ced4da' : '2px solid red';
-
-        // --- LAYER 2: VERIFICATION LOGIC (Email & Mobile) ---
+        // --- LAYER 2: VERIFICATION (INDIVIDUAL FIELD CHECK) ---
         if (r.field_id === 'email' || r.field_id === 'mobile') {
             const wrapper = document.getElementById(`v-wrapper-${r.field_id}`);
             const vBtn = document.getElementById(`vbtn-${r.field_id}`);
-            const isEditable = !input.disabled; // Only true if user clicked "Edit"
+            const isEditable = !input.disabled;
             const isVerified = verificationStates[r.field_id];
+            
+            // NEW FIX: Only show the yellow button if THIS specific input is the one being typed in
+            // OR if it has a value but hasn't been verified yet.
+            const isCurrentlyActive = (activeElement && activeElement.id === `inp-${r.field_id}`);
 
             if (wrapper) {
-                // Show Yellow Button ONLY if: Editable AND Layer 1 Valid AND NOT yet verified
-                if (isEditable && isValid && !isVerified && input.value.trim() !== "") {
+                if (isEditable && isValid && !isVerified && input.value.trim() !== "" && isCurrentlyActive) {
                     wrapper.style.display = 'block';
                     vBtn.innerText = "Click here to send verification code to " + input.value;
-                    allValid = false; // Block registration while verification is pending
-                } else {
+                } else if (isVerified) {
+                    // Hide if already verified
+                    wrapper.style.display = 'none';
+                } else if (!isCurrentlyActive && input.value.trim() === "") {
+                    // Hide if empty and not being touched
                     wrapper.style.display = 'none';
                 }
             }
             
-            // If the field is currently being edited but not verified, block the form
+            // If it's editable but not verified, it's NOT valid yet
             if (isEditable && !isVerified) {
                 allValid = false;
             }
@@ -378,7 +386,7 @@ function checkAllValidations() {
       }
     });
 
-    // Update the button states (Final Registration Button)
+    // Update the Register/Update button
     const regBtn = document.getElementById('btn-register');
     const updBtn = document.getElementById('btn-update');
     
@@ -386,10 +394,10 @@ function checkAllValidations() {
         if (btn) {
             btn.disabled = !allValid;
             btn.style.opacity = allValid ? "1" : "0.5";
-            btn.style.cursor = allValid ? "pointer" : "not-allowed";
         }
     });
 }
+
 
 async function triggerSendCode(fId) {
     const inputVal = document.getElementById(`inp-${fId}`).value.trim();
