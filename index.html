@@ -242,8 +242,9 @@ const payload = {
 
     try {
         await db.ref('registrations/' + regId).set(payload);
-        const scriptUrl = "https://script.google.com/macros/s/AKfycbwwF8ZbE_Mp3TfcRIIK3IGn9bMw7MIbrURkqzLlfkYWU5twkhMYiDYeh_DPiBt2yTyu/exec"; 
+        const scriptUrl = "https://script.google.com/macros/s/AKfycbwkU3kI8yzR2kENRStLaX1i32roJdVBjm8yQcW_b9WI35OL-7qCLlKstTrSxQ8mM69iqw/exec"; 
 
+      
         const finalTriggerUrl = `${scriptUrl}?action=sendEmail&regId=${regId}&eventId=${eventId.toUpperCase()}`;
         
         fetch(finalTriggerUrl, { mode: 'no-cors' });
