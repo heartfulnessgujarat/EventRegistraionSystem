@@ -314,6 +314,9 @@ function validateField(id, value, rule) {
     return true;
   }
 
+// --- GLOBAL STATES TO TRACK VERIFICATION ---
+let verificationStates = { email: false, mobile: false };
+let generatedCodes = { email: "", mobile: "" };
 
 function checkAllValidations() {
     let allValid = true;
@@ -321,9 +324,10 @@ function checkAllValidations() {
     fieldRules.forEach(r => {
       const input = document.getElementById(`inp-${r.field_id}`);
       const container = document.getElementById(`cont-${r.field_id}`);
-      const errorDiv = document.getElementById(`err-${r.field_id}`); // Finds the box
+      const errorDiv = document.getElementById(`err-${r.field_id}`);
       
       if (container && container.style.display === 'block' && input) {
+        // --- LAYER 1: REGEX VALIDATION (From Google Sheet) ---
         let isValid = validateField(r.field_id, input.value, r.field_validation);
 
         // Special check for Centre dropdown
@@ -336,7 +340,6 @@ function checkAllValidations() {
         // --- ERROR TEXT LOGIC ---
         if (!isValid && input.value.trim() !== "") {
             if (errorDiv) {
-                // Fetch from your Google Sheet column "error_msg"
                 errorDiv.textContent = r.error_msg || r.Error_Msg || "Invalid Entry"; 
                 errorDiv.style.display = 'block';
             }
@@ -344,13 +347,38 @@ function checkAllValidations() {
             if (errorDiv) errorDiv.style.display = 'none';
         }
 
-        // --- YOUR RED BORDER (DON'T TOUCH) ---
+        // --- RED BORDER LOGIC ---
         input.style.border = isValid ? '1px solid #ced4da' : '2px solid red';
+
+        // --- LAYER 2: VERIFICATION LOGIC (Email & Mobile) ---
+        if (r.field_id === 'email' || r.field_id === 'mobile') {
+            const wrapper = document.getElementById(`v-wrapper-${r.field_id}`);
+            const vBtn = document.getElementById(`vbtn-${r.field_id}`);
+            const isEditable = !input.disabled; // Only true if user clicked "Edit"
+            const isVerified = verificationStates[r.field_id];
+
+            if (wrapper) {
+                // Show Yellow Button ONLY if: Editable AND Layer 1 Valid AND NOT yet verified
+                if (isEditable && isValid && !isVerified && input.value.trim() !== "") {
+                    wrapper.style.display = 'block';
+                    vBtn.innerText = "Click here to send verification code to " + input.value;
+                    allValid = false; // Block registration while verification is pending
+                } else {
+                    wrapper.style.display = 'none';
+                }
+            }
+            
+            // If the field is currently being edited but not verified, block the form
+            if (isEditable && !isVerified) {
+                allValid = false;
+            }
+        }
+
         if (!isValid) allValid = false;
       }
     });
 
-    // Update the button states
+    // Update the button states (Final Registration Button)
     const regBtn = document.getElementById('btn-register');
     const updBtn = document.getElementById('btn-update');
     
@@ -363,53 +391,47 @@ function checkAllValidations() {
     });
 }
 
-let generatedCode = ""; // Global to store for comparison
-
 async function triggerSendCode(fId) {
-    const emailInput = document.getElementById('inp-email');
-    const targetEmail = emailInput ? emailInput.value.trim() : "";
+    const inputVal = document.getElementById(`inp-${fId}`).value.trim();
     const vBtn = document.getElementById(`vbtn-${fId}`);
     
-    if (!targetEmail) { alert("Please enter an email address first."); return; }
+    if (!inputVal) { alert("Please enter a value first."); return; }
 
-    generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
-    
-    // TEXT UPDATED AS REQUESTED
-    vBtn.innerText = "Sending verification code to " + targetEmail + "...";
-    vBtn.disabled = true;
+    // Generate code and store it for this specific field
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    generatedCodes[fId] = code;
 
-    // YOUR ESTABLISHED SCRIPT URL
+    // 1. Show the Alert Popup as requested
+    alert("Verification code has been sent to " + inputVal);
+
+    // 2. Hide yellow button and show input box
+    vBtn.parentElement.style.display = 'none'; 
+    document.getElementById(`vgroup-${fId}`).style.display = 'flex';
+
+    // 3. Fire the Google Script (Same logic as your successful registration)
     const scriptUrl = "https://script.google.com/macros/s/AKfycbwwF8ZbE_Mp3TfcRIIK3IGn9bMw7MIbrURkqzLlfkYWU5twkhMYiDYeh_DPiBt2yTyu/exec";
-    const finalUrl = `${scriptUrl}?action=verifyExternal&email=${encodeURIComponent(targetEmail)}&code=${generatedCode}&fId=${fId.toUpperCase()}`;
+    const finalUrl = `${scriptUrl}?action=verifyExternal&email=${encodeURIComponent(inputVal)}&code=${code}&fId=${fId.toUpperCase()}`;
 
-    // Standard fetch call mirroring your successful registration trigger
     fetch(finalUrl, { mode: 'no-cors' })
-      .then(() => {
-          // Success: Switch UI to the code entry box
-          vBtn.style.display = 'none';
-          document.getElementById(`vgroup-${fId}`).style.display = 'flex';
-      })
-      .catch(err => {
-          alert("Error: " + err);
-          vBtn.disabled = false;
-          vBtn.innerText = "Retry Sending";
-      });
+      .catch(err => console.log("Background email trigger sent."));
 }
 
 function verifyCodeInput(fId) {
     const userCode = document.getElementById(`vcode-${fId}`).value.trim();
-    if (userCode === generatedCode) {
+    if (userCode === generatedCodes[fId]) {
+        // Mark as verified
+        verificationStates[fId] = true;
+        
+        // UI Updates
         document.getElementById(`vstatus-${fId}`).innerHTML = "✅ Verified";
         document.getElementById(`vgroup-${fId}`).style.display = 'none';
-        checkAllValidations(); // Re-check to enable the Register button
+        
+        // Re-run validations to unlock the "Register" button
+        checkAllValidations(); 
     } else {
-        alert("Incorrect code. Please check your email.");
+        alert("Incorrect code. Please check your " + fId + " and try again.");
     }
-}
-
-  
-
-  
+}  
 </script>
 </body>
 </html>
