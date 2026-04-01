@@ -140,6 +140,7 @@
 
 
 function renderForm() {
+    console.log("Form Rendered with Verification UI"); // Check for this in F12
     const container = document.getElementById('dynamic-fields');
     container.innerHTML = '';
     
@@ -159,8 +160,18 @@ function renderForm() {
                disabled 
                autocomplete="off">
         
-        <div class="error-msg-text" id="err-${r.field_id}"></div>
+        <button id="vbtn-${r.field_id}" class="verify-btn" onclick="triggerSendCode('${r.field_id}')">
+          Click here to Send Verification Code
+        </button>
         
+        <div id="vgroup-${r.field_id}" class="v-input-group">
+          <input type="text" id="vcode-${r.field_id}" class="v-input" placeholder="000000" maxlength="6">
+          <button class="primary-btn" style="width:auto; padding:8px 15px; margin:0; font-size:12px;" onclick="confirmCode('${r.field_id}')">Verify</button>
+        </div>
+
+        <div id="vsuccess-${r.field_id}" class="v-success">✓ Verified & Updated</div>
+
+        <div class="error-msg-text" id="err-${r.field_id}"></div>
         <div class="help-text" id="help-${r.field_id}">${r.field_help_text || ''}</div>
         <div class="dropdown" id="res-${r.field_id}"></div>`;
         
@@ -174,6 +185,7 @@ function renderForm() {
 }
 
 
+  
 function renderForm() {
     const container = document.getElementById('dynamic-fields');
     container.innerHTML = '';
