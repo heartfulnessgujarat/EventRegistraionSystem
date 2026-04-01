@@ -14,17 +14,22 @@
     .subtitle { color: #666; font-size: 14px; text-align: center; margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
     .field-container { margin-bottom: 20px; position: relative; }
     label { display: block; font-weight: 700; font-size: 13px; color: #1a237e; margin-bottom: 6px; }
-    input { width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+    input { width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 8px; box-sizing: border-box; font-size: 16px; width: 100%; }
     input:disabled { background: #f8f9fa; color: #6c757d; }
-    .error-msg-text { color: #d32f2f; font-size: 11px; margin-top: 5px; font-weight: bold; display: none; }
+    
+    /* Error Message - Pushed down to avoid overlap */
+    .error-msg-text { color: #d32f2f; font-size: 11px; margin-top: 5px; font-weight: bold; display: none; width: 100%; }
     
     .primary-btn { width: 100%; padding: 15px; background: #1a237e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
     
-    /* Verification UI */
-    .verify-btn { background: #fbc02d; color: #000; border: none; padding: 10px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; margin-top: 8px; display: none; width: 100%; }
-    .v-input-group { display: none; margin-top: 10px; gap: 8px; background: #fff9c4; padding: 10px; border-radius: 8px; border: 1px solid #fbc02d; flex-wrap: nowrap; }
-    .v-input { width: 100% !important; padding: 8px !important; text-align: center; letter-spacing: 2px; font-weight: bold; background: white !important; flex-grow: 2; }
-    .v-confirm-btn { background: #1a237e; color: white; border: none; padding: 8px 15px; border-radius: 5px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+    /* Verification UI - Improved Layout */
+    .verify-area { margin-top: 8px; }
+    .verify-btn { background: #fbc02d; color: #000; border: none; padding: 10px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; display: none; width: 100%; }
+    
+    .v-input-group { display: none; margin-top: 10px; gap: 8px; background: #fff9c4; padding: 10px; border-radius: 8px; border: 1px solid #fbc02d; align-items: center; }
+    .v-input { flex: 1; padding: 8px !important; text-align: center; letter-spacing: 2px; font-weight: bold; background: white !important; min-width: 0; }
+    .v-confirm-btn { background: #1a237e; color: white; border: none; padding: 8px 15px; border-radius: 5px; font-size: 11px; cursor: pointer; white-space: nowrap; }
+    
     .v-success { color: #2e7d32; font-size: 13px; font-weight: bold; display: none; margin-top: 8px; padding: 8px; border: 1px solid #2e7d32; border-radius: 4px; background: #e8f5e9; text-align: center; }
 
     .dropdown { border: 1px solid #ddd; max-height: 200px; overflow-y: auto; background: white; position: absolute; width: 100%; z-index: 1000; display: none; border-radius: 0 0 8px 8px; }
@@ -90,12 +95,16 @@
       div.innerHTML = `
         <label>${r.display_label || r.field_id}</label>
         <input type="text" id="inp-${r.field_id}" oninput="handleInput('${r.field_id}', this.value)" disabled autocomplete="off">
-        <button id="vbtn-${r.field_id}" class="verify-btn" onclick="triggerSendCode('${r.field_id}')">Click here to Send Verification Code</button>
-        <div id="vgroup-${r.field_id}" class="v-input-group">
-          <input type="text" id="vcode-${r.field_id}" class="v-input" placeholder="Enter OTP" maxlength="6">
-          <button type="button" class="v-confirm-btn" onclick="confirmCode('${r.field_id}')">Verify</button>
+        
+        <div class="verify-area">
+            <button id="vbtn-${r.field_id}" class="verify-btn" onclick="triggerSendCode('${r.field_id}')">Click here to Send Verification Code</button>
+            <div id="vgroup-${r.field_id}" class="v-input-group">
+              <input type="text" id="vcode-${r.field_id}" class="v-input" placeholder="Enter Verification Code" maxlength="6">
+              <button type="button" class="v-confirm-btn" onclick="confirmCode('${r.field_id}')">Verify</button>
+            </div>
+            <div id="vsuccess-${r.field_id}" class="v-success">✓ Verified</div>
         </div>
-        <div id="vsuccess-${r.field_id}" class="v-success">✓ Verified</div>
+
         <div class="error-msg-text" id="err-${r.field_id}"></div>
         <div class="dropdown" id="res-${r.field_id}"></div>`;
       container.appendChild(div);
@@ -110,12 +119,16 @@
 
   function selectParticipant(p) {
     isEditModeActive = false;
-    originalValues = { mobile: p.mobile || '', email: p.email || '' };
+    originalValues = { mobile: String(p.mobile || '').trim(), email: String(p.email || '').trim() };
     verificationState = { mobile: true, email: true };
     fieldRules.forEach(r => {
       const el = document.getElementById(`inp-${r.field_id}`);
-      if (el) { el.value = p[r.field_id] || ''; el.disabled = true; 
-      if (r.initial_state !== 'Hidden') document.getElementById(`cont-${r.field_id}`).style.display = 'block'; }
+      if (el) { 
+          el.value = p[r.field_id] || ''; 
+          el.disabled = true; 
+          document.getElementById(`vbtn-${r.field_id}`).style.display = 'none'; // Hide verify buttons on fresh load
+          if (r.initial_state !== 'Hidden') document.getElementById(`cont-${r.field_id}`).style.display = 'block'; 
+      }
     });
     document.getElementById('btns-start').style.display = 'flex';
     document.getElementById('btn-update').style.display = 'none';
@@ -145,17 +158,28 @@
         
         if (r.field_id === 'mobile' || r.field_id === 'email') {
            const isChanged = val !== originalValues[r.field_id];
-           // Only show yellow button if Edit is active AND user actually changed the value
-           if (isEditModeActive && isChanged && isValid && verificationState[r.field_id] === true) {
+           
+           // TRIGGER LOGIC: Only show if Edit is on AND value is valid AND it's a complete entry (10 digits for mobile)
+           let isComplete = (r.field_id === 'mobile') ? val.length === 10 : val.includes('@');
+           
+           if (isEditModeActive && isChanged && isValid && isComplete && verificationState[r.field_id] === true) {
                vBtn.style.display = 'block';
                verificationState[r.field_id] = false; 
-           } else if (!isChanged || !isEditModeActive || verificationState[r.field_id] === "DONE") {
+           } else if (!isChanged || !isEditModeActive || verificationState[r.field_id] === "DONE" || !isComplete) {
                vBtn.style.display = 'none';
                if (!isChanged) verificationState[r.field_id] = true;
            }
         }
-        if (!isValid && val !== "") { input.style.border = '2px solid red'; allValid = false; } 
-        else { input.style.border = '1px solid #ced4da'; }
+
+        if (!isValid && val !== "") { 
+            document.getElementById(`err-${r.field_id}`).style.display = 'block';
+            document.getElementById(`err-${r.field_id}`).innerText = "Invalid format";
+            input.style.border = '2px solid red'; 
+            allValid = false; 
+        } else { 
+            document.getElementById(`err-${r.field_id}`).style.display = 'none';
+            input.style.border = '1px solid #ced4da'; 
+        }
         if (!isValid) allValid = false;
       }
     });
@@ -169,20 +193,11 @@
     const targetEmail = document.getElementById('inp-email').value;
     document.getElementById(`vbtn-${fId}`).innerText = "Sending...";
     
-    try {
-      google.script.run.withSuccessHandler(() => {
-        showVerificationGroup(fId);
-      }).sendVerificationEmail(targetEmail, generatedCode, fId.toUpperCase());
-    } catch(e) {
-      // Fail-safe for local testing
-      alert("LOCAL TEST: Code is " + generatedCode);
-      showVerificationGroup(fId);
-    }
-  }
-
-  function showVerificationGroup(fId) {
-    document.getElementById(`vbtn-${fId}`).style.display = 'none';
-    document.getElementById(`vgroup-${fId}`).style.display = 'flex';
+    // Silence the local alert and call the real script
+    google.script.run.withSuccessHandler(() => {
+        document.getElementById(`vbtn-${fId}`).style.display = 'none';
+        document.getElementById(`vgroup-${fId}`).style.display = 'flex';
+    }).sendVerificationEmail(targetEmail, generatedCode, fId.toUpperCase());
   }
 
   function confirmCode(fId) {
@@ -193,7 +208,7 @@
       document.getElementById(`vsuccess-${fId}`).style.display = 'block';
       document.getElementById(`inp-${fId}`).disabled = true;
       checkAllValidations();
-    } else { alert("Invalid Code"); }
+    } else { alert("Invalid Verification Code. Please check your email."); }
   }
 
   function validateField(id, value, rule) {
