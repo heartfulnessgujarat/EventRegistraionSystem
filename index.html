@@ -393,35 +393,32 @@ function checkAllValidations() {
     }
 }
 
-  
+
 async function triggerSendCode(fId) {
-    // ALWAYS get the email address, because we verify Mobile via Email too
-    const emailVal = document.getElementById('inp-email').value.trim();
-    const inputVal = document.getElementById(`inp-${fId}`).value.trim(); // The value being changed
-    const vBtn = document.getElementById(`vbtn-${fId}`);
+    const inputVal = document.getElementById(`inp-${fId}`).value.trim();
+    const emailField = document.getElementById('inp-email').value.trim();
     
-    if (!emailVal) { alert("Email address is required for verification."); return; }
+    // Logic: If verifying Mobile, send to current Email. If verifying Email, send to New Email.
+    const targetEmail = (fId === 'email') ? inputVal : emailField;
+    
+    if (!targetEmail) { alert("Valid email required for verification."); return; }
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     generatedCodes[fId] = code;
 
-    // CORRECTED POPUP MESSAGE
-    alert("Verification code has been sent to " + emailVal);
+    alert("Verification code has been sent to " + targetEmail);
 
-    vBtn.parentElement.style.display = 'none'; 
+    document.getElementById(`v-wrapper-${fId}`).style.display = 'none'; 
     document.getElementById(`vgroup-${fId}`).style.display = 'flex';
 
-    // THE BRIDGE: Even if fId is 'mobile', we send to emailVal
     const scriptUrl = "https://script.google.com/macros/s/AKfycbwwF8ZbE_Mp3TfcRIIK3IGn9bMw7MIbrURkqzLlfkYWU5twkhMYiDYeh_DPiBt2yTyu/exec";
-    const finalUrl = `${scriptUrl}?action=verifyExternal&email=${encodeURIComponent(emailVal)}&code=${code}&fId=${fId.toUpperCase()}`;
+    const finalUrl = `${scriptUrl}?action=verifyExternal&email=${encodeURIComponent(targetEmail)}&code=${code}&fId=${fId.toUpperCase()}`;
 
-    // Force a 'GET' call to ensure Apps Script wakes up
-    fetch(finalUrl, { mode: 'no-cors' })
-      .then(() => console.log("Verification email triggered for " + fId))
-      .catch(err => console.error("Fetch error:", err));
+    fetch(finalUrl, { mode: 'no-cors' });
 }
 
 
+  
 function verifyCodeInput(fId) {
     const userCode = document.getElementById(`vcode-${fId}`).value.trim();
     if (userCode === generatedCodes[fId]) {
