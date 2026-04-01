@@ -16,16 +16,18 @@
     label { display: block; font-weight: 700; font-size: 13px; color: #1a237e; margin-bottom: 6px; }
     input { width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
     input:disabled { background: #f8f9fa; color: #6c757d; }
-    .error-msg-text { color: #d32f2f; font-size: 12px; margin-top: 5px; font-weight: bold; display: none; }
-    .help-text { font-size: 11px; color: #666; margin-top: 5px; display: none; font-weight: 500; }
+    .error-msg-text { color: #d32f2f; font-size: 11px; margin-top: 5px; font-weight: bold; display: none; }
+    
     .primary-btn { width: 100%; padding: 15px; background: #1a237e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
     
-    .verify-btn { background: #fbc02d; color: #000; border: none; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; margin-top: 8px; display: none; width: 100%; }
-    .v-input-group { display: none; margin-top: 10px; gap: 10px; align-items: center; background: #fff9c4; padding: 10px; border-radius: 8px; border: 1px solid #fbc02d; }
-    .v-input { width: 100% !important; padding: 8px !important; text-align: center; letter-spacing: 4px; font-weight: bold; background: white !important; }
+    /* Verification UI */
+    .verify-btn { background: #fbc02d; color: #000; border: none; padding: 10px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; margin-top: 8px; display: none; width: 100%; }
+    .v-input-group { display: none; margin-top: 10px; gap: 8px; background: #fff9c4; padding: 10px; border-radius: 8px; border: 1px solid #fbc02d; flex-wrap: nowrap; }
+    .v-input { width: 100% !important; padding: 8px !important; text-align: center; letter-spacing: 2px; font-weight: bold; background: white !important; flex-grow: 2; }
+    .v-confirm-btn { background: #1a237e; color: white; border: none; padding: 8px 15px; border-radius: 5px; font-size: 12px; cursor: pointer; white-space: nowrap; }
     .v-success { color: #2e7d32; font-size: 13px; font-weight: bold; display: none; margin-top: 8px; padding: 8px; border: 1px solid #2e7d32; border-radius: 4px; background: #e8f5e9; text-align: center; }
 
-    .dropdown { border: 1px solid #ddd; max-height: 200px; overflow-y: auto; background: white; position: absolute; width: 100%; z-index: 1000; display: none; border-radius: 0 0 8px 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .dropdown { border: 1px solid #ddd; max-height: 200px; overflow-y: auto; background: white; position: absolute; width: 100%; z-index: 1000; display: none; border-radius: 0 0 8px 8px; }
     .item { padding: 12px; cursor: pointer; border-bottom: 1px solid #f1f1f1; font-size: 14px; }
     .item:hover { background: #e8eaf6; }
     #loader, #loading-init { text-align: center; padding: 40px; color: #1a237e; }
@@ -56,7 +58,7 @@
   const urlParams = new URLSearchParams(window.location.search);
   const eventId = (urlParams.get('id') || 'EVT001').toUpperCase();
   
-  let fieldRules = [], masterData = [], eventConfig = {};
+  let fieldRules = [], masterData = [];
   let originalValues = { mobile: '', email: '' }; 
   let verificationState = { mobile: true, email: true }; 
   let generatedCode = null; 
@@ -66,9 +68,9 @@
     try {
       const configSnap = await db.ref('config/eventConfig').once('value');
       const allConfigs = configSnap.val() || {};
-      eventConfig = allConfigs[eventId] || { title: "Registration" };
-      document.getElementById('title').innerHTML = eventConfig.title;
-      document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
+      const eventConfig = allConfigs[eventId] || { title: "Registration" };
+      document.getElementById('title').innerText = eventConfig.title;
+      document.getElementById('subtitle').innerText = eventConfig.subtitle || "";
       const rulesSnap = await db.ref('config/fieldRules').once('value');
       fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
       renderForm();
@@ -85,21 +87,25 @@
       div.className = 'field-container';
       div.id = `cont-${r.field_id}`;
       div.style.display = (r.initial_state === 'Visible') ? 'block' : 'none';
-      const labelText = r.display_label || r.field_id;
       div.innerHTML = `
-        <label>${labelText}</label>
-        <input type="text" id="inp-${r.field_id}" oninput="handleSearch('${r.field_id}', this.value); checkAllValidations();" disabled autocomplete="off">
+        <label>${r.display_label || r.field_id}</label>
+        <input type="text" id="inp-${r.field_id}" oninput="handleInput('${r.field_id}', this.value)" disabled autocomplete="off">
         <button id="vbtn-${r.field_id}" class="verify-btn" onclick="triggerSendCode('${r.field_id}')">Click here to Send Verification Code</button>
         <div id="vgroup-${r.field_id}" class="v-input-group">
-          <input type="text" id="vcode-${r.field_id}" class="v-input" placeholder="6-digit Code" maxlength="6">
-          <button type="button" class="primary-btn" style="width:auto; padding:8px 15px; margin:0;" onclick="confirmCode('${r.field_id}')">Verify</button>
+          <input type="text" id="vcode-${r.field_id}" class="v-input" placeholder="Enter OTP" maxlength="6">
+          <button type="button" class="v-confirm-btn" onclick="confirmCode('${r.field_id}')">Verify</button>
         </div>
-        <div id="vsuccess-${r.field_id}" class="v-success">✓ Verified & Updated</div>
+        <div id="vsuccess-${r.field_id}" class="v-success">✓ Verified</div>
         <div class="error-msg-text" id="err-${r.field_id}"></div>
         <div class="dropdown" id="res-${r.field_id}"></div>`;
       container.appendChild(div);
       if (r.field_id === 'full_name') { div.style.display = 'block'; document.getElementById('inp-full_name').disabled = false; }
     });
+  }
+
+  function handleInput(fId, val) {
+    if(fId === 'full_name') handleSearch(val);
+    checkAllValidations();
   }
 
   function selectParticipant(p) {
@@ -136,8 +142,10 @@
       if (input && document.getElementById(`cont-${r.field_id}`).style.display === 'block') {
         let val = input.value.trim();
         let isValid = validateField(r.field_id, val, r.field_validation);
+        
         if (r.field_id === 'mobile' || r.field_id === 'email') {
-           const isChanged = val !== (originalValues[r.field_id] || "");
+           const isChanged = val !== originalValues[r.field_id];
+           // Only show yellow button if Edit is active AND user actually changed the value
            if (isEditModeActive && isChanged && isValid && verificationState[r.field_id] === true) {
                vBtn.style.display = 'block';
                verificationState[r.field_id] = false; 
@@ -152,12 +160,72 @@
       }
     });
     const isReady = allValid && verificationState.mobile !== false && verificationState.email !== false;
-    const updBtn = document.getElementById('btn-update');
-    const regBtn = document.getElementById('btn-register');
-    [updBtn, regBtn].forEach(b => { if(b){ b.disabled = !isReady; b.style.opacity = isReady ? "1" : "0.5"; } });
+    document.getElementById('btn-update').disabled = !isReady;
+    document.getElementById('btn-register').disabled = !allValid;
   }
 
   function triggerSendCode(fId) {
     generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
     const targetEmail = document.getElementById('inp-email').value;
-    document.
+    document.getElementById(`vbtn-${fId}`).innerText = "Sending...";
+    
+    try {
+      google.script.run.withSuccessHandler(() => {
+        showVerificationGroup(fId);
+      }).sendVerificationEmail(targetEmail, generatedCode, fId.toUpperCase());
+    } catch(e) {
+      // Fail-safe for local testing
+      alert("LOCAL TEST: Code is " + generatedCode);
+      showVerificationGroup(fId);
+    }
+  }
+
+  function showVerificationGroup(fId) {
+    document.getElementById(`vbtn-${fId}`).style.display = 'none';
+    document.getElementById(`vgroup-${fId}`).style.display = 'flex';
+  }
+
+  function confirmCode(fId) {
+    const entered = document.getElementById(`vcode-${fId}`).value;
+    if (entered === generatedCode) {
+      verificationState[fId] = "DONE";
+      document.getElementById(`vgroup-${fId}`).style.display = 'none';
+      document.getElementById(`vsuccess-${fId}`).style.display = 'block';
+      document.getElementById(`inp-${fId}`).disabled = true;
+      checkAllValidations();
+    } else { alert("Invalid Code"); }
+  }
+
+  function validateField(id, value, rule) {
+    if (!rule || rule === 'NULL') return true;
+    const v = value.trim();
+    if (v === "") return false;
+    if (rule === 'MOB') return /^[6-9]\d{9}$/.test(v);
+    if (rule === 'EMAIL') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+    return true;
+  }
+
+  async function handleSearch(val) {
+    if (val.length < 3) return;
+    if (masterData.length === 0) { const snap = await db.ref('masterData').once('value'); masterData = Object.values(snap.val() || {}); }
+    const resDiv = document.getElementById('res-full_name');
+    resDiv.innerHTML = ''; resDiv.style.display = 'block';
+    masterData.filter(x => x.full_name?.toLowerCase().includes(val.toLowerCase())).slice(0,8).forEach(item => {
+      const d = document.createElement('div'); d.className = 'item'; d.textContent = item.full_name;
+      d.onclick = () => selectParticipant(item); resDiv.appendChild(d);
+    });
+  }
+
+  async function submitData() {
+    document.getElementById('form-content').style.display = 'none';
+    document.getElementById('loader').style.display = 'block';
+    const regId = `${eventId}REG${Date.now()}`;
+    const payload = { registration_id: regId, timestamp: new Date().toISOString() };
+    fieldRules.forEach(r => { payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; });
+    await db.ref('registrations/' + regId).set(payload);
+    document.getElementById('app').innerHTML = `<h2>Success!</h2><p>ID: ${regId}</p>`;
+  }
+  init();
+</script>
+</body>
+</html>
