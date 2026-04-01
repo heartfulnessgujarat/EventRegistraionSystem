@@ -242,7 +242,7 @@ const payload = {
 
     try {
         await db.ref('registrations/' + regId).set(payload);
-        const scriptUrl = "https://script.google.com/macros/s/AKfycbwwF8ZbE_Mp3TfcRIIK3IGn9bMw7MIbrURkqzLlfkYWU5twkhMYiDYeh_DPiBt2yTyu/exec"; 
+        const scriptUrl = "https://script.google.com/macros/s/AKfycbyDiwrCKB77X-Dsxh9TdYcBkD5amFsZNMTe-dgptNBSFJGlZ_XJWc_Xv5prSK2x--3g8g/exec"; 
 
         const finalTriggerUrl = `${scriptUrl}?action=sendEmail&regId=${regId}&eventId=${eventId.toUpperCase()}`;
         
