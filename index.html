@@ -349,8 +349,12 @@ function selectParticipant(p) {
 
 
 function checkAllValidations() {
+
+// GUARD: If fieldRules is empty or null, exit immediately
+    if (!fieldRules || fieldRules.length === 0) return; 
     let allValid = true;
-    let verificationPending = false; // New flag
+    let verificationPending = false;
+         
     
     fieldRules.forEach(r => {
         const input = document.getElementById(`inp-${r.field_id}`);
