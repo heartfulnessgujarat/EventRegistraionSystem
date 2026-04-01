@@ -329,14 +329,19 @@ function checkAllValidations() {
       if (container && container.style.display === 'block' && input) {
         let isValid = validateField(r.field_id, input.value, r.field_validation);
 
-        // --- VERIFICATION BUTTON LOGIC ---
-        // Only show the button if: 1. Edit is active 2. Field is Mobile/Email 3. Value changed
-        if (document.getElementById('btn-update').style.display === 'block' && (r.field_id === 'mobile' || r.field_id === 'email')) {
-            const isChanged = input.value.trim() !== (originalValues ? originalValues[r.field_id] : "");
-            if (isChanged && isValid && vBtn) {
-                vBtn.style.display = 'block';
-            } else if (vBtn) {
-                vBtn.style.display = 'none';
+       // --- VERIFICATION BUTTON LOGIC (FIXED) ---
+        const isEditModeActive = document.getElementById('btn-update').style.display === 'block';
+        
+        if (isEditModeActive && (r.field_id === 'mobile' || r.field_id === 'email')) {
+            const vBtn = document.getElementById(`vbtn-${r.field_id}`);
+            const currentVal = input.value.trim();
+            const originalVal = (originalValues && originalValues[r.field_id]) ? originalValues[r.field_id].toString().trim() : "";
+            
+            // Logic: Only show if value is different AND valid AND not empty
+            if (currentVal !== originalVal && isValid && currentVal !== "") {
+                if (vBtn) vBtn.style.display = 'block';
+            } else {
+                if (vBtn) vBtn.style.display = 'none';
             }
         }
 
