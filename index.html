@@ -288,31 +288,35 @@ function validateField(id, value, rule) {
 
 function checkAllValidations() {
     let allValid = true;
-    console.log("Validation check triggered..."); 
-
+    
     fieldRules.forEach(r => {
       const input = document.getElementById(`inp-${r.field_id}`);
       const container = document.getElementById(`cont-${r.field_id}`);
       
-      if (container && container.style.display === 'block') {
+      if (container && container.style.display === 'block' && input) {
+        // We fetch the rule directly from the fieldRules object
         const isValid = validateField(r.field_id, input.value, r.field_validation);
         
-        input.style.borderColor = isValid ? '#ced4da' : 'red';
+        // Visual Feedback
+        input.style.border = isValid ? '1px solid #ced4da' : '2px solid red';
         input.style.backgroundColor = isValid ? 'white' : '#fff0f0';
         
         if (!isValid) allValid = false;
       }
     });
     
-    // Select BOTH buttons
-    const regBtn = document.getElementById('btn-register');
-    const updBtn = document.getElementById('btn-update');
-    
-    if (regBtn) regBtn.disabled = !allValid;
-    if (updBtn) updBtn.disabled = !allValid;
-    
-    console.log("Form Status - All Valid:", allValid);
-  }
+    // --- FORCE LOCK ALL PRIMARY BUTTONS ---
+    const allButtons = document.querySelectorAll('.primary-btn');
+    allButtons.forEach(btn => {
+      // Only lock the Register/Update buttons, leave the "Edit" button alone
+      if (btn.innerText.includes("Register") || btn.innerText.includes("Confirm")) {
+          btn.disabled = !allValid;
+          btn.style.opacity = allValid ? "1" : "0.5";
+          btn.style.cursor = allValid ? "pointer" : "not-allowed";
+      }
+    });
+}
+
 
 
 
