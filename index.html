@@ -318,10 +318,31 @@ function validateField(id, value, rule) {
 let verificationStates = { email: false, mobile: false };
 let generatedCodes = { email: "", mobile: "" };
 
+
+
+// Add a global to store the original values from Master Data
+let originalValues = {}; 
+
+// Update your selectParticipant function to save the originals
+function selectParticipant(p) {
+    fieldRules.forEach(r => {
+        const el = document.getElementById(`inp-${r.field_id}`);
+        if (el) { 
+            el.value = p[r.field_id] || ''; 
+            originalValues[r.field_id] = el.value; // SAVE ORIGINAL HERE
+            if (r.field_id === 'full_name') el.disabled = true; 
+            if (r.initial_state !== 'Hidden') {
+                document.getElementById(`cont-${r.field_id}`).style.display = 'block';
+            }
+        }
+    });
+    document.getElementById('res-full_name').style.display = 'none';
+    document.getElementById('btns-start').style.display = 'flex';
+    checkAllValidations();
+}
+
 function checkAllValidations() {
     let allValid = true;
-    
-    // Get the element that is currently focused (the one the user is typing in)
     const activeElement = document.activeElement;
     
     fieldRules.forEach(r => {
@@ -330,75 +351,57 @@ function checkAllValidations() {
       const errorDiv = document.getElementById(`err-${r.field_id}`);
       
       if (container && container.style.display === 'block' && input) {
-        // --- LAYER 1: REGEX VALIDATION ---
         let isValid = validateField(r.field_id, input.value, r.field_validation);
 
-        // Special check for Centre dropdown
-        if (r.field_id === 'centre') {
-            const dropdown = document.getElementById('res-centre');
-            if (dropdown && dropdown.style.display === 'block') isValid = false;
-            if (input.value.trim() === "") isValid = false;
-        }
-
-        // Error Text and Red Border Logic
+        // --- ERROR & BORDER LOGIC ---
         if (!isValid && input.value.trim() !== "") {
-            if (errorDiv) {
-                errorDiv.textContent = r.error_msg || "Invalid Entry"; 
-                errorDiv.style.display = 'block';
-            }
+            if (errorDiv) errorDiv.style.display = 'block';
             input.style.border = '2px solid red';
         } else {
             if (errorDiv) errorDiv.style.display = 'none';
             input.style.border = '1px solid #ced4da';
         }
 
-        // --- LAYER 2: VERIFICATION (INDIVIDUAL FIELD CHECK) ---
+        // --- LAYER 2: VERIFICATION ---
         if (r.field_id === 'email' || r.field_id === 'mobile') {
             const wrapper = document.getElementById(`v-wrapper-${r.field_id}`);
             const vBtn = document.getElementById(`vbtn-${r.field_id}`);
             const isEditable = !input.disabled;
             const isVerified = verificationStates[r.field_id];
             
-            // NEW FIX: Only show the yellow button if THIS specific input is the one being typed in
-            // OR if it has a value but hasn't been verified yet.
-            const isCurrentlyActive = (activeElement && activeElement.id === `inp-${r.field_id}`);
+            // LOGIC: Only show button if:
+            // 1. We are in Edit Mode
+            // 2. Layer 1 is Valid
+            // 3. The value is DIFFERENT from what was in the Master Data
+            const isModified = (input.value !== originalValues[r.field_id]);
 
             if (wrapper) {
-                if (isEditable && isValid && !isVerified && input.value.trim() !== "" && isCurrentlyActive) {
+                if (isEditable && isValid && !isVerified && isModified) {
                     wrapper.style.display = 'block';
-                    vBtn.innerText = "Click here to send verification code to " + input.value;
-                } else if (isVerified) {
-                    // Hide if already verified
-                    wrapper.style.display = 'none';
-                } else if (!isCurrentlyActive && input.value.trim() === "") {
-                    // Hide if empty and not being touched
+                    // CORRECTED TEXT FOR MOBILE
+                    const msgType = (r.field_id === 'email') ? "email address" : "mobile number";
+                    vBtn.innerText = "Click here to verify change of " + msgType + " to " + input.value;
+                } else {
                     wrapper.style.display = 'none';
                 }
             }
             
-            // If it's editable but not verified, it's NOT valid yet
-            if (isEditable && !isVerified) {
-                allValid = false;
-            }
+            if (isEditable && isModified && !isVerified) allValid = false;
         }
 
         if (!isValid) allValid = false;
       }
     });
 
-    // Update the Register/Update button
-    const regBtn = document.getElementById('btn-register');
     const updBtn = document.getElementById('btn-update');
-    
-    [regBtn, updBtn].forEach(btn => {
-        if (btn) {
-            btn.disabled = !allValid;
-            btn.style.opacity = allValid ? "1" : "0.5";
-        }
-    });
+    if (updBtn) {
+        updBtn.disabled = !allValid;
+        updBtn.style.opacity = allValid ? "1" : "0.5";
+    }
 }
 
 
+  
 async function triggerSendCode(fId) {
     // ALWAYS get the email address, because we verify Mobile via Email too
     const emailVal = document.getElementById('inp-email').value.trim();
