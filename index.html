@@ -349,6 +349,51 @@ function checkAllValidations() {
     });
 }
 
+let generatedCode = ""; // Global to store for comparison
+
+async function triggerSendCode(fId) {
+    const emailInput = document.getElementById('inp-email');
+    const targetEmail = emailInput ? emailInput.value.trim() : "";
+    const vBtn = document.getElementById(`vbtn-${fId}`);
+    
+    if (!targetEmail) { alert("Please enter an email address first."); return; }
+
+    generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // TEXT UPDATED AS REQUESTED
+    vBtn.innerText = "Sending verification code to " + targetEmail + "...";
+    vBtn.disabled = true;
+
+    // YOUR ESTABLISHED SCRIPT URL
+    const scriptUrl = "https://script.google.com/macros/s/AKfycbwwF8ZbE_Mp3TfcRIIK3IGn9bMw7MIbrURkqzLlfkYWU5twkhMYiDYeh_DPiBt2yTyu/exec";
+    const finalUrl = `${scriptUrl}?action=verifyExternal&email=${encodeURIComponent(targetEmail)}&code=${generatedCode}&fId=${fId.toUpperCase()}`;
+
+    // Standard fetch call mirroring your successful registration trigger
+    fetch(finalUrl, { mode: 'no-cors' })
+      .then(() => {
+          // Success: Switch UI to the code entry box
+          vBtn.style.display = 'none';
+          document.getElementById(`vgroup-${fId}`).style.display = 'flex';
+      })
+      .catch(err => {
+          alert("Error: " + err);
+          vBtn.disabled = false;
+          vBtn.innerText = "Retry Sending";
+      });
+}
+
+function verifyCodeInput(fId) {
+    const userCode = document.getElementById(`vcode-${fId}`).value.trim();
+    if (userCode === generatedCode) {
+        document.getElementById(`vstatus-${fId}`).innerHTML = "✅ Verified";
+        document.getElementById(`vgroup-${fId}`).style.display = 'none';
+        checkAllValidations(); // Re-check to enable the Register button
+    } else {
+        alert("Incorrect code. Please check your email.");
+    }
+}
+
+  
 
   
 </script>
