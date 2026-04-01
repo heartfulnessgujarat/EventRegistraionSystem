@@ -60,9 +60,7 @@
   const eventId = (urlParams.get('id') || 'EVT001').toUpperCase();
 
   let fieldRules = [], masterData = [], locData = [], eventConfig = {};
-  let verificationStates = { email: false, mobile: false };
-  let generatedCodes = { email: "", mobile: "" };
-  let originalValues = {}; 
+ 
 
   // 2. INITIALIZATION
   window.onload = init;
