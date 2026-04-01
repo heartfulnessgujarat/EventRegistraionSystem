@@ -102,7 +102,10 @@ function renderForm() {
         <label>${labelText}</label>
         <input type="text" 
                id="inp-${r.field_id}" 
-               oninput="handleSearch('${r.field_id}', this.value); checkAllValidations();" 
+
+               // Change the oninput string to this:
+oninput="checkAllValidations(); handleSearch('${r.field_id}', this.value);"
+              
                disabled 
                autocomplete="off">
         <div class="help-text" id="help-${r.field_id}">${r.field_help_text || ''}</div>
