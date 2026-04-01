@@ -17,13 +17,11 @@
     input { width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
     input:disabled { background: #f8f9fa; color: #6c757d; }
     
-    /* Error & Button Placement Area */
     .status-area { min-height: 20px; margin-top: 5px; }
     .error-msg-text { color: #d32f2f; font-size: 12px; font-weight: bold; display: none; }
     
     .primary-btn { width: 100%; padding: 15px; background: #1a237e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
     
-    /* Verification UI */
     .verify-btn { background: #fbc02d; color: #000; border: none; padding: 12px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; display: none; width: 100%; }
     .v-input-group { display: none; margin-top: 10px; gap: 8px; background: #fff9c4; padding: 10px; border-radius: 8px; border: 1px solid #fbc02d; align-items: center; }
     .v-input { flex: 1; padding: 10px !important; text-align: center; letter-spacing: 4px; font-weight: bold; background: white !important; border: 1px solid #fbc02d !important; }
@@ -103,4 +101,45 @@
           <input type="text" id="vcode-${r.field_id}" class="v-input" placeholder="6-digit Code" maxlength="6">
           <button type="button" class="v-confirm-btn" onclick="confirmCode('${r.field_id}')">Verify</button>
         </div>
-        <div id="vsuccess-${r.field_id}" class="v-success">
+        <div id="vsuccess-${r.field_id}" class="v-success">✓ Verified & Updated</div>
+        <div class="dropdown" id="res-${r.field_id}"></div>`;
+      container.appendChild(div);
+      if (r.field_id === 'full_name') { div.style.display = 'block'; document.getElementById('inp-full_name').disabled = false; }
+    });
+  }
+
+  // --- ADDED MISSING FUNCTIONS BELOW ---
+
+  function handleInput(fId, val) {
+    if(fId === 'full_name') handleSearch(val);
+    checkAllValidations();
+  }
+
+  function triggerSendCode(fId) {
+    generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const targetEmail = document.getElementById('inp-email').value;
+    const vBtn = document.getElementById(`vbtn-${fId}`);
+    
+    vBtn.innerText = "Sending code to " + targetEmail + "...";
+    vBtn.disabled = true;
+
+    google.script.run
+      .withSuccessHandler(function() {
+          vBtn.style.display = 'none';
+          document.getElementById(`vgroup-${fId}`).style.display = 'flex';
+      })
+      .withFailureHandler(function(err) {
+          alert("Email Error: " + err.message);
+          vBtn.innerText = "Click here to Send Verification Code";
+          vBtn.disabled = false;
+      })
+      .sendVerificationEmail(targetEmail, generatedCode, fId.toUpperCase());
+  }
+
+  function confirmCode(fId) {
+    const entered = document.getElementById(`vcode-${fId}`).value;
+    if (entered === generatedCode) {
+      verificationState[fId] = "DONE";
+      document.getElementById(`vgroup-${fId}`).style.display = 'none';
+      document.getElementById(`vsuccess-${fId}`).style.display = 'block';
+      document.getElementById(`inp-${fId}`).disabled =
