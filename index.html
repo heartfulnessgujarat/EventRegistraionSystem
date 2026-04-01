@@ -87,8 +87,6 @@
     }
   }
 
-
-
 function renderForm() {
     const container = document.getElementById('dynamic-fields');
     container.innerHTML = '';
@@ -101,8 +99,6 @@ function renderForm() {
       
       const labelText = r.display_label || r.Display_Label || r.field_id;
       
-      // Look closely at the line starting with <div class="error-msg-text"...
-      // That is the part currently missing from your screen!
       div.innerHTML = `
         <label>${labelText}</label>
         <input type="text" 
@@ -110,7 +106,9 @@ function renderForm() {
                oninput="handleSearch('${r.field_id}', this.value); checkAllValidations();"
                disabled 
                autocomplete="off">
+        
         <div class="error-msg-text" id="err-${r.field_id}"></div>
+        
         <div class="help-text" id="help-${r.field_id}">${r.field_help_text || ''}</div>
         <div class="dropdown" id="res-${r.field_id}"></div>`;
         
@@ -122,6 +120,8 @@ function renderForm() {
       }
     });
 }
+
+
 
 
   
