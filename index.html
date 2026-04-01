@@ -298,34 +298,33 @@ function checkAllValidations() {
       const container = document.getElementById(`cont-${r.field_id}`);
       
       if (container && container.style.display === 'block' && input) {
+        // Standard rule check (MOB, EMAIL, etc.)
         let isValid = validateField(r.field_id, input.value, r.field_validation);
 
-        // --- IMPROVED DANGER ZONE ---
-        // Lock the button if they are typing in name/centre but haven't picked from the list
-        if (r.field_id === 'full_name' || r.field_id === 'centre') {
-           const dropdown = document.getElementById(`res-${r.field_id}`);
-           // If dropdown is open, they are still searching, so the form is NOT ready
-           if (dropdown && dropdown.style.display === 'block') {
-             isValid = false; 
-           }
-           // If the field is empty, it's also invalid
-           if (input.value.trim() === "") isValid = false;
+        // SIMPLE LOCK: If it's empty, it's invalid. 
+        // We REMOVED the dropdown-display-check that was killing your search.
+        if (input.value.trim() === "") {
+            isValid = false;
         }
         
+        // Visual Feedback
         input.style.border = isValid ? '1px solid #ced4da' : '2px solid red';
         if (!isValid) allValid = false;
       }
     });
 
-    const buttons = document.querySelectorAll('.primary-btn');
-    buttons.forEach(btn => {
-      const txt = btn.innerText;
-      if (txt.includes("Register") || txt.includes("Confirm")) {
-          btn.disabled = !allValid;
-          btn.style.opacity = allValid ? "1" : "0.5";
-          btn.style.cursor = allValid ? "pointer" : "not-allowed";
-      }
-    });
+    // Handle the button states
+    const regBtn = document.getElementById('btn-register');
+    const updBtn = document.getElementById('btn-update');
+    
+    if (regBtn) {
+        regBtn.disabled = !allValid;
+        regBtn.style.opacity = allValid ? "1" : "0.5";
+    }
+    if (updBtn) {
+        updBtn.disabled = !allValid;
+        updBtn.style.opacity = allValid ? "1" : "0.5";
+    }
 }
 
 
