@@ -305,32 +305,36 @@ function checkAllValidations() {
     fieldRules.forEach(r => {
       const input = document.getElementById(`inp-${r.field_id}`);
       const container = document.getElementById(`cont-${r.field_id}`);
+      const errorDiv = document.getElementById(`err-${r.field_id}`); // Finds the box
       
       if (container && container.style.display === 'block' && input) {
         let isValid = validateField(r.field_id, input.value, r.field_validation);
 
-        // --- SPECIFIC CENTRE LOCK ---
-        // This ONLY triggers for the 'centre' field.
-        // It locks the button if the dropdown is open OR the field is empty.
+        // Special check for Centre dropdown
         if (r.field_id === 'centre') {
             const dropdown = document.getElementById('res-centre');
-            // If user is searching (dropdown visible), the form is NOT ready
-            if (dropdown && dropdown.style.display === 'block') {
-                isValid = false;
-            }
-            // If the box is empty, it's also invalid
-            if (input.value.trim() === "") {
-                isValid = false;
-            }
+            if (dropdown && dropdown.style.display === 'block') isValid = false;
+            if (input.value.trim() === "") isValid = false;
         }
-        
-        // Visual Feedback (Red border if invalid)
+
+        // --- ERROR TEXT LOGIC ---
+        if (!isValid && input.value.trim() !== "") {
+            if (errorDiv) {
+                // Fetch from your Google Sheet column "error_msg"
+                errorDiv.textContent = r.error_msg || r.Error_Msg || "Invalid Entry"; 
+                errorDiv.style.display = 'block';
+            }
+        } else {
+            if (errorDiv) errorDiv.style.display = 'none';
+        }
+
+        // --- YOUR RED BORDER (DON'T TOUCH) ---
         input.style.border = isValid ? '1px solid #ced4da' : '2px solid red';
         if (!isValid) allValid = false;
       }
     });
 
-    // Update the button states (Both Register and Update)
+    // Update the button states
     const regBtn = document.getElementById('btn-register');
     const updBtn = document.getElementById('btn-update');
     
