@@ -170,27 +170,26 @@ function renderForm() {
   }
 
 
-  function selectParticipant(p) {
-    fieldRules.forEach(r => {
-      const el = document.getElementById(`inp-${r.field_id}`);
-      if (el) { 
-        el.value = p[r.field_id] || ''; 
-        
-        // THE FIX: Lock the name field immediately after selection
-        if (r.field_id === 'full_name') {
-          el.disabled = true; 
-        }
+let originalValues = {}; // Top of script
 
-        if (r.initial_state !== 'Hidden') {
-          document.getElementById(`cont-${r.field_id}`).style.display = 'block';
+function selectParticipant(p) {
+    fieldRules.forEach(r => {
+        const el = document.getElementById(`inp-${r.field_id}`);
+        if (el) { 
+            el.value = p[r.field_id] || ''; 
+            originalValues[r.field_id] = el.value; // Store the "Database" value
+            
+            if (r.field_id === 'full_name') el.disabled = true; 
+            if (r.initial_state !== 'Hidden') {
+                document.getElementById(`cont-${r.field_id}`).style.display = 'block';
+            }
         }
-      }
     });
     document.getElementById('res-full_name').style.display = 'none';
     document.getElementById('btns-start').style.display = 'flex';
-    // Add this inside selectParticipant, at the very bottom
-  checkAllValidations();
-  }
+    checkAllValidations();
+}
+
 
 function selectLocation(l) {
     document.getElementById('inp-centre').value = l.centre;
