@@ -236,6 +236,43 @@ const payload = {
   }
 
   init();
+
+
+function validateField(id, value, rule) {
+    if (!rule || rule === 'NULL') return true;
+    const val = value.trim();
+    if (val === "") return false;
+
+    // 1. MOB (Indian Mobile)
+    if (rule === 'MOB') return /^[6-9]\d{9}$/.test(val);
+
+    // 2. PIN (Indian Pincode)
+    if (rule === 'PIN') return /^\d{6}$/.test(val);
+
+    // 3. EMAIL
+    if (rule === 'EMAIL') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+
+    // 4. NUM:XTOY (Integers)
+    if (rule.startsWith('NUM:')) {
+      const range = rule.replace('NUM:', '').split('TO');
+      const num = parseInt(val);
+      return !isNaN(num) && num >= parseInt(range[0]) && num <= parseInt(range[1]) && /^\d+$/.test(val);
+    }
+
+    // 5. NUMF:XTOY (Fractions)
+    if (rule.startsWith('NUMF:')) {
+      const range = rule.replace('NUMF:', '').split('TO');
+      const num = parseFloat(val);
+      return !isNaN(num) && num >= parseFloat(range[0]) && num <= parseFloat(range[1]);
+    }
+
+    return true;
+  }
+
+
+
+
+  
 </script>
 </body>
 </html>
