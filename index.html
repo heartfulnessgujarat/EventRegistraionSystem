@@ -279,30 +279,40 @@ function validateField(id, value, rule) {
     return true;
   }
 
+
 function checkAllValidations() {
     let allValid = true;
-    
+    console.log("Validation check triggered..."); 
+
     fieldRules.forEach(r => {
       const input = document.getElementById(`inp-${r.field_id}`);
       const container = document.getElementById(`cont-${r.field_id}`);
       
-      // Only validate if the field is actually visible to the user
       if (container && container.style.display === 'block') {
         const isValid = validateField(r.field_id, input.value, r.field_validation);
         
-        // Visual Feedback: Red border if invalid, standard if valid
-        input.style.borderColor = isValid ? '#ccc' : 'red';
+        input.style.borderColor = isValid ? '#ced4da' : 'red';
         input.style.backgroundColor = isValid ? 'white' : '#fff0f0';
         
         if (!isValid) allValid = false;
       }
     });
     
-    // Disable the Register button if ANY visible field is invalid
+    // Select BOTH buttons
     const regBtn = document.getElementById('btn-register');
+    const updBtn = document.getElementById('btn-update');
+    
     if (regBtn) regBtn.disabled = !allValid;
+    if (updBtn) updBtn.disabled = !allValid;
+    
+    console.log("Form Status - All Valid:", allValid);
   }
 
+
+
+
+
+  
 
   
 </script>
