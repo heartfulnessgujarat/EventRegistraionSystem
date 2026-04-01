@@ -340,65 +340,58 @@ function selectParticipant(p) {
     checkAllValidations();
 }
 
+
 function checkAllValidations() {
     let allValid = true;
-    const activeElement = document.activeElement;
+    let verificationPending = false; // New flag
     
     fieldRules.forEach(r => {
-      const input = document.getElementById(`inp-${r.field_id}`);
-      const container = document.getElementById(`cont-${r.field_id}`);
-      const errorDiv = document.getElementById(`err-${r.field_id}`);
-      
-      if (container && container.style.display === 'block' && input) {
-        let isValid = validateField(r.field_id, input.value, r.field_validation);
-
-        // --- ERROR & BORDER LOGIC ---
-        if (!isValid && input.value.trim() !== "") {
-            if (errorDiv) errorDiv.style.display = 'block';
-            input.style.border = '2px solid red';
-        } else {
-            if (errorDiv) errorDiv.style.display = 'none';
-            input.style.border = '1px solid #ced4da';
-        }
-
-        // --- LAYER 2: VERIFICATION ---
-        if (r.field_id === 'email' || r.field_id === 'mobile') {
-            const wrapper = document.getElementById(`v-wrapper-${r.field_id}`);
-            const vBtn = document.getElementById(`vbtn-${r.field_id}`);
-            const isEditable = !input.disabled;
-            const isVerified = verificationStates[r.field_id];
+        const input = document.getElementById(`inp-${r.field_id}`);
+        const container = document.getElementById(`cont-${r.field_id}`);
+        
+        if (container && container.style.display === 'block' && input) {
+            // LAYER 1: REGEX (Always check this)
+            let isValid = validateField(r.field_id, input.value, r.field_validation);
             
-            // LOGIC: Only show button if:
-            // 1. We are in Edit Mode
-            // 2. Layer 1 is Valid
-            // 3. The value is DIFFERENT from what was in the Master Data
-            const isModified = (input.value !== originalValues[r.field_id]);
+            // Border Logic
+            input.style.border = isValid ? '1px solid #ced4da' : '2px solid red';
+            if (!isValid) allValid = false;
 
-            if (wrapper) {
-                if (isEditable && isValid && !isVerified && isModified) {
-                    wrapper.style.display = 'block';
-                    // CORRECTED TEXT FOR MOBILE
-                    const msgType = (r.field_id === 'email') ? "email address" : "mobile number";
-                    vBtn.innerText = "Click here to verify change of " + msgType + " to " + input.value;
+            // LAYER 2: SENSITIVE FIELDS (Email & Mobile)
+            if (r.field_id === 'email' || r.field_id === 'mobile') {
+                const wrapper = document.getElementById(`v-wrapper-${r.field_id}`);
+                const isEditable = !input.disabled;
+                const isChanged = (input.value !== originalValues[r.field_id]);
+                const isVerified = verificationStates[r.field_id];
+
+                if (isEditable && isChanged && !isVerified) {
+                    // USER MODIFIED EMAIL/MOBILE - LOCK THE BUTTON
+                    if (isValid) {
+                        wrapper.style.display = 'block';
+                        const vBtn = document.getElementById(`vbtn-${r.field_id}`);
+                        vBtn.innerText = "Click here to verify change of " + r.field_id + " to " + input.value;
+                    }
+                    verificationPending = true; 
                 } else {
-                    wrapper.style.display = 'none';
+                    // No change or already verified - Hide the yellow button
+                    if (wrapper) wrapper.style.display = 'none';
                 }
             }
-            
-            if (isEditable && isModified && !isVerified) allValid = false;
         }
-
-        if (!isValid) allValid = false;
-      }
     });
 
+    // FINAL BUTTON LOGIC
     const updBtn = document.getElementById('btn-update');
     if (updBtn) {
-        updBtn.disabled = !allValid;
-        updBtn.style.opacity = allValid ? "1" : "0.5";
+        // Button is clickable ONLY if:
+        // 1. All fields pass Regex (allValid)
+        // 2. No sensitive changes are waiting for a code (verificationPending)
+        const canSubmit = allValid && !verificationPending;
+        updBtn.disabled = !canSubmit;
+        updBtn.style.opacity = canSubmit ? "1" : "0.5";
+        updBtn.style.cursor = canSubmit ? "pointer" : "not-allowed";
     }
 }
-
 
   
 async function triggerSendCode(fId) {
