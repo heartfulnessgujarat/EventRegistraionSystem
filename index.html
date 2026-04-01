@@ -364,7 +364,45 @@ function checkAllValidations() {
     }
 }
 
+let generatedCode = "";
+let originalValues = {}; // To track changes
 
+// Capture original values when participant is selected
+const oldSelectParticipant = selectParticipant;
+selectParticipant = function(p) {
+    originalValues = { mobile: p.mobile || "", email: p.email || "" };
+    oldSelectParticipant(p);
+};
+
+function triggerSendCode(fId) {
+    const emailVal = document.getElementById('inp-email').value;
+    const vBtn = document.getElementById(`vbtn-${fId}`);
+    
+    if (!emailVal) { alert("Please enter an email address first."); return; }
+
+    generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
+    vBtn.innerText = "Sending to " + emailVal + "...";
+    vBtn.disabled = true;
+
+    google.script.run
+      .withSuccessHandler(() => {
+          vBtn.style.display = 'none';
+          document.getElementById(`vgroup-${fId}`).style.display = 'flex';
+      })
+      .sendVerificationEmail(emailVal, generatedCode, fId.toUpperCase());
+}
+
+function confirmCode(fId) {
+    const inputCode = document.getElementById(`vcode-${fId}`).value;
+    if (inputCode === generatedCode) {
+        document.getElementById(`vgroup-${fId}`).style.display = 'none';
+        document.getElementById(`vsuccess-${fId}`).style.display = 'block';
+        document.getElementById(`inp-${fId}`).disabled = true; // Lock the field after verification
+        checkAllValidations();
+    } else {
+        alert("Incorrect code. Please try again.");
+    }
+}
 
   
 </script>
