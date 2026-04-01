@@ -290,28 +290,26 @@ function validateField(id, value, rule) {
     return true;
   }
 
-
-
-  function checkAllValidations() {
+function checkAllValidations() {
     let allValid = true;
     
     fieldRules.forEach(r => {
       const input = document.getElementById(`inp-${r.field_id}`);
       const container = document.getElementById(`cont-${r.field_id}`);
       
-      if (container && container.style.display === 'block') {
+      if (container && container.style.display === 'block' && input) {
         let isValid = validateField(r.field_id, input.value, r.field_validation);
 
-        // --- THE "DANGER ZONE" LOGIC ---
-        // If the user is typing in 'full_name' or 'centre', but hasn't 
-        // selected a result from the dropdown yet, we FORCE it to be invalid.
+        // --- IMPROVED DANGER ZONE ---
+        // Lock the button if they are typing in name/centre but haven't picked from the list
         if (r.field_id === 'full_name' || r.field_id === 'centre') {
-           // If they are typing (less than 3 chars) or haven't clicked a dropdown, lock it.
-           // We'll check if the dropdown is currently visible. If it is, the button MUST be locked.
            const dropdown = document.getElementById(`res-${r.field_id}`);
+           // If dropdown is open, they are still searching, so the form is NOT ready
            if (dropdown && dropdown.style.display === 'block') {
              isValid = false; 
            }
+           // If the field is empty, it's also invalid
+           if (input.value.trim() === "") isValid = false;
         }
         
         input.style.border = isValid ? '1px solid #ced4da' : '2px solid red';
@@ -319,15 +317,18 @@ function validateField(id, value, rule) {
       }
     });
 
-    // Ensure the Register/Update buttons react
     const buttons = document.querySelectorAll('.primary-btn');
     buttons.forEach(btn => {
-      if (btn.innerText.includes("Register") || btn.innerText.includes("Confirm")) {
+      const txt = btn.innerText;
+      if (txt.includes("Register") || txt.includes("Confirm")) {
           btn.disabled = !allValid;
           btn.style.opacity = allValid ? "1" : "0.5";
+          btn.style.cursor = allValid ? "pointer" : "not-allowed";
       }
     });
 }
+
+
 
   
 
