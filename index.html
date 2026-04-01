@@ -400,29 +400,32 @@ function checkAllValidations() {
 
 
 async function triggerSendCode(fId) {
-    const inputVal = document.getElementById(`inp-${fId}`).value.trim();
+    // ALWAYS get the email address, because we verify Mobile via Email too
+    const emailVal = document.getElementById('inp-email').value.trim();
+    const inputVal = document.getElementById(`inp-${fId}`).value.trim(); // The value being changed
     const vBtn = document.getElementById(`vbtn-${fId}`);
     
-    if (!inputVal) { alert("Please enter a value first."); return; }
+    if (!emailVal) { alert("Email address is required for verification."); return; }
 
-    // Generate code and store it for this specific field
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     generatedCodes[fId] = code;
 
-    // 1. Show the Alert Popup as requested
-    alert("Verification code has been sent to " + inputVal);
+    // CORRECTED POPUP MESSAGE
+    alert("Verification code has been sent to " + emailVal);
 
-    // 2. Hide yellow button and show input box
     vBtn.parentElement.style.display = 'none'; 
     document.getElementById(`vgroup-${fId}`).style.display = 'flex';
 
-    // 3. Fire the Google Script (Same logic as your successful registration)
+    // THE BRIDGE: Even if fId is 'mobile', we send to emailVal
     const scriptUrl = "https://script.google.com/macros/s/AKfycbwwF8ZbE_Mp3TfcRIIK3IGn9bMw7MIbrURkqzLlfkYWU5twkhMYiDYeh_DPiBt2yTyu/exec";
-    const finalUrl = `${scriptUrl}?action=verifyExternal&email=${encodeURIComponent(inputVal)}&code=${code}&fId=${fId.toUpperCase()}`;
+    const finalUrl = `${scriptUrl}?action=verifyExternal&email=${encodeURIComponent(emailVal)}&code=${code}&fId=${fId.toUpperCase()}`;
 
+    // Force a 'GET' call to ensure Apps Script wakes up
     fetch(finalUrl, { mode: 'no-cors' })
-      .catch(err => console.log("Background email trigger sent."));
+      .then(() => console.log("Verification email triggered for " + fId))
+      .catch(err => console.error("Fetch error:", err));
 }
+
 
 function verifyCodeInput(fId) {
     const userCode = document.getElementById(`vcode-${fId}`).value.trim();
