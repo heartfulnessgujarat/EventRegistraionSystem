@@ -88,7 +88,6 @@
     }
   }
 
-
 function renderForm() {
     const container = document.getElementById('dynamic-fields');
     container.innerHTML = '';
@@ -101,6 +100,22 @@ function renderForm() {
       
       const labelText = r.display_label || r.Display_Label || r.field_id;
       
+      // We check if the current field is 'email'. 
+      // If it is, we inject the Orange Verification Button and the hidden input group.
+      const verificationHtml = (r.field_id === 'email') ? `
+        <button id="vbtn-${r.field_id}" type="button" class="primary-btn" 
+                style="background:#f39c12; margin-top:10px; font-size:14px; padding:10px;" 
+                onclick="triggerSendCode('${r.field_id}')">
+          Send Verification Code
+        </button>
+        <div id="vgroup-${r.field_id}" style="display:none; gap:10px; margin-top:10px;">
+          <input type="text" id="vcode-${r.field_id}" placeholder="Enter 6-digit code" style="flex:1;">
+          <button type="button" class="primary-btn" style="width:auto; margin:0; padding:10px 20px;" 
+                  onclick="verifyCodeInput('${r.field_id}')">Verify</button>
+        </div>
+        <div id="vstatus-${r.field_id}" style="color:green; font-weight:bold; margin-top:5px; font-size:14px;"></div>
+      ` : '';
+
       div.innerHTML = `
         <label>${labelText}</label>
         <input type="text" 
@@ -108,6 +123,8 @@ function renderForm() {
                oninput="handleSearch('${r.field_id}', this.value); checkAllValidations();"
                disabled 
                autocomplete="off">
+        
+        ${verificationHtml}
         
         <div class="error-msg-text" id="err-${r.field_id}"></div>
         
@@ -122,8 +139,6 @@ function renderForm() {
       }
     });
 }
-
-
 
   
 
