@@ -109,7 +109,7 @@ function renderForm() {
       
       // Setup UI for Email and Mobile fields
       const isVerifyField = (r.field_id === 'email' || r.field_id === 'mobile');
-      const verificationHtml = isVerifyField ? `
+      const verificationHtml = isVerifyField ? 
         <div id="v-wrapper-${r.field_id}" style="display:none;">
           <button id="vbtn-${r.field_id}" type="button" class="primary-btn" 
                   style="background:#f3cc12; color:black; margin-top:10px; font-size:13px;" 
