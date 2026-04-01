@@ -109,7 +109,24 @@ function renderForm() {
                autocomplete="off">
         
         <div class="error-msg-text" id="err-${r.field_id}"></div>
-        
+
+        <button id="vbtn-${r.field_id}" class="primary-btn" 
+                style="display:none; background:#fbc02d; color:black; font-size:12px; padding:8px;" 
+                onclick="triggerSendCode('${r.field_id}')">
+                Click here to Send Verification Code
+        </button>
+
+        <div id="vgroup-${r.field_id}" style="display:none; margin-top:10px; gap:5px; align-items:center;">
+          <input type="text" id="vcode-${r.field_id}" placeholder="6-digit code" 
+                 style="flex:1; text-align:center; letter-spacing:3px; border:2px solid #fbc02d;">
+          <button class="primary-btn" style="width:auto; margin:0; padding:10px;" 
+                  onclick="confirmCode('${r.field_id}')">Verify</button>
+        </div>
+
+        <div id="vsuccess-${r.field_id}" 
+             style="display:none; color:green; font-weight:bold; font-size:12px; margin-top:5px;">
+             ✓ Verified
+        </div>
         <div class="help-text" id="help-${r.field_id}">${r.field_help_text || ''}</div>
         <div class="dropdown" id="res-${r.field_id}"></div>`;
         
@@ -124,7 +141,7 @@ function renderForm() {
 
 
 
-  
+
 
   
 
