@@ -291,6 +291,7 @@ function validateField(id, value, rule) {
     return true;
   }
 
+
 function checkAllValidations() {
     let allValid = true;
     
@@ -299,38 +300,42 @@ function checkAllValidations() {
       const container = document.getElementById(`cont-${r.field_id}`);
       
       if (container && container.style.display === 'block' && input) {
-        // Standard rule check (MOB, EMAIL, etc.)
         let isValid = validateField(r.field_id, input.value, r.field_validation);
 
-        // SIMPLE LOCK: If it's empty, it's invalid. 
-        // We REMOVED the dropdown-display-check that was killing your search.
-        if (input.value.trim() === "") {
-            isValid = false;
+        // --- SPECIFIC CENTRE LOCK ---
+        // This ONLY triggers for the 'centre' field.
+        // It locks the button if the dropdown is open OR the field is empty.
+        if (r.field_id === 'centre') {
+            const dropdown = document.getElementById('res-centre');
+            // If user is searching (dropdown visible), the form is NOT ready
+            if (dropdown && dropdown.style.display === 'block') {
+                isValid = false;
+            }
+            // If the box is empty, it's also invalid
+            if (input.value.trim() === "") {
+                isValid = false;
+            }
         }
         
-        // Visual Feedback
+        // Visual Feedback (Red border if invalid)
         input.style.border = isValid ? '1px solid #ced4da' : '2px solid red';
         if (!isValid) allValid = false;
       }
     });
 
-    // Handle the button states
+    // Update the button states (Both Register and Update)
     const regBtn = document.getElementById('btn-register');
     const updBtn = document.getElementById('btn-update');
     
-    if (regBtn) {
-        regBtn.disabled = !allValid;
-        regBtn.style.opacity = allValid ? "1" : "0.5";
-    }
-    if (updBtn) {
-        updBtn.disabled = !allValid;
-        updBtn.style.opacity = allValid ? "1" : "0.5";
-    }
+    [regBtn, updBtn].forEach(btn => {
+        if (btn) {
+            btn.disabled = !allValid;
+            btn.style.opacity = allValid ? "1" : "0.5";
+            btn.style.cursor = allValid ? "pointer" : "not-allowed";
+        }
+    });
 }
 
-
-
-  
 
   
 </script>
