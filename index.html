@@ -34,10 +34,13 @@
     <h2 id="title"></h2>
     <p class="subtitle" id="subtitle"></p>
     <div id="dynamic-fields"></div>
-    <div id="btns-start" style="display:none; flex-direction:column; gap:10px;">
-      <button class="primary-btn" onclick="submitData()">Confirm Registration</button>
+
+<div id="btns-start" style="display:none; flex-direction:column; gap:10px;">
+      <button id="btn-register" class="primary-btn" disabled onclick="submitData()">Confirm Registration</button>
       <button class="primary-btn" style="background:#455a64;" onclick="enableEdit()">I want to edit my details</button>
     </div>
+
+
     <button id="btn-update" class="primary-btn" style="display:none;" disabled onclick="submitData()">Update & Register</button>
   </div>
 
