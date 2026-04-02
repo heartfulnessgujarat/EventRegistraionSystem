@@ -17,14 +17,9 @@
     .edit-link { font-size: 11px; color: #1a237e; cursor: pointer; font-weight: bold; text-decoration: underline; display: none; }
     input { width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
     input:disabled { background: #f8f9fa; color: #6c757d; }
-    
-    /* Help Text Style - Proactive Guidance */
     .help-text { font-size: 11px; color: #5c6bc0; margin-top: 4px; font-style: italic; display: none; font-weight: 500; line-height: 1.3; }
-    
-    /* Error Message Style - Reactive Feedback */
     .error-msg-text { color: #d32f2f; font-size: 12px; margin-top: 5px; font-weight: bold; display: none; }
-    
-    .verify-panel { background: #fffde7; border: 1px solid #fbc02d; padding: 10px; border-radius: 8px; margin-top: 10px; display: none; }
+    .verify-panel { background: #fffde7; border: 1px solid #fbc02d; padding: 10px; border-radius: 8px; margin-top: 10px; display: none; transition: all 0.3s; }
     .verify-btn { background: #fbc02d; color: #333; border: none; padding: 10px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 12px; width: 100%; margin-bottom: 10px; }
     .primary-btn { width: 100%; padding: 15px; background: #1a237e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
     .primary-btn:disabled { opacity: 0.5; cursor: not-allowed; background: #999; }
@@ -32,30 +27,29 @@
     .item { padding: 12px; cursor: pointer; border-bottom: 1px solid #f1f1f1; font-size: 14px; }
     .item:hover { background: #e8eaf6; }
     #loader { text-align: center; padding: 40px; color: #1a237e; display: none; }
+    .resend-link { font-size: 11px; color: #1a237e; text-decoration: underline; cursor: pointer; font-weight: bold; }
+    .timer-text { font-size: 11px; color: #666; font-style: italic; }
   </style>
 </head>
 <body>
 
 <div class="card" id="app">
   <div id="loading-init"><h2>Loading registration form...</h2></div>
-
   <div id="form-content" style="display:none;">
     <h2 id="title"></h2>
     <p class="subtitle" id="subtitle"></p>
     <div id="dynamic-fields"></div>
-
     <div id="btns-start" style="display:none; flex-direction:column; gap:10px;">
       <button id="btn-register" class="primary-btn" disabled onclick="submitData()">Confirm Registration</button>
       <button class="primary-btn" style="background:#455a64;" onclick="enableEditMode()">I want to edit my details</button>
     </div>
-
     <button id="btn-master-update" class="primary-btn" style="display:none;" disabled onclick="submitData()">DETAILS UPDATED, REGISTER ME</button>
   </div>
-
   <div id="loader"><h3>Processing...</h3></div>
 </div>
 
 <script>
+  // UPDATE THIS URL AFTER NEW DEPLOYMENT
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyDiwrCKB77X-Dsxh9TdYcBkD5amFsZNMTe-dgptNBSFJGlZ_XJWc_Xv5prSK2x--3g8g/exec";
   const firebaseConfig = { databaseURL: "https://ferrari-reg-2026-default-rtdb.asia-southeast1.firebasedatabase.app" };
   firebase.initializeApp(firebaseConfig);
@@ -72,10 +66,8 @@
       eventConfig = (configSnap.val() || {})[eventId] || { title: "Registration" };
       document.getElementById('title').innerHTML = eventConfig.title;
       document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
-      
       const rulesSnap = await db.ref('config/fieldRules').once('value');
       fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
-      
       renderForm();
       document.getElementById('loading-init').style.display = 'none';
       document.getElementById('form-content').style.display = 'block';
@@ -89,258 +81,4 @@
       const div = document.createElement('div');
       div.className = 'field-container';
       div.id = `cont-${r.field_id}`;
-      div.style.display = (r.initial_state === 'Visible') ? 'block' : 'none';
-      
-      const canEdit = ['email', 'mobile', 'centre', 'pincode'].includes(r.field_id);
-      const helpText = r.field_help_text || r.Field_Help_Text || '';
-
-      div.innerHTML = `
-        <div class="label-row">
-          <label>${r.display_label || r.field_id}</label>
-          ${canEdit ? `<span class="edit-link" id="edit-link-${r.field_id}" onclick="unlockField('${r.field_id}')">Edit</span>` : ''}
-        </div>
-        <input type="text" id="inp-${r.field_id}" oninput="onInputChange('${r.field_id}', this.value)" disabled autocomplete="off">
-        
-        <div class="help-text" id="help-${r.field_id}">${helpText}</div>
-        
-        <div class="error-msg-text" id="err-${r.field_id}"></div>
-        
-        <div class="dropdown" id="res-${r.field_id}"></div>
-        
-        ${(r.field_id === 'email' || r.field_id === 'mobile') ? `
-          <div class="verify-panel" id="panel-${r.field_id}">
-            <button class="verify-btn" id="vbtn-${r.field_id}" onclick="sendCode('${r.field_id}')"></button>
-            <div id="box-${r.field_id}" style="display:none;">
-              <input type="text" placeholder="Enter 6-digit code" id="code-${r.field_id}" oninput="verifyCodeInput('${r.field_id}', this.value)">
-              <div id="vmsg-${r.field_id}" style="font-size:12px; margin-top:5px; font-weight:bold;"></div>
-            </div>
-          </div>
-        ` : ''}
-      `;
-      container.appendChild(div);
-      if (r.field_id === 'full_name') {
-        div.style.display = 'block';
-        document.getElementById('inp-full_name').disabled = false;
-      }
-    });
-  }
-
-  async function onInputChange(fId, val) {
-    if (fId === 'full_name') handleSearch(fId, val);
-    if (fId === 'centre') handleSearch(fId, val);
-    checkAllValidations();
-  }
-
-  async function handleSearch(fId, val) {
-    const resDiv = document.getElementById(`res-${fId}`);
-    if (val.length < 3) { resDiv.style.display = 'none'; return; }
-    if (fId === 'full_name') {
-      if (masterData.length === 0) { const snap = await db.ref('masterData').once('value'); masterData = Object.values(snap.val() || {}); }
-      renderDropdown(resDiv, masterData.filter(x => x.full_name?.toLowerCase().includes(val.toLowerCase())).slice(0, 8), 'name');
-    } else if (fId === 'centre') {
-      if (locData.length === 0) { const snap = await db.ref('config/locations').once('value'); locData = Object.values(snap.val() || {}); }
-      renderDropdown(resDiv, locData.filter(x => x.centre?.toLowerCase().includes(val.toLowerCase())).slice(0, 8), 'loc');
-    }
-  }
-
-  function renderDropdown(div, list, type) {
-    div.innerHTML = '';
-    if (list.length > 0) {
-      div.style.display = 'block';
-      list.forEach(item => {
-        const d = document.createElement('div');
-        d.className = 'item';
-        d.textContent = type === 'loc' ? item.centre : item.full_name;
-        d.onclick = () => type === 'loc' ? selectLocation(item) : selectParticipant(item);
-        div.appendChild(d);
-      });
-    }
-  }
-
-  function selectParticipant(p) {
-    fieldRules.forEach(r => {
-      const el = document.getElementById(`inp-${r.field_id}`);
-      if (el) {
-        el.value = p[r.field_id] || '';
-        originalData[r.field_id] = el.value;
-        if (r.field_id === 'full_name') {
-          el.disabled = true;
-          // OPTION A: Immediately show Help Text for Name
-          const helpEl = document.getElementById('help-full_name');
-          if (helpEl && helpEl.innerText.trim() !== "") helpEl.style.display = 'block';
-        }
-        if (r.initial_state !== 'Hidden') document.getElementById(`cont-${r.field_id}`).style.display = 'block';
-      }
-    });
-    document.getElementById('res-full_name').style.display = 'none';
-    document.getElementById('btns-start').style.display = 'flex';
-    checkAllValidations();
-  }
-
-  function selectLocation(l) {
-    document.getElementById('inp-centre').value = l.centre;
-    ['district', 'zone'].forEach(f => { if(document.getElementById(`inp-${f}`)) document.getElementById(`inp-${f}`).value = l[f] || ''; });
-    document.getElementById('res-centre').style.display = 'none';
-    checkAllValidations();
-  }
-
-  function enableEditMode() {
-    document.getElementById('btns-start').style.display = 'none';
-    document.getElementById('btn-master-update').style.display = 'block';
-    
-    fieldRules.forEach(r => {
-      // Show individual Edit buttons
-      const link = document.getElementById(`edit-link-${r.field_id}`);
-      if (link) link.style.display = 'inline';
-
-      // Show Help Text for all fields now being offered for edit
-      const helpEl = document.getElementById(`help-${r.field_id}`);
-      if (helpEl && helpEl.innerText.trim() !== "") helpEl.style.display = 'block';
-    });
-  }
-
-  function unlockField(fId) {
-    document.getElementById(`inp-${fId}`).disabled = false;
-    document.getElementById(`inp-${fId}`).focus();
-    document.getElementById(`edit-link-${fId}`).style.display = 'none';
-  }
-
-
-function sendCode(type) {
-    const newEmail = document.getElementById('inp-email').value;
-    const regEmail = originalData['email'];
-    const targetEmail = (type === 'email') ? newEmail : regEmail;
-
-    // UI Updates
-    const btn = document.getElementById(`vbtn-${type}`);
-    btn.disabled = true;
-    btn.innerText = "Sending Verification Code...";
-    btn.style.background = "#ddd";
-
-    fetch(`${SCRIPT_URL}?action=sendVerificationCode&email=${encodeURIComponent(targetEmail)}&eventId=${eventId}`, { mode: 'no-cors' });
-
-    setTimeout(() => {
-      document.getElementById(`panel-${type}`).style.backgroundColor = "#e3f2fd";
-      btn.style.display = "none";
-      document.getElementById(`box-${type}`).style.display = "block";
-      
-      // ADDED: Resend Logic UI
-      document.getElementById(`vmsg-${type}`).innerHTML = `
-        Code sent to ${targetEmail}<br>
-        <span id="resend-timer-${type}" style="font-size:10px; color:#666;">Wait 30s to resend</span>
-        <a href="#" id="resend-link-${type}" style="display:none; font-size:11px; color:#1a237e; font-weight:bold;" onclick="resendAction('${type}')">Resend Code</a>
-      `;
-      
-      // Start 30s Cooldown
-      let timeLeft = 30;
-      const timer = setInterval(() => {
-        timeLeft--;
-        if(document.getElementById(`resend-timer-${type}`)) document.getElementById(`resend-timer-${type}`).innerText = `Wait ${timeLeft}s to resend`;
-        if (timeLeft <= 0) {
-          clearInterval(timer);
-          if(document.getElementById(`resend-timer-${type}`)) document.getElementById(`resend-timer-${type}`).style.display = "none";
-          if(document.getElementById(`resend-link-${type}`)) document.getElementById(`resend-link-${type}`).style.display = "inline";
-        }
-      }, 1000);
-
-    }, 1500);
-  }
-
-
-
-  
-
-      if (data && data.code === code) {
-        document.getElementById(`vmsg-${type}`).innerText = "Code Verified ✅";
-        document.getElementById(`vmsg-${type}`).style.color = "green";
-        document.getElementById(`inp-${type}`).disabled = true;
-        verificationStates[type] = true;
-      } else {
-        document.getElementById(`vmsg-${type}`).innerText = "Code is not matching ❌";
-        document.getElementById(`vmsg-${type}`).style.color = "red";
-        verificationStates[type] = false;
-      }
-      checkAllValidations();
-    }
-  }
-
-  function validateField(id, value, rule) {
-    if (!rule || rule === 'NULL' || value.trim() === "") return value.trim() !== "";
-    const val = value.trim();
-    if (rule === 'MOB') return /^[6-9]\d{9}$/.test(val);
-    if (rule === 'PIN') return /^\d{6}$/.test(val);
-    if (rule === 'EMAIL') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
-    return true;
-  }
-
-  function checkAllValidations() {
-    let allValid = true;
-    let needsEmailVerification = false;
-    let needsMobileVerification = false;
-
-    fieldRules.forEach(r => {
-      const input = document.getElementById(`inp-${r.field_id}`);
-      const err = document.getElementById(`err-${r.field_id}`);
-      if (input && (!input.disabled || originalData[r.field_id])) {
-        let valid = validateField(r.field_id, input.value, r.field_validation);
-        
-        if (!valid && input.value !== "") {
-          err.innerText = r.error_msg || "Invalid Entry";
-          err.style.display = "block";
-          allValid = false;
-        } else { err.style.display = "none"; }
-
-        input.style.border = valid ? '1px solid #ced4da' : '2px solid red';
-        if (!valid) allValid = false;
-
-        if (r.field_id === 'email' && input.value !== originalData['email'] && valid) needsEmailVerification = true;
-        if (r.field_id === 'mobile' && input.value !== originalData['mobile'] && valid) needsMobileVerification = true;
-      }
-    });
-
-    if (needsEmailVerification && !verificationStates.email) {
-      document.getElementById('panel-email').style.display = 'block';
-      document.getElementById('vbtn-email').innerText = `Click here to send verification code to ${document.getElementById('inp-email').value}`;
-      allValid = false;
-    } else if (!needsEmailVerification && document.getElementById('panel-email')) {
-        document.getElementById('panel-email').style.display = 'none';
-    }
-
-    if (needsMobileVerification && !verificationStates.mobile) {
-      document.getElementById('panel-mobile').style.display = 'block';
-      document.getElementById('vbtn-mobile').innerText = `Click here to send verification code to ${originalData['email']}`;
-      allValid = false;
-    } else if (!needsMobileVerification && document.getElementById('panel-mobile')) {
-        document.getElementById('panel-mobile').style.display = 'none';
-    }
-
-    const masterBtn = document.getElementById('btn-master-update');
-    const regBtn = document.getElementById('btn-register');
-    
-    if (masterBtn) {
-      masterBtn.disabled = !allValid;
-      masterBtn.style.background = allValid ? "#1a237e" : "#999";
-    }
-    if (regBtn) regBtn.disabled = !allValid;
-  }
-
-  async function submitData() {
-    document.getElementById('form-content').style.display = 'none';
-    document.getElementById('loader').style.display = 'block';
-    
-    const regId = `${eventId}REG${Date.now()}`;
-    const payload = { registration_id: regId, event_id: eventId, timestamp: new Date().toISOString() };
-    fieldRules.forEach(r => { payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; });
-
-    try {
-      await db.ref('registrations/' + regId).set(payload);
-      fetch(`${SCRIPT_URL}?action=sendEmail&regId=${regId}&eventId=${eventId}`, { mode: 'no-cors' });
-      const snap = await db.ref(`htmlStorage/${eventId}/thank`).once('value');
-      document.getElementById('app').innerHTML = snap.val() || "<h2>Success!</h2>";
-    } catch (e) { alert("Error"); location.reload(); }
-  }
-
-  init();
-</script>
-</body>
-</html>
+      div.style.display = (r.initial_state === 'Visible') ? 'block
