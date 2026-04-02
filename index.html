@@ -205,29 +205,50 @@
     document.getElementById(`edit-link-${fId}`).style.display = 'none';
   }
 
-  function sendCode(type) {
+
+function sendCode(type) {
     const newEmail = document.getElementById('inp-email').value;
     const regEmail = originalData['email'];
     const targetEmail = (type === 'email') ? newEmail : regEmail;
 
-    document.getElementById(`vbtn-${type}`).disabled = true;
-    document.getElementById(`vbtn-${type}`).innerText = "Sending Verification Code...";
+    // UI Updates
+    const btn = document.getElementById(`vbtn-${type}`);
+    btn.disabled = true;
+    btn.innerText = "Sending Verification Code...";
+    btn.style.background = "#ddd";
 
     fetch(`${SCRIPT_URL}?action=sendVerificationCode&email=${encodeURIComponent(targetEmail)}&eventId=${eventId}`, { mode: 'no-cors' });
 
     setTimeout(() => {
       document.getElementById(`panel-${type}`).style.backgroundColor = "#e3f2fd";
-      document.getElementById(`vbtn-${type}`).style.display = "none";
+      btn.style.display = "none";
       document.getElementById(`box-${type}`).style.display = "block";
-      document.getElementById(`vmsg-${type}`).innerText = `Verification Code sent to ${targetEmail}`;
+      
+      // ADDED: Resend Logic UI
+      document.getElementById(`vmsg-${type}`).innerHTML = `
+        Code sent to ${targetEmail}<br>
+        <span id="resend-timer-${type}" style="font-size:10px; color:#666;">Wait 30s to resend</span>
+        <a href="#" id="resend-link-${type}" style="display:none; font-size:11px; color:#1a237e; font-weight:bold;" onclick="resendAction('${type}')">Resend Code</a>
+      `;
+      
+      // Start 30s Cooldown
+      let timeLeft = 30;
+      const timer = setInterval(() => {
+        timeLeft--;
+        if(document.getElementById(`resend-timer-${type}`)) document.getElementById(`resend-timer-${type}`).innerText = `Wait ${timeLeft}s to resend`;
+        if (timeLeft <= 0) {
+          clearInterval(timer);
+          if(document.getElementById(`resend-timer-${type}`)) document.getElementById(`resend-timer-${type}`).style.display = "none";
+          if(document.getElementById(`resend-link-${type}`)) document.getElementById(`resend-link-${type}`).style.display = "inline";
+        }
+      }, 1000);
+
     }, 1500);
   }
 
-  async function verifyCodeInput(type, code) {
-    if (code.length === 6) {
-      const emailForCode = (type === 'email') ? document.getElementById('inp-email').value : originalData['email'];
-      const snap = await db.ref("verificationCodes/" + emailForCode.replace(/[.#$[\]]/g, "_")).once('value');
-      const data = snap.val();
+
+
+  
 
       if (data && data.code === code) {
         document.getElementById(`vmsg-${type}`).innerText = "Code Verified ✅";
