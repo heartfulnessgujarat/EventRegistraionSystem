@@ -51,7 +51,7 @@
 </div>
 
 <script>
-  // CORRECTED SCRIPT URL
+  // --- SCRIPT URL RE-INSERTED HERE ---
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzugqmH2nXXjbiG9MKGE8hzhzbQn4ZWr0Tlvo468yRcbpBjFXfuNPoOmbRpNoxPGRFtgA/exec";
   const firebaseConfig = { databaseURL: "https://ferrari-reg-2026-default-rtdb.asia-southeast1.firebasedatabase.app" };
   
@@ -65,30 +65,8 @@
   let currentRegId = null;
   let currentEditCount = 0;
 
-  async function init() {
-    try {
-      const configSnap = await db.ref('config/eventConfig').once('value');
-      eventConfig = (configSnap.val() || {})[eventId] || { title: "Registration" };
-      document.getElementById('title').innerHTML = eventConfig.title;
-      document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
-      
-      const rulesSnap = await db.ref('config/fieldRules').once('value');
-      fieldRules = Object.values(rulesSnap.val() || {}).filter(r => r && String(r.event_id).toUpperCase() === eventId);
-      
-      renderForm();
-      document.getElementById('loading-init').style.display = 'none';
-      document.getElementById('form-content').style.display = 'block';
-    } catch (e) { 
-      console.error("Init Error:", e);
-      document.getElementById('loading-init').innerHTML = "<h2>Data load failed. Please refresh.</h2>";
-    }
-  }
-
-  function renderForm() {
-    const container = document.getElementById('dynamic-fields');
-    container.innerHTML = '';
-    fieldRules.forEach(r => {
-      const div = document.createElement('div');
-      div.className = 'field-container';
-      div.id = `cont-${r.field_id}`;
-      div.style.display = (r.initial_state === 'Visible') ? 'block' : 'none
+  // Standalone Dropdown Function
+  function renderDropdown(div, list, type) {
+    div.innerHTML = '';
+    if (list.length > 0) {
+      div.style.display = 'block
