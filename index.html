@@ -38,11 +38,9 @@
     <h2 id="title"></h2>
     <p class="subtitle" id="subtitle"></p>
     <div id="dynamic-fields"></div>
-    
     <div id="lockout-panel" class="lockout-msg">
       Maximum of 3 update sessions reached. For further changes, please contact Br. Vinay Chavda.
     </div>
-
     <div id="btns-start" style="display:none; flex-direction:column; gap:10px;">
       <button id="btn-register" class="primary-btn" disabled onclick="submitData('NEW')">Confirm Registration</button>
       <button id="btn-edit-trigger" class="primary-btn" style="background:#455a64;" onclick="enableEditMode()">I want to edit my details</button>
@@ -116,39 +114,12 @@
     });
   }
 
-  async function handleSearch(fId, val) {
-    const resDiv = document.getElementById(`res-${fId}`);
-    if (val.length < 3) { resDiv.style.display = 'none'; return; }
-    if (fId === 'full_name') {
-      if (masterData.length === 0) { const snap = await db.ref('masterData').once('value'); masterData = Object.values(snap.val() || {}); }
-      renderDropdown(resDiv, masterData.filter(x => x.full_name?.toLowerCase().includes(val.toLowerCase())).slice(0, 8), 'name');
-    } else if (fId === 'centre') {
-      if (locData.length === 0) { const snap = await db.ref('config/locations').once('value'); locData = Object.values(snap.val() || {}); }
-      renderDropdown(resDiv, locData.filter(x => x.centre?.toLowerCase().includes(val.toLowerCase())).slice(0, 8), 'loc');
-    }
-  }
-
-  function renderDropdown(div, list, type) {
-    div.innerHTML = '';
-    if (list.length > 0) {
-      div.style.display = 'block';
-      list.forEach(item => {
-        const d = document.createElement('div');
-        d.className = 'item';
-        d.textContent = type === 'loc' ? item.centre : item.full_name;
-        d.onclick = () => type === 'loc' ? selectLocation(item) : selectParticipant(item);
-        div.appendChild(d);
-      });
-    }
-  }
-
   async function selectParticipant(p) {
     currentRegId = null;
     currentEditCount = 0;
     document.getElementById('lockout-panel').style.display = 'none';
     document.getElementById('btn-edit-trigger').style.display = 'block';
 
-    // CHECK FIREBASE FOR EXISTING REGISTRATION & EDIT COUNT
     const regSnap = await db.ref('registrations').orderByChild('full_name').equalTo(p.full_name).once('value');
     const existingData = regSnap.val();
     if (existingData) {
@@ -176,50 +147,24 @@
     document.getElementById('res-full_name').style.display = 'none';
     document.getElementById('btns-start').style.display = 'flex';
 
-    // APPLY LOCKOUT IF COUNT >= 3
     if (currentEditCount >= 3) {
       document.getElementById('btn-edit-trigger').style.display = 'none';
       document.getElementById('lockout-panel').style.display = 'block';
     }
-
     checkAllValidations();
   }
 
-  function selectLocation(l) {
-    document.getElementById('inp-centre').value = l.centre;
-    ['district', 'zone'].forEach(f => { if(document.getElementById(`inp-${f}`)) document.getElementById(`inp-${f}`).value = l[f] || ''; });
-    document.getElementById('res-centre').style.display = 'none';
-    checkAllValidations();
-  }
-
-  function enableEditMode() {
-    document.getElementById('btns-start').style.display = 'none';
-    document.getElementById('btn-master-update').style.display = 'block';
-    fieldRules.forEach(r => {
-      const link = document.getElementById(`edit-link-${r.field_id}`);
-      if (link) link.style.display = 'inline';
-      const helpEl = document.getElementById(`help-${r.field_id}`);
-      if (helpEl && helpEl.innerText.trim() !== "") helpEl.style.display = 'block';
-    });
-  }
-
-  function unlockField(fId) {
-    document.getElementById(`inp-${fId}`).disabled = false;
-    document.getElementById(`inp-${fId}`).focus();
-    document.getElementById(`edit-link-${fId}`).style.display = 'none';
-  }
-
-  // --- SECURITY LOGIC ---
   function sendCode(type) {
     const targetEmail = (type === 'email') ? document.getElementById('inp-email').value : originalData['email'];
     const btn = document.getElementById(`vbtn-${type}`);
     btn.disabled = true;
-    btn.innerText = "Sending...";
+    btn.innerText = "Sending Verification Code...";
     fetch(`${SCRIPT_URL}?action=sendVerificationCode&email=${encodeURIComponent(targetEmail)}&eventId=${eventId}`, { mode: 'no-cors' });
     setTimeout(() => {
       btn.style.display = "none";
       document.getElementById(`box-${type}`).style.display = "block";
-      document.getElementById(`vmsg-${type}`).innerText = `Sent to ${targetEmail}`;
+      document.getElementById(`vmsg-${type}`).innerText = `Verification Code sent to ${targetEmail}`;
+      document.getElementById(`vmsg-${type}`).style.color = "black";
       startResendTimer(type);
     }, 1500);
   }
@@ -229,8 +174,8 @@
     let seconds = 30;
     const interval = setInterval(() => {
       seconds--;
-      if (seconds > 0) { container.innerHTML = `<span style="font-size:10px; color:#666;">Wait ${seconds}s</span>`; }
-      else { clearInterval(interval); container.innerHTML = `<span style="font-size:11px; color:#1a237e; cursor:pointer; font-weight:bold; text-decoration:underline;" onclick="resendCode('${type}')">Resend</span>`; }
+      if (seconds > 0) { container.innerHTML = `<span style="font-size:10px; color:#666;">Wait ${seconds}s to resend</span>`; }
+      else { clearInterval(interval); container.innerHTML = `<span style="font-size:11px; color:#1a237e; cursor:pointer; font-weight:bold; text-decoration:underline;" onclick="resendCode('${type}')">Resend Code</span>`; }
     }, 1000);
   }
 
@@ -248,26 +193,11 @@
       const msg = document.getElementById(`vmsg-${type}`);
       if (!data) return;
       const isExpired = (new Date().getTime() - data.timestamp) > 300000;
-      if (isExpired) { msg.innerText = "Expired! Resend."; msg.style.color = "red"; }
-      else if (data.code === code) { msg.innerText = "Verified ✅"; msg.style.color = "green"; document.getElementById(`inp-${type}`).disabled = true; verificationStates[type] = true; }
-      else { msg.innerText = "Wrong Code ❌"; msg.style.color = "red"; }
+      if (isExpired) { msg.innerText = "Code Expired ❌ Please Resend."; msg.style.color = "red"; }
+      else if (data.code === code) { msg.innerText = "Code Verified ✅"; msg.style.color = "green"; document.getElementById(`inp-${type}`).disabled = true; verificationStates[type] = true; }
+      else { msg.innerText = "Code is not matching ❌"; msg.style.color = "red"; }
       checkAllValidations();
     }
-  }
-
-  function onInputChange(fId, val) {
-    if (fId === 'full_name') handleSearch(fId, val);
-    if (fId === 'centre') handleSearch(fId, val);
-    checkAllValidations();
-  }
-
-  function validateField(id, value, rule) {
-    if (!rule || rule === 'NULL' || value.trim() === "") return value.trim() !== "";
-    const val = value.trim();
-    if (rule === 'MOB') return /^[6-9]\d{9}$/.test(val);
-    if (rule === 'PIN') return /^\d{6}$/.test(val);
-    if (rule === 'EMAIL') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
-    return true;
   }
 
   function checkAllValidations() {
@@ -279,7 +209,7 @@
       const err = document.getElementById(`err-${r.field_id}`);
       if (input && (!input.disabled || originalData[r.field_id])) {
         let valid = validateField(r.field_id, input.value, r.field_validation);
-        if (!valid && input.value !== "") { err.innerText = r.error_msg || "Invalid"; err.style.display = "block"; allValid = false; }
+        if (!valid && input.value !== "") { err.innerText = r.error_msg || "Invalid Entry"; err.style.display = "block"; allValid = false; }
         else { err.style.display = "none"; }
         if (!valid) allValid = false;
         if (r.field_id === 'email' && input.value !== originalData['email'] && valid) needsEmailV = true;
@@ -288,42 +218,26 @@
     });
     if (needsEmailV && !verificationStates.email) {
       document.getElementById('panel-email').style.display = 'block';
-      document.getElementById('vbtn-email').innerText = `Verify New Email`;
+      document.getElementById('vbtn-email').innerText = `Click here to send verification code to ${document.getElementById('inp-email').value}`;
       allValid = false;
     } else if (document.getElementById('panel-email')) { document.getElementById('panel-email').style.display = 'none'; }
     if (needsMobileV && !verificationStates.mobile) {
       document.getElementById('panel-mobile').style.display = 'block';
-      document.getElementById('vbtn-mobile').innerText = `Verify Mobile via Registered Email`;
+      document.getElementById('vbtn-mobile').innerText = `Click here to send verification code to ${originalData['email']}`;
       allValid = false;
     } else if (document.getElementById('panel-mobile')) { document.getElementById('panel-mobile').style.display = 'none'; }
     document.getElementById('btn-master-update').disabled = !allValid;
     if (document.getElementById('btn-register')) document.getElementById('btn-register').disabled = !allValid;
   }
 
-  async function submitData(mode) {
-    document.getElementById('form-content').style.display = 'none';
-    document.getElementById('loader').style.display = 'block';
-    
-    // NEW LOGIC: Use existing RegID if updating, otherwise generate new
-    const regId = (mode === 'UPDATE' && currentRegId) ? currentRegId : `${eventId}REG${Date.now()}`;
-    const newCount = (mode === 'UPDATE') ? (currentEditCount + 1) : 0;
-
-    const payload = { 
-      registration_id: regId, 
-      event_id: eventId, 
-      timestamp: new Date().toISOString(),
-      edit_count: newCount
-    };
-    fieldRules.forEach(r => { payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; });
-    
-    try {
-      await db.ref('registrations/' + regId).set(payload);
-      fetch(`${SCRIPT_URL}?action=sendEmail&regId=${regId}&eventId=${eventId}`, { mode: 'no-cors' });
-      const snap = await db.ref(`htmlStorage/${eventId}/thank`).once('value');
-      document.getElementById('app').innerHTML = snap.val() || "<h2>Success!</h2>";
-    } catch (e) { alert("Error"); location.reload(); }
-  }
-
+  // --- UTILITY FUNCTIONS REMAINS SAME ---
+  function onInputChange(fId, val) { if (fId === 'full_name') handleSearch(fId, val); if (fId === 'centre') handleSearch(fId, val); checkAllValidations(); }
+  function validateField(id, value, rule) { if (!rule || rule === 'NULL' || value.trim() === "") return value.trim() !== ""; const val = value.trim(); if (rule === 'MOB') return /^[6-9]\d{9}$/.test(val); if (rule === 'PIN') return /^\d{6}$/.test(val); if (rule === 'EMAIL') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val); return true; }
+  async function handleSearch(fId, val) { const resDiv = document.getElementById(`res-${fId}`); if (val.length < 3) { resDiv.style.display = 'none'; return; } if (fId === 'full_name') { if (masterData.length === 0) { const snap = await db.ref('masterData').once('value'); masterData = Object.values(snap.val() || {}); } renderDropdown(resDiv, masterData.filter(x => x.full_name?.toLowerCase().includes(val.toLowerCase())).slice(0, 8), 'name'); } else if (fId === 'centre') { if (locData.length === 0) { const snap = await db.ref('config/locations').once('value'); locData = Object.values(snap.val() || {}); } renderDropdown(resDiv, locData.filter(x => x.centre?.toLowerCase().includes(val.toLowerCase())).slice(0, 8), 'loc'); } }
+  function selectLocation(l) { document.getElementById('inp-centre').value = l.centre; ['district', 'zone'].forEach(f => { if(document.getElementById(`inp-${f}`)) document.getElementById(`inp-${f}`).value = l[f] || ''; }); document.getElementById('res-centre').style.display = 'none'; checkAllValidations(); }
+  function enableEditMode() { document.getElementById('btns-start').style.display = 'none'; document.getElementById('btn-master-update').style.display = 'block'; fieldRules.forEach(r => { const link = document.getElementById(`edit-link-${r.field_id}`); if (link) link.style.display = 'inline'; const helpEl = document.getElementById(`help-${r.field_id}`); if (helpEl && helpEl.innerText.trim() !== "") helpEl.style.display = 'block'; }); }
+  function unlockField(fId) { document.getElementById(`inp-${fId}`).disabled = false; document.getElementById(`inp-${fId}`).focus(); document.getElementById(`edit-link-${fId}`).style.display = 'none'; }
+  async function submitData(mode) { document.getElementById('form-content').style.display = 'none'; document.getElementById('loader').style.display = 'block'; const regId = (mode === 'UPDATE' && currentRegId) ? currentRegId : `${eventId}REG${Date.now()}`; const newCount = (mode === 'UPDATE') ? (currentEditCount + 1) : 0; const payload = { registration_id: regId, event_id: eventId, timestamp: new Date().toISOString(), edit_count: newCount }; fieldRules.forEach(r => { payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; }); try { await db.ref('registrations/' + regId).set(payload); fetch(`${SCRIPT_URL}?action=sendEmail&regId=${regId}&eventId=${eventId}`, { mode: 'no-cors' }); const snap = await db.ref(`htmlStorage/${eventId}/thank`).once('value'); document.getElementById('app').innerHTML = snap.val() || "<h2>Success!</h2>"; } catch (e) { alert("Error"); location.reload(); } }
   init();
 </script>
 </body>
