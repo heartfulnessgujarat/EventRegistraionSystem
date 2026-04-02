@@ -51,8 +51,12 @@
 </div>
 
 <script>
-  // --- SCRIPT URL RE-INSERTED HERE ---
+  /****************************************************************************
+   * GOOGLE SCRIPT URL CONFIGURATION
+   ****************************************************************************/
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzugqmH2nXXjbiG9MKGE8hzhzbQn4ZWr0Tlvo468yRcbpBjFXfuNPoOmbRpNoxPGRFtgA/exec";
+  /****************************************************************************/
+
   const firebaseConfig = { databaseURL: "https://ferrari-reg-2026-default-rtdb.asia-southeast1.firebasedatabase.app" };
   
   firebase.initializeApp(firebaseConfig);
@@ -65,8 +69,237 @@
   let currentRegId = null;
   let currentEditCount = 0;
 
-  // Standalone Dropdown Function
   function renderDropdown(div, list, type) {
     div.innerHTML = '';
-    if (list.length > 0) {
-      div.style.display = 'block
+    if (list && list.length > 0) {
+      div.style.display = 'block';
+      list.forEach(item => {
+        const d = document.createElement('div');
+        d.className = 'item';
+        d.textContent = type === 'loc' ? item.centre : item.full_name;
+        d.onclick = () => type === 'loc' ? selectLocation(item) : selectParticipant(item);
+        div.appendChild(d);
+      });
+    }
+  }
+
+  async function init() {
+    try {
+      const configSnap = await db.ref('config/eventConfig').once('value');
+      const val = configSnap.val();
+      eventConfig = (val && val[eventId]) ? val[eventId] : { title: "Registration" };
+      document.getElementById('title').innerHTML = eventConfig.title;
+      document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
+      
+      const rulesSnap = await db.ref('config/fieldRules').once('value');
+      fieldRules = Object.values(rulesSnap.val() || {}).filter(r => r && String(r.event_id).toUpperCase() === eventId);
+      
+      renderForm();
+      document.getElementById('loading-init').style.display = 'none';
+      document.getElementById('form-content').style.display = 'block';
+    } catch (e) { 
+      console.error("Init Error:", e);
+      document.getElementById('loading-init').innerHTML = "<h2>Data load failed. Please refresh.</h2>";
+    }
+  }
+
+  function renderForm() {
+    const container = document.getElementById('dynamic-fields');
+    container.innerHTML = '';
+    fieldRules.forEach(r => {
+      const div = document.createElement('div');
+      div.className = 'field-container';
+      div.id = `cont-${r.field_id}`;
+      div.style.display = (r.initial_state === 'Visible') ? 'block' : 'none';
+      const canEdit = ['email', 'mobile', 'centre', 'pincode'].includes(r.field_id);
+      div.innerHTML = `
+        <div class="label-row">
+          <label>${r.display_label || r.field_id}</label>
+          ${canEdit ? `<span class="edit-link" id="edit-link-${r.field_id}" onclick="unlockField('${r.field_id}')">Edit</span>` : ''}
+        </div>
+        <input type="text" id="inp-${r.field_id}" oninput="onInputChange('${r.field_id}', this.value)" disabled autocomplete="off">
+        <div class="help-text" id="help-${r.field_id}">${r.field_help_text || r.Field_Help_Text || ''}</div>
+        <div class="error-msg-text" id="err-${r.field_id}"></div>
+        <div class="dropdown" id="res-${r.field_id}"></div>
+        ${(r.field_id === 'email' || r.field_id === 'mobile') ? `
+          <div class="verify-panel" id="panel-${r.field_id}">
+            <button class="verify-btn" id="vbtn-${r.field_id}" onclick="sendCode('${r.field_id}')"></button>
+            <div id="box-${r.field_id}" style="display:none;">
+              <input type="text" placeholder="Enter 6-digit code" id="code-${r.field_id}" oninput="verifyCodeInput('${r.field_id}', this.value)">
+              <div id="vmsg-${r.field_id}" style="font-size:12px; margin-top:5px; font-weight:bold;"></div>
+              <div id="resend-container-${r.field_id}" style="margin-top:8px;"></div>
+            </div>
+          </div>
+        ` : ''}
+      `;
+      container.appendChild(div);
+      if (r.field_id === 'full_name') {
+        div.style.display = 'block';
+        document.getElementById('inp-full_name').disabled = false;
+      }
+    });
+  }
+
+  function onInputChange(fId, val) {
+    if (fId === 'full_name') handleSearch(fId, val);
+    if (fId === 'centre') handleSearch(fId, val);
+    checkAllValidations();
+  }
+
+  async function handleSearch(fId, val) {
+    const resDiv = document.getElementById(`res-${fId}`);
+    if (val.length < 3) { resDiv.style.display = 'none'; return; }
+    if (fId === 'full_name') {
+      if (masterData.length === 0) { const snap = await db.ref('masterData').once('value'); masterData = Object.values(snap.val() || {}); }
+      renderDropdown(resDiv, masterData.filter(x => x.full_name?.toLowerCase().includes(val.toLowerCase())).slice(0, 8), 'name');
+    } else if (fId === 'centre') {
+      if (locData.length === 0) { const snap = await db.ref('config/locations').once('value'); locData = Object.values(snap.val() || {}); }
+      renderDropdown(resDiv, locData.filter(x => x.centre?.toLowerCase().includes(val.toLowerCase())).slice(0, 8), 'loc');
+    }
+  }
+
+  async function selectParticipant(p) {
+    currentRegId = null;
+    currentEditCount = 0;
+    document.getElementById('lockout-panel').style.display = 'none';
+    document.getElementById('btn-edit-trigger').style.display = 'block';
+
+    const regSnap = await db.ref('registrations').orderByChild('full_name').equalTo(p.full_name).once('value');
+    const existingData = regSnap.val();
+    if (existingData) {
+      const myReg = Object.values(existingData).find(r => r.event_id === eventId);
+      if (myReg) {
+        currentRegId = myReg.registration_id;
+        currentEditCount = myReg.edit_count || 0;
+      }
+    }
+
+    fieldRules.forEach(r => {
+      const el = document.getElementById(`inp-${r.field_id}`);
+      if (el) {
+        el.value = p[r.field_id] || '';
+        originalData[r.field_id] = el.value;
+        if (r.field_id === 'full_name') {
+          el.disabled = true;
+          const helpEl = document.getElementById('help-full_name');
+          if (helpEl && helpEl.innerText.trim() !== "") helpEl.style.display = 'block';
+        }
+        if (r.initial_state !== 'Hidden') document.getElementById(`cont-${r.field_id}`).style.display = 'block';
+      }
+    });
+
+    document.getElementById('res-full_name').style.display = 'none';
+    document.getElementById('btns-start').style.display = 'flex';
+
+    if (currentEditCount >= 3) {
+      document.getElementById('btn-edit-trigger').style.display = 'none';
+      document.getElementById('lockout-panel').style.display = 'block';
+    }
+    checkAllValidations();
+  }
+
+  function selectLocation(l) {
+    document.getElementById('inp-centre').value = l.centre;
+    ['district', 'zone'].forEach(f => { if(document.getElementById(`inp-${f}`)) document.getElementById(`inp-${f}`).value = l[f] || ''; });
+    document.getElementById('res-centre').style.display = 'none';
+    checkAllValidations();
+  }
+
+  function enableEditMode() {
+    document.getElementById('btns-start').style.display = 'none';
+    document.getElementById('btn-master-update').style.display = 'block';
+    fieldRules.forEach(r => {
+      const link = document.getElementById(`edit-link-${r.field_id}`);
+      if (link) link.style.display = 'inline';
+      const helpEl = document.getElementById(`help-${r.field_id}`);
+      if (helpEl && helpEl.innerText.trim() !== "") helpEl.style.display = 'block';
+    });
+  }
+
+  function unlockField(fId) {
+    document.getElementById(`inp-${fId}`).disabled = false;
+    document.getElementById(`inp-${fId}`).focus();
+    document.getElementById(`edit-link-${fId}`).style.display = 'none';
+  }
+
+  function sendCode(type) {
+    const targetEmail = (type === 'email') ? document.getElementById('inp-email').value : originalData['email'];
+    const btn = document.getElementById(`vbtn-${type}`);
+    btn.disabled = true;
+    btn.innerText = "Sending Verification Code...";
+    fetch(`${SCRIPT_URL}?action=sendVerificationCode&email=${encodeURIComponent(targetEmail)}&eventId=${eventId}`, { mode: 'no-cors' });
+    setTimeout(() => {
+      btn.style.display = "none";
+      document.getElementById(`box-${type}`).style.display = "block";
+      document.getElementById(`vmsg-${type}`).innerText = `Verification Code sent to ${targetEmail}`;
+      document.getElementById(`vmsg-${type}`).style.color = "black";
+      startResendTimer(type);
+    }, 1500);
+  }
+
+  function startResendTimer(type) {
+    const container = document.getElementById(`resend-container-${type}`);
+    let seconds = 30;
+    const interval = setInterval(() => {
+      seconds--;
+      if (seconds > 0) { container.innerHTML = `<span style="font-size:10px; color:#666;">Wait ${seconds}s to resend</span>`; }
+      else { clearInterval(interval); container.innerHTML = `<span style="font-size:11px; color:#1a237e; cursor:pointer; font-weight:bold; text-decoration:underline;" onclick="resendCode('${type}')">Resend Code</span>`; }
+    }, 1000);
+  }
+
+  function resendCode(type) {
+    document.getElementById(`box-${type}`).style.display = "none";
+    document.getElementById(`vbtn-${type}`).style.display = "block";
+    sendCode(type);
+  }
+
+  async function verifyCodeInput(type, code) {
+    if (code.length === 6) {
+      const emailKey = ((type === 'email') ? document.getElementById('inp-email').value : originalData['email']).replace(/[.#$[\]]/g, "_");
+      const snap = await db.ref("verificationCodes/" + emailKey).once('value');
+      const data = snap.val();
+      const msg = document.getElementById(`vmsg-${type}`);
+      if (!data) return;
+      const isExpired = (new Date().getTime() - data.timestamp) > 300000;
+      if (isExpired) { msg.innerText = "Code Expired ❌ Please Resend."; msg.style.color = "red"; }
+      else if (data.code === code) { msg.innerText = "Code Verified ✅"; msg.style.color = "green"; document.getElementById(`inp-${type}`).disabled = true; verificationStates[type] = true; }
+      else { msg.innerText = "Code is not matching ❌"; msg.style.color = "red"; }
+      checkAllValidations();
+    }
+  }
+
+  function validateField(id, value, rule) {
+    if (!rule || rule === 'NULL' || value.trim() === "") return value.trim() !== "";
+    const val = value.trim();
+    if (rule === 'MOB') return /^[6-9]\d{9}$/.test(val);
+    if (rule === 'PIN') return /^\d{6}$/.test(val);
+    if (rule === 'EMAIL') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+    return true;
+  }
+
+  function checkAllValidations() {
+    let allValid = true;
+    let needsEmailV = false;
+    let needsMobileV = false;
+    fieldRules.forEach(r => {
+      const input = document.getElementById(`inp-${r.field_id}`);
+      const err = document.getElementById(`err-${r.field_id}`);
+      if (input && (!input.disabled || originalData[r.field_id])) {
+        let valid = validateField(r.field_id, input.value, r.field_validation);
+        if (!valid && input.value !== "") { err.innerText = r.error_msg || "Invalid Entry"; err.style.display = "block"; allValid = false; }
+        else { err.style.display = "none"; }
+        if (!valid) allValid = false;
+        if (r.field_id === 'email' && input.value !== originalData['email'] && valid) needsEmailV = true;
+        if (r.field_id === 'mobile' && input.value !== originalData['mobile'] && valid) needsMobileV = true;
+      }
+    });
+    if (needsEmailV && !verificationStates.email) {
+      document.getElementById('panel-email').style.display = 'block';
+      document.getElementById('vbtn-email').innerText = `Click here to send verification code to ${document.getElementById('inp-email').value}`;
+      allValid = false;
+    } else if (document.getElementById('panel-email')) { document.getElementById('panel-email').style.display = 'none'; }
+    if (needsMobileV && !verificationStates.mobile) {
+      document.getElementById('panel-mobile').style.display = 'block';
+      document.getElementById('vbtn-mobile').innerText = `Click here to send verification code to ${originalData['email']}`;
+      allValid = false;
+    } else if (document.getElementById('panel-mobile')) { document.getElementById('panel-mobile').style.display = 'none'; }
