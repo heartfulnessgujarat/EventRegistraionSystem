@@ -1,204 +1,57 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <style>
-    body { font-family: sans-serif; background: #f4f7f6; padding: 20px; display: flex; justify-content: center; }
-    .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
-    .field-group { margin-bottom: 18px; position: relative; }
-    .label-row { display: flex; justify-content: space-between; align-items: center; }
-    label { font-weight: bold; font-size: 13px; color: #333; }
-    .tiny-edit { font-size: 11px; color: #1a237e; cursor: pointer; font-weight: bold; text-decoration: underline; display: none; }
-    input { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-    input:disabled { background: #f9f9f9; color: #777; }
-    .help { font-size: 11px; color: #666; margin-top: 4px; display: none; font-style: italic; }
-    .verify-box { background: #fff9c4; padding: 10px; border-radius: 6px; margin-top: 8px; display: none; }
-    .primary-btn { width: 100%; padding: 12px; background: #1a237e; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-    .primary-btn:disabled { background: #ccc; }
-    .dropdown { position: absolute; background: white; border: 1px solid #ddd; width: 100%; z-index: 10; max-height: 150px; overflow-y: auto; display: none; }
-    .item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; }
-    .item:hover { background: #f0f0f0; }
-  </style>
-</head>
-<body>
-
-<div class="card">
-  <div id="init-msg">Loading event details...</div>
-  <div id="form-body" style="display:none;">
-    <h2 id="title" style="text-align:center; margin-bottom:5px;"></h2>
-    <p id="subtitle" style="text-align:center; font-size:12px; color:#666; margin-bottom:20px;"></p>
-    
-    <div id="fields-container"></div>
-    
-    <div id="start-actions" style="display:none; margin-top:20px;">
-      <button id="btn-confirm" class="primary-btn" onclick="submit(false)">Confirm Registration</button>
-      <button class="primary-btn" style="background:#546e7a;" onclick="triggerEditFlow()">I want to edit my details</button>
-    </div>
-    
-    <button id="btn-update" class="primary-btn" style="display:none;" disabled onclick="submit(true)">Details Updated, Register Me</button>
-  </div>
-</div>
-
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-
 <script>
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyo2w1Frxo0NeVnPngG3KIxFKkV-N3YMou5smiHh4h5StTvZwBVHjFek6SnXB9exHDV4g/exec";
-  const firebaseConfig = { databaseURL: "https://ferrari-reg-2026-default-rtdb.asia-southeast1.firebasedatabase.app" };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+  // ... [Keep Firebase Init and start() function] ...
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const eventId = (urlParams.get('id') || 'EVT001').toUpperCase();
-
-  let fieldRules = [], originalData = {}, verificationMap = {};
-
-  async function start() {
-    const configSnap = await db.ref(`config/eventConfig/${eventId}`).once('value');
-    const config = configSnap.val();
-    
-    if (!config || config.event_status !== "ACTIVE") {
-      document.getElementById('init-msg').innerHTML = "<h2>Event Closed</h2>";
-      return;
-    }
-
-    document.getElementById('title').innerText = config.title;
-    document.getElementById('subtitle').innerHTML = config.subtitle;
-
-    const rulesSnap = await db.ref('config/fieldRules').once('value');
-    fieldRules = Object.values(rulesSnap.val() || {}).filter(r => r.Event_ID === eventId);
-
-    buildUI();
-    document.getElementById('init-msg').style.display = 'none';
-    document.getElementById('form-body').style.display = 'block';
-  }
-
-  function buildUI() {
-    const container = document.getElementById('fields-container');
-    fieldRules.forEach(r => {
-      const isSearchField = (r.Field_ID === 'full_name');
-      const canEdit = ['Editable','Editable_Verify','Editable_Lookup'].includes(r.Edit_Behavior);
-      
-      const html = `
-        <div class="field-group" id="group-${r.Field_ID}" style="display: ${r.Initial_State === 'Visible' ? 'block' : 'none'}">
-          <div class="label-row">
-            <label>${r.Display_Label}</label>
-            ${canEdit ? `<span class="tiny-edit" id="btn-edit-${r.Field_ID}" onclick="unlockRow('${r.Field_ID}')">Edit</span>` : ''}
-          </div>
-          <input type="text" id="inp-${r.Field_ID}" ${isSearchField ? '' : 'disabled'} oninput="handleTyping('${r.Field_ID}', this.value)">
-          <div class="help" id="help-${r.Field_ID}">${r.Field_Help_Text || ''}</div>
-          <div class="dropdown" id="drop-${r.Field_ID}"></div>
-          <div class="verify-box" id="vbox-${r.Field_ID}">
-             <button onclick="sendOTP('${r.Field_ID}')" id="vbtn-${r.Field_ID}" style="font-size:10px;">Verify Change</button>
-             <input type="text" id="otp-${r.Field_ID}" placeholder="6-digit code" style="display:none; margin-top:5px;" oninput="checkOTP('${r.Field_ID}', this.value)">
-          </div>
-        </div>`;
-      container.insertAdjacentHTML('beforeend', html);
-    });
-  }
-
+  // FIX: ADDED CENTRE SEARCH TO TYPING HANDLER
   async function handleTyping(fId, val) {
+    const rule = fieldRules.find(r => r.Field_ID === fId);
+    
+    // NAME SEARCH
     if (fId === 'full_name' && val.length >= 3) {
       const snap = await db.ref('masterData').once('value');
-      const matches = Object.values(snap.val()).filter(x => x.full_name.toLowerCase().includes(val.toLowerCase())).slice(0,5);
-      showDrop(fId, matches);
-    }
+      const items = Object.values(snap.val() || {}).filter(x => x.full_name.toLowerCase().includes(val.toLowerCase())).slice(0,5);
+      showDrop(fId, items, 'user');
+    } 
     
-    // Dynamic Verification Check
-    const rule = fieldRules.find(r => r.Field_ID === fId);
+    // CENTRE SEARCH (RESTORED)
+    if (fId === 'centre' && val.length >= 2) {
+      const matches = locations.filter(x => x.centre.toLowerCase().includes(val.toLowerCase())).slice(0,8);
+      showDrop(fId, matches, 'loc');
+    }
+
+    // VERIFICATION TRIGGER
     if (rule && rule.Edit_Behavior === 'Editable_Verify') {
-      if (val !== originalData[fId]) {
-        verificationMap[fId] = false;
-        document.getElementById(`vbox-${fId}`).style.display = 'block';
-      } else {
-        verificationMap[fId] = true;
-        document.getElementById(`vbox-${fId}`).style.display = 'none';
-      }
+      const isChanged = (val.trim() !== String(originalData[fId] || "").trim());
+      verificationMap[fId] = !isChanged;
+      document.getElementById(`vbox-${fId}`).style.display = isChanged ? 'block' : 'none';
     }
     validate();
   }
 
-  function showDrop(fId, items) {
-    const d = document.getElementById(`drop-${fId}`);
-    d.innerHTML = items.map(i => `<div class="item" onclick="selectItem('${fId}', ${JSON.stringify(i).replace(/"/g, '&quot;')})">${i.full_name}</div>`).join('');
-    d.style.display = items.length ? 'block' : 'none';
-  }
-
-  function selectItem(fId, data) {
-    originalData = data;
-    fieldRules.forEach(r => {
-      const input = document.getElementById(`inp-${r.Field_ID}`);
-      if (input) {
-        input.value = data[r.Field_ID] || "";
-        document.getElementById(`group-${r.Field_ID}`).style.display = (r.Initial_State === 'Hidden' ? 'none' : 'block');
-        if (r.Edit_Behavior === 'Editable_Verify') verificationMap[r.Field_ID] = true;
-      }
-    });
-    document.getElementById(`drop-${fId}`).style.display = 'none';
-    document.getElementById(`inp-full_name`).disabled = true;
-    document.getElementById('start-actions').style.display = 'block';
-    validate();
-  }
-
-  function triggerEditFlow() {
-    document.getElementById('start-actions').style.display = 'none';
-    document.getElementById('btn-update').style.display = 'block';
-    fieldRules.forEach(r => {
-      const btn = document.getElementById(`btn-edit-${r.Field_ID}`);
-      if (btn) btn.style.display = 'inline';
-    });
-  }
-
-  function unlockRow(fId) {
-    document.getElementById(`inp-${fId}`).disabled = false;
-    document.getElementById(`inp-${fId}`).focus();
-    document.getElementById(`btn-edit-${fId}`).style.display = 'none';
-    document.getElementById(`help-${fId}`).style.display = 'block';
-  }
-
+  // FIX: VALIDATION RULES (MOB/PIN)
   function validate() {
     let ok = true;
     fieldRules.forEach(r => {
-      const val = document.getElementById(`inp-${r.Field_ID}`).value;
+      const input = document.getElementById(`inp-${r.Field_ID}`);
+      if (!input) return;
+      const val = input.value.trim();
+      const validationType = r.field_validation;
+      
+      // If visible and empty -> fail
       if (r.Initial_State !== 'Hidden' && !val) ok = false;
+      
+      // Mobile Validation (10 digits)
+      if (val && validationType === 'MOB' && !/^[6-9]\d{9}$/.test(val)) ok = false;
+      
+      // Pincode Validation (6 digits)
+      if (val && validationType === 'PIN' && !/^\d{6}$/.test(val)) ok = false;
+      
+      // Verification check
       if (r.Edit_Behavior === 'Editable_Verify' && verificationMap[r.Field_ID] === false) ok = false;
     });
+    
     document.getElementById('btn-update').disabled = !ok;
     document.getElementById('btn-confirm').disabled = !ok;
   }
 
-  function sendOTP(fId) {
-    const btn = document.getElementById(`vbtn-${fId}`);
-    btn.innerText = "Sending...";
-    fetch(`${SCRIPT_URL}?action=sendVerificationCode&email=${originalData.email}`);
-    setTimeout(() => {
-      btn.style.display = 'none';
-      document.getElementById(`otp-${fId}`).style.display = 'block';
-    }, 1000);
-  }
-
-  async function checkOTP(fId, code) {
-    if (code.length === 6) {
-      const emailKey = originalData.email.replace(/[.#$[\]]/g, "_");
-      const snap = await db.ref(`verificationCodes/${emailKey}`).once('value');
-      if (snap.val() && snap.val().code === code) {
-        verificationMap[fId] = true;
-        document.getElementById(`vbox-${fId}`).innerHTML = "<b style='color:green; font-size:11px;'>Verified ✅</b>";
-        validate();
-      }
-    }
-  }
-
-  async function submit(isUpdate) {
-    const payload = { event_id: eventId, timestamp: new Date().toISOString() };
-    fieldRules.forEach(r => payload[r.Field_ID] = document.getElementById(`inp-${r.Field_ID}`).value);
-    
-    const regId = isUpdate ? originalData.registration_id : `REG${Date.now()}`;
-    await db.ref(`registrations/${regId}`).update(payload);
-    alert("Success! Check your email.");
-    location.reload();
-  }
-
-  start();
+  // ... [Keep select(), showTinyButtons(), and unlock() functions] ...
 </script>
-</body>
-</html>
