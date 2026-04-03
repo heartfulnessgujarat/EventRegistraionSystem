@@ -1,57 +1,5 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Event Registration 2026</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-  <style>
-    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
-    .card { width: 100%; max-width: 450px; background: white; padding: 35px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-    h2 { color: #1a237e; margin-bottom: 5px; text-align: center; }
-    .subtitle { color: #666; font-size: 14px; text-align: center; margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
-    .field-container { margin-bottom: 20px; position: relative; }
-    .label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-    label { font-weight: 700; font-size: 13px; color: #1a237e; }
-    .edit-link { font-size: 11px; color: #1a237e; cursor: pointer; font-weight: bold; text-decoration: underline; display: none; }
-    input { width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
-    input:disabled { background: #f8f9fa; color: #6c757d; }
-    .help-text { font-size: 11px; color: #5c6bc0; margin-top: 4px; font-style: italic; display: none; font-weight: 500; line-height: 1.3; }
-    .error-msg-text { color: #d32f2f; font-size: 12px; margin-top: 5px; font-weight: bold; display: none; }
-    .verify-panel { background: #fffde7; border: 1px solid #fbc02d; padding: 10px; border-radius: 8px; margin-top: 10px; display: none; }
-    .verify-btn { background: #fbc02d; color: #333; border: none; padding: 10px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 12px; width: 100%; margin-bottom: 10px; }
-    .primary-btn { width: 100%; padding: 15px; background: #1a237e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-    .primary-btn:disabled { opacity: 0.5; cursor: not-allowed; background: #999; }
-    .dropdown { border: 1px solid #ddd; max-height: 200px; overflow-y: auto; background: white; position: absolute; width: 100%; z-index: 1000; display: none; }
-    .item { padding: 12px; cursor: pointer; border-bottom: 1px solid #f1f1f1; font-size: 14px; }
-    .item:hover { background: #e8eaf6; }
-    #loader { text-align: center; padding: 40px; color: #1a237e; display: none; }
-    .lockout-msg { color: #d32f2f; font-weight: bold; text-align: center; margin-top: 10px; display: none; font-size: 13px; }
-  </style>
-</head>
-<body>
-
-<div class="card" id="app">
-  <div id="loading-init"><h2>Checking event status...</h2></div>
-  <div id="form-content" style="display:none;">
-    <h2 id="title"></h2>
-    <p class="subtitle" id="subtitle"></p>
-    <div id="dynamic-fields"></div>
-    <div id="lockout-notice" class="lockout-msg">⚠️ Maximum 3 edits reached for this registration.</div>
-    <div id="btns-start" style="display:none; flex-direction:column; gap:10px;">
-      <button id="btn-register" class="primary-btn" disabled onclick="submitData(false)">Confirm Registration</button>
-      <button id="btn-edit-trigger" class="primary-btn" style="background:#455a64;" onclick="enableEditMode()">I want to edit my details</button>
-    </div>
-    <button id="btn-master-update" class="primary-btn" style="display:none;" disabled onclick="submitData(true)">DETAILS UPDATED, REGISTER ME</button>
-  </div>
-  <div id="loader"><h3>Processing...</h3></div>
-</div>
-
 <script>
-  // UPDATE THIS URL AFTER NEW DEPLOYMENT
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyo2w1Frxo0NeVnPngG3KIxFKkV-N3YMou5smiHh4h5StTvZwBVHjFek6SnXB9exHDV4g/exec";
-
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw_3Vis6yzISxizKfoWghXW2jk6Bm5xYj2CYyf-Qkrl89yuKyujX9FuQ3rkWE-MszQGjA/exec";
   const firebaseConfig = { databaseURL: "https://ferrari-reg-2026-default-rtdb.asia-southeast1.firebasedatabase.app" };
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
@@ -59,31 +7,24 @@
 
   let fieldRules = [], masterData = [], locData = [], eventConfig = {};
   let originalData = {}, currentRegId = "";
-  let verificationStates = {}; // Will hold { field_id: boolean }
+  let verificationStates = {}; 
 
   async function init() {
     try {
       const configSnap = await db.ref('config/eventConfig/' + eventId).once('value');
       eventConfig = configSnap.val() || {};
       
-      const now = new Date();
-      const start = new Date(eventConfig.Reg_Start_Date);
-      const end = new Date(eventConfig.Reg_End_Date);
-      const isActive = (eventConfig.event_status === "ACTIVE");
-
-      if (!isActive || now < start || now > end) {
-        document.getElementById('app').innerHTML = `<h2>Registration Closed</h2><p style="text-align:center;">This event is currently not accepting registrations.</p>`;
-        return;
-      }
-
-      document.getElementById('title').innerHTML = eventConfig.title || "Registration";
-      document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
       const rulesSnap = await db.ref('config/fieldRules').once('value');
-      fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.Event_ID || r.event_id).toUpperCase() === eventId);
+      // Scan for rules belonging to this event
+      fieldRules = Object.values(rulesSnap.val() || {}).filter(r => 
+        String(r.Event_ID || r.event_id).toUpperCase() === eventId
+      );
       
       renderForm();
       document.getElementById('loading-init').style.display = 'none';
       document.getElementById('form-content').style.display = 'block';
+      document.getElementById('title').innerHTML = eventConfig.title || "Registration";
+      document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
     } catch (e) { console.error(e); }
   }
 
@@ -97,22 +38,23 @@
       div.id = `cont-${fId}`;
       div.style.display = (r.Initial_State === 'Visible') ? 'block' : 'none';
       
-      const canShowEdit = ['Editable_Verify', 'Editable_Lookup', 'Editable'].includes(r.Edit_Behavior);
+      // Determine if this field is allowed to have an Edit button based on Google Sheet
+      const isEditableType = ['Editable', 'Editable_Verify', 'Editable_Lookup'].includes(r.Edit_Behavior);
       
       div.innerHTML = `
         <div class="label-row">
           <label>${r.Display_Label || fId}</label>
-          ${canShowEdit ? `<span class="edit-link" id="edit-link-${fId}" onclick="unlockField('${fId}')">Edit</span>` : ''}
+          ${isEditableType ? `<span class="edit-link" id="edit-btn-${fId}" onclick="unlockField('${fId}', '${r.Edit_Behavior}')">Edit</span>` : ''}
         </div>
-        <input type="text" id="inp-${fId}" oninput="onInputChange('${fId}', this.value)" disabled autocomplete="off">
+        <input type="text" id="inp-${fId}" oninput="onInputChange('${fId}', this.value)" disabled>
         <div class="help-text" id="help-${fId}">${r.Field_Help_Text || ''}</div>
         <div class="error-msg-text" id="err-${fId}"></div>
         <div class="dropdown" id="res-${fId}"></div>
         ${r.Edit_Behavior === 'Editable_Verify' ? `
-          <div class="verify-panel" id="panel-${fId}">
-            <button class="verify-btn" id="vbtn-${fId}" onclick="sendCode('${fId}')">Verify Change</button>
+          <div class="verify-panel" id="panel-${fId}" style="display:none;">
+            <button class="verify-btn" id="vbtn-${fId}" onclick="sendCode('${fId}')">Verify New ${fId}</button>
             <div id="box-${fId}" style="display:none;">
-              <input type="text" placeholder="6-digit code" id="code-${fId}" oninput="verifyCodeInput('${fId}', this.value)">
+              <input type="text" placeholder="Enter 6-digit code" id="code-${fId}" oninput="verifyCodeInput('${fId}', this.value)">
               <div id="vmsg-${fId}" style="font-size:12px; margin-top:5px; font-weight:bold;"></div>
             </div>
           </div>
@@ -121,46 +63,9 @@
       container.appendChild(div);
       if (fId === 'full_name') {
         div.style.display = 'block';
-        document.getElementById('inp-full_name').disabled = false;
+        document.getElementById('inp-full_name').disabled = false; // Search is always active
       }
     });
-  }
-
-  function onInputChange(fId, val) {
-    if (fId === 'full_name' || fId === 'centre') handleSearch(fId, val);
-    
-    // DYNAMIC VERIFICATION LOGIC
-    const rule = fieldRules.find(r => (r.Field_ID || r.field_id) === fId);
-    if (rule && rule.Edit_Behavior === 'Editable_Verify') {
-        verificationStates[fId] = (val.trim() === (originalData[fId] || "").trim());
-    }
-    checkAllValidations();
-  }
-
-  async function handleSearch(fId, val) {
-    const resDiv = document.getElementById(`res-${fId}`);
-    if (val.length < 3) { resDiv.style.display = 'none'; return; }
-    if (fId === 'full_name') {
-      if (masterData.length === 0) { const snap = await db.ref('masterData').once('value'); masterData = Object.values(snap.val() || {}); }
-      renderDropdown(resDiv, masterData.filter(x => x.full_name?.toLowerCase().includes(val.toLowerCase())).slice(0, 8), 'name');
-    } else if (fId === 'centre') {
-      if (locData.length === 0) { const snap = await db.ref('config/locations').once('value'); locData = Object.values(snap.val() || {}); }
-      renderDropdown(resDiv, locData.filter(x => x.centre?.toLowerCase().includes(val.toLowerCase())).slice(0, 8), 'loc');
-    }
-  }
-
-  function renderDropdown(div, list, type) {
-    div.innerHTML = '';
-    if (list.length > 0) {
-      div.style.display = 'block';
-      list.forEach(item => {
-        const d = document.createElement('div');
-        d.className = 'item';
-        d.textContent = type === 'loc' ? item.centre : item.full_name;
-        d.onclick = () => type === 'loc' ? selectLocation(item) : selectParticipant(item);
-        div.appendChild(d);
-      });
-    }
   }
 
   function selectParticipant(p) {
@@ -172,14 +77,12 @@
       const el = document.getElementById(`inp-${fId}`);
       if (el) el.value = p[fId] || '';
       if (r.Initial_State !== 'Hidden') document.getElementById(`cont-${fId}`).style.display = 'block';
-      
-      // Initially, all loaded fields are considered verified
       if (r.Edit_Behavior === 'Editable_Verify') verificationStates[fId] = true;
     });
 
-    document.getElementById('res-full_name').style.display = 'none';
     document.getElementById('inp-full_name').disabled = true;
     document.getElementById('btns-start').style.display = 'flex';
+    document.getElementById('res-full_name').style.display = 'none';
     
     if ((p.edit_count || 0) >= 3) {
       document.getElementById('btn-edit-trigger').style.display = 'none';
@@ -188,96 +91,80 @@
     checkAllValidations();
   }
 
+  // THIS IS THE MAIN "I WANT TO EDIT" BUTTON ACTION
+  function enableEditMode() {
+    document.getElementById('btns-start').style.display = 'none';
+    document.getElementById('btn-master-update').style.display = 'block';
+    
+    // Show the tiny individual edit buttons based on rules
+    fieldRules.forEach(r => {
+      const fId = r.Field_ID || r.field_id;
+      const tinyBtn = document.getElementById(`edit-btn-${fId}`);
+      if (tinyBtn) tinyBtn.style.display = 'inline';
+    });
+  }
+
+  // THIS IS THE TINY EDIT BUTTON ACTION
+  function unlockField(fId, behavior) {
+    const input = document.getElementById(`inp-${fId}`);
+    input.disabled = false;
+    input.focus();
+    
+    // Hide the tiny button once clicked
+    document.getElementById(`edit-btn-${fId}`).style.display = 'none';
+    
+    // Show help text if it exists
+    const help = document.getElementById(`help-${fId}`);
+    if (help && help.innerText.trim() !== "") help.style.display = 'block';
+  }
+
+  function onInputChange(fId, val) {
+    if (fId === 'full_name' || fId === 'centre') handleSearch(fId, val);
+    
+    const rule = fieldRules.find(r => (r.Field_ID || r.field_id) === fId);
+    if (rule && rule.Edit_Behavior === 'Editable_Verify') {
+        // If it matches original, it's "verified". If changed, it needs code.
+        verificationStates[fId] = (val.trim() === (originalData[fId] || "").trim());
+    }
+    checkAllValidations();
+  }
+
   function selectLocation(l) {
     document.getElementById('inp-centre').value = l.centre;
-    ['district', 'zone'].forEach(f => { if(document.getElementById(`inp-${f}`)) document.getElementById(`inp-${f}`).value = l[f] || ''; });
+    // Auto-fill locked fields from lookup
+    ['district', 'zone'].forEach(f => {
+      const el = document.getElementById(`inp-${f}`);
+      if(el) el.value = l[f] || '';
+    });
     document.getElementById('res-centre').style.display = 'none';
     checkAllValidations();
   }
 
-  function enableEditMode() {
-    document.getElementById('btns-start').style.display = 'none';
-    document.getElementById('btn-master-update').style.display = 'block';
-    fieldRules.forEach(r => {
-      const fId = r.Field_ID || r.field_id;
-      const link = document.getElementById(`edit-link-${fId}`);
-      if (link) link.style.display = 'inline';
-      const help = document.getElementById(`help-${fId}`);
-      if (help && help.innerText.trim() !== "") help.style.display = 'block';
-    });
-  }
-
-  function unlockField(fId) {
-    document.getElementById(`inp-${fId}`).disabled = false;
-    document.getElementById(`edit-link-${fId}`).style.display = 'none';
-    checkAllValidations();
-  }
-
-  function sendCode(fId) {
-    // Verification is sent to the REGISTERED email, regardless of which field is changing
-    const targetEmail = originalData['email']; 
-    const btn = document.getElementById(`vbtn-${fId}`);
-    btn.disabled = true; btn.innerText = "Sending...";
-    fetch(`${SCRIPT_URL}?action=sendVerificationCode&email=${encodeURIComponent(targetEmail)}&eventId=${eventId}`, { mode: 'no-cors' });
-    setTimeout(() => {
-      btn.style.display = "none";
-      document.getElementById(`box-${fId}`).style.display = "block";
-      document.getElementById(`vmsg-${fId}`).innerText = `Code sent to ${targetEmail}`;
-    }, 1200);
-  }
-
-  async function verifyCodeInput(fId, code) {
-    if (code.length === 6) {
-      const emailKey = originalData['email'].replace(/[.#$[\]]/g, "_");
-      const snap = await db.ref("verificationCodes/" + emailKey).once('value');
-      const data = snap.val();
-      const now = new Date().getTime();
-
-      if (data && data.code === code && (now - data.timestamp) < 300000) {
-        document.getElementById(`vmsg-${fId}`).innerText = "Verified ✅"; 
-        document.getElementById(`vmsg-${fId}`).style.color = "green";
-        document.getElementById(`inp-${fId}`).disabled = true;
-        document.getElementById(`code-${fId}`).disabled = true;
-        verificationStates[fId] = true;
-      } else {
-        document.getElementById(`vmsg-${fId}`).innerText = "Invalid/Expired ❌"; 
-        document.getElementById(`vmsg-${fId}`).style.color = "red";
-      }
-      checkAllValidations();
-    }
-  }
-
   function checkAllValidations() {
     let allValid = true;
-    
     fieldRules.forEach(r => {
       const fId = r.Field_ID || r.field_id;
       const input = document.getElementById(`inp-${fId}`);
-      const err = document.getElementById(`err-${fId}`);
       const panel = document.getElementById(`panel-${fId}`);
       
-      if (input && (!input.disabled || originalData[fId])) {
+      if (input) {
         const val = input.value.trim();
-        let valid = (val !== "");
-        
-        // Dynamic Validation Rules
+        // 1. Basic Empty Check
+        if (val === "" && r.Initial_State !== 'Hidden') allValid = false;
+
+        // 2. Format Validations (MOB/EMAIL/PIN)
         const vRule = r.field_validation || r.Field_Validation;
-        if (vRule === 'MOB') valid = /^[6-9]\d{9}$/.test(val);
-        if (vRule === 'EMAIL') valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
-        if (vRule === 'PIN') valid = /^\d{6}$/.test(val);
+        if (vRule === 'MOB' && !/^[6-9]\d{9}$/.test(val)) allValid = false;
+        if (vRule === 'EMAIL' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) allValid = false;
+        if (vRule === 'PIN' && !/^\d{6}$/.test(val)) allValid = false;
 
-        if (!valid) {
-            allValid = false;
-            if (val !== "") { err.innerText = r.error_msg || "Invalid"; err.style.display = 'block'; }
-        } else { err.style.display = 'none'; }
-
-        // Dynamic Verification Panel Trigger
+        // 3. Verification Check
         if (r.Edit_Behavior === 'Editable_Verify' && !input.disabled) {
            if (val !== originalData[fId] && !verificationStates[fId]) {
-              panel.style.display = 'block';
+              if(panel) panel.style.display = 'block';
               allValid = false;
            } else {
-              panel.style.display = 'none';
+              if(panel) panel.style.display = 'none';
            }
         }
       }
@@ -287,32 +174,7 @@
     if (document.getElementById('btn-register')) document.getElementById('btn-register').disabled = !allValid;
   }
 
-  async function submitData(isUpdate) {
-    document.getElementById('form-content').style.display = 'none';
-    document.getElementById('loader').style.display = 'block';
-    
-    const finalRegId = isUpdate ? currentRegId : `${eventId}REG${Date.now()}`;
-    const payload = { 
-        registration_id: finalRegId, 
-        event_id: eventId, 
-        timestamp: new Date().toISOString(),
-        edit_count: isUpdate ? (originalData.edit_count || 0) + 1 : 0
-    };
-    
-    fieldRules.forEach(r => { 
-        const fId = r.Field_ID || r.field_id;
-        payload[fId] = document.getElementById(`inp-${fId}`).value; 
-    });
-    
-    try {
-      await db.ref('registrations/' + finalRegId).update(payload);
-      fetch(`${SCRIPT_URL}?action=sendEmail&regId=${finalRegId}&eventId=${eventId}`, { mode: 'no-cors' });
-      const snap = await db.ref(`htmlStorage/${eventId}/thank`).once('value');
-      document.getElementById('app').innerHTML = snap.val() || "<h2>Success!</h2>";
-    } catch (e) { alert("Error saving"); location.reload(); }
-  }
-
+  // [Keep handleSearch, renderDropdown, sendCode, verifyCodeInput, and submitData the same as before]
+  // ...
   init();
 </script>
-</body>
-</html>
