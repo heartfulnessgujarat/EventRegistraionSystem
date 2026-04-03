@@ -19,11 +19,11 @@
     input:disabled { background: #f8f9fa; color: #6c757d; }
     .help-text { font-size: 11px; color: #5c6bc0; margin-top: 4px; font-style: italic; display: none; font-weight: 500; line-height: 1.3; }
     .error-msg-text { color: #d32f2f; font-size: 12px; margin-top: 5px; font-weight: bold; display: none; }
-    .verify-panel { background: #fffde7; border: 1px solid #fbc02d; padding: 10px; border-radius: 8px; margin-top: 10px; display: none; transition: all 0.3s; }
+    .verify-panel { background: #fffde7; border: 1px solid #fbc02d; padding: 10px; border-radius: 8px; margin-top: 10px; display: none; }
     .verify-btn { background: #fbc02d; color: #333; border: none; padding: 10px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 12px; width: 100%; margin-bottom: 10px; }
     .primary-btn { width: 100%; padding: 15px; background: #1a237e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
     .primary-btn:disabled { opacity: 0.5; cursor: not-allowed; background: #999; }
-    .dropdown { border: 1px solid #ddd; max-height: 200px; overflow-y: auto; background: white; position: absolute; width: 100%; z-index: 1000; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .dropdown { border: 1px solid #ddd; max-height: 200px; overflow-y: auto; background: white; position: absolute; width: 100%; z-index: 1000; display: none; }
     .item { padding: 12px; cursor: pointer; border-bottom: 1px solid #f1f1f1; font-size: 14px; }
     .item:hover { background: #e8eaf6; }
     #loader { text-align: center; padding: 40px; color: #1a237e; display: none; }
@@ -49,9 +49,8 @@
 </div>
 
 <script>
-  // REPLACE THIS WITH YOUR NEW DEPLOYMENT URL
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyo2w1Frxo0NeVnPngG3KIxFKkV-N3YMou5smiHh4h5StTvZwBVHjFek6SnXB9exHDV4g/exec";
-  
+  // UPDATE THIS URL AFTER NEW DEPLOYMENT
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw_3Vis6yzISxizKfoWghXW2jk6Bm5xYj2CYyf-Qkrl89yuKyujX9FuQ3rkWE-MszQGjA/exec";
   const firebaseConfig = { databaseURL: "https://ferrari-reg-2026-default-rtdb.asia-southeast1.firebasedatabase.app" };
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
@@ -59,7 +58,7 @@
 
   let fieldRules = [], masterData = [], locData = [], eventConfig = {};
   let originalData = {}, currentRegId = "";
-  let verificationStates = { email: false, mobile: false };
+  let verificationStates = {}; // Will hold { field_id: boolean }
 
   async function init() {
     try {
@@ -67,19 +66,20 @@
       eventConfig = configSnap.val() || {};
       
       const now = new Date();
-      const start = new Date(eventConfig.reg_start_date);
-      const end = new Date(eventConfig.reg_end_date);
-      const isActive = eventConfig.event_status === "ACTIVE";
+      const start = new Date(eventConfig.Reg_Start_Date);
+      const end = new Date(eventConfig.Reg_End_Date);
+      const isActive = (eventConfig.event_status === "ACTIVE");
 
       if (!isActive || now < start || now > end) {
-        document.getElementById('app').innerHTML = `<h2>Registration Closed</h2><p style="text-align:center;">${eventConfig.closed_msg || 'This registration is currently inactive or the date has expired.'}</p>`;
+        document.getElementById('app').innerHTML = `<h2>Registration Closed</h2><p style="text-align:center;">This event is currently not accepting registrations.</p>`;
         return;
       }
 
       document.getElementById('title').innerHTML = eventConfig.title || "Registration";
       document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
       const rulesSnap = await db.ref('config/fieldRules').once('value');
-      fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
+      fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.Event_ID || r.event_id).toUpperCase() === eventId);
+      
       renderForm();
       document.getElementById('loading-init').style.display = 'none';
       document.getElementById('form-content').style.display = 'block';
@@ -90,40 +90,49 @@
     const container = document.getElementById('dynamic-fields');
     container.innerHTML = '';
     fieldRules.forEach(r => {
+      const fId = r.Field_ID || r.field_id;
       const div = document.createElement('div');
       div.className = 'field-container';
-      div.id = `cont-${r.field_id}`;
-      div.style.display = (r.initial_state === 'Visible') ? 'block' : 'none';
-      const canEdit = ['email', 'mobile', 'centre', 'pincode'].includes(r.field_id);
+      div.id = `cont-${fId}`;
+      div.style.display = (r.Initial_State === 'Visible') ? 'block' : 'none';
+      
+      const canShowEdit = ['Editable_Verify', 'Editable_Lookup', 'Editable'].includes(r.Edit_Behavior);
+      
       div.innerHTML = `
         <div class="label-row">
-          <label>${r.display_label || r.field_id}</label>
-          ${canEdit ? `<span class="edit-link" id="edit-link-${r.field_id}" onclick="unlockField('${r.field_id}')">Edit</span>` : ''}
+          <label>${r.Display_Label || fId}</label>
+          ${canShowEdit ? `<span class="edit-link" id="edit-link-${fId}" onclick="unlockField('${fId}')">Edit</span>` : ''}
         </div>
-        <input type="text" id="inp-${r.field_id}" oninput="onInputChange('${r.field_id}', this.value)" disabled autocomplete="off">
-        <div class="help-text" id="help-${r.field_id}">${r.field_help_text || ''}</div>
-        <div class="error-msg-text" id="err-${r.field_id}"></div>
-        <div class="dropdown" id="res-${r.field_id}"></div>
-        ${(r.field_id === 'email' || r.field_id === 'mobile') ? `
-          <div class="verify-panel" id="panel-${r.field_id}">
-            <button class="verify-btn" id="vbtn-${r.field_id}" onclick="sendCode('${r.field_id}')"></button>
-            <div id="box-${r.field_id}" style="display:none;">
-              <input type="text" placeholder="6-digit code" id="code-${r.field_id}" oninput="verifyCodeInput('${r.field_id}', this.value)">
-              <div id="vmsg-${r.field_id}" style="font-size:12px; margin-top:5px; font-weight:bold;"></div>
+        <input type="text" id="inp-${fId}" oninput="onInputChange('${fId}', this.value)" disabled autocomplete="off">
+        <div class="help-text" id="help-${fId}">${r.Field_Help_Text || ''}</div>
+        <div class="error-msg-text" id="err-${fId}"></div>
+        <div class="dropdown" id="res-${fId}"></div>
+        ${r.Edit_Behavior === 'Editable_Verify' ? `
+          <div class="verify-panel" id="panel-${fId}">
+            <button class="verify-btn" id="vbtn-${fId}" onclick="sendCode('${fId}')">Verify Change</button>
+            <div id="box-${fId}" style="display:none;">
+              <input type="text" placeholder="6-digit code" id="code-${fId}" oninput="verifyCodeInput('${fId}', this.value)">
+              <div id="vmsg-${fId}" style="font-size:12px; margin-top:5px; font-weight:bold;"></div>
             </div>
           </div>
         ` : ''}
       `;
       container.appendChild(div);
-      if (r.field_id === 'full_name') {
+      if (fId === 'full_name') {
         div.style.display = 'block';
         document.getElementById('inp-full_name').disabled = false;
       }
     });
   }
 
-  async function onInputChange(fId, val) {
+  function onInputChange(fId, val) {
     if (fId === 'full_name' || fId === 'centre') handleSearch(fId, val);
+    
+    // DYNAMIC VERIFICATION LOGIC
+    const rule = fieldRules.find(r => (r.Field_ID || r.field_id) === fId);
+    if (rule && rule.Edit_Behavior === 'Editable_Verify') {
+        verificationStates[fId] = (val.trim() === (originalData[fId] || "").trim());
+    }
     checkAllValidations();
   }
 
@@ -155,12 +164,18 @@
 
   function selectParticipant(p) {
     currentRegId = p.registration_id || "";
-    originalData = JSON.parse(JSON.stringify(p)); // Deep copy
+    originalData = JSON.parse(JSON.stringify(p)); 
+    
     fieldRules.forEach(r => {
-      const el = document.getElementById(`inp-${r.field_id}`);
-      if (el) { el.value = p[r.field_id] || ''; }
-      if (r.initial_state !== 'Hidden') document.getElementById(`cont-${r.field_id}`).style.display = 'block';
+      const fId = r.Field_ID || r.field_id;
+      const el = document.getElementById(`inp-${fId}`);
+      if (el) el.value = p[fId] || '';
+      if (r.Initial_State !== 'Hidden') document.getElementById(`cont-${fId}`).style.display = 'block';
+      
+      // Initially, all loaded fields are considered verified
+      if (r.Edit_Behavior === 'Editable_Verify') verificationStates[fId] = true;
     });
+
     document.getElementById('res-full_name').style.display = 'none';
     document.getElementById('inp-full_name').disabled = true;
     document.getElementById('btns-start').style.display = 'flex';
@@ -183,10 +198,10 @@
     document.getElementById('btns-start').style.display = 'none';
     document.getElementById('btn-master-update').style.display = 'block';
     fieldRules.forEach(r => {
-      if (['email', 'mobile', 'centre', 'pincode'].includes(r.field_id)) {
-        document.getElementById(`edit-link-${r.field_id}`).style.display = 'inline';
-      }
-      const help = document.getElementById(`help-${r.field_id}`);
+      const fId = r.Field_ID || r.field_id;
+      const link = document.getElementById(`edit-link-${fId}`);
+      if (link) link.style.display = 'inline';
+      const help = document.getElementById(`help-${fId}`);
       if (help && help.innerText.trim() !== "") help.style.display = 'block';
     });
   }
@@ -194,35 +209,38 @@
   function unlockField(fId) {
     document.getElementById(`inp-${fId}`).disabled = false;
     document.getElementById(`edit-link-${fId}`).style.display = 'none';
+    checkAllValidations();
   }
 
-  function sendCode(type) {
-    const targetEmail = (type === 'email') ? document.getElementById('inp-email').value : originalData['email'];
-    const btn = document.getElementById(`vbtn-${type}`);
+  function sendCode(fId) {
+    // Verification is sent to the REGISTERED email, regardless of which field is changing
+    const targetEmail = originalData['email']; 
+    const btn = document.getElementById(`vbtn-${fId}`);
     btn.disabled = true; btn.innerText = "Sending...";
     fetch(`${SCRIPT_URL}?action=sendVerificationCode&email=${encodeURIComponent(targetEmail)}&eventId=${eventId}`, { mode: 'no-cors' });
     setTimeout(() => {
       btn.style.display = "none";
-      document.getElementById(`box-${type}`).style.display = "block";
-      document.getElementById(`vmsg-${type}`).innerText = `Code sent to ${targetEmail}`;
+      document.getElementById(`box-${fId}`).style.display = "block";
+      document.getElementById(`vmsg-${fId}`).innerText = `Code sent to ${targetEmail}`;
     }, 1200);
   }
 
-  async function verifyCodeInput(type, code) {
+  async function verifyCodeInput(fId, code) {
     if (code.length === 6) {
-      const emailKey = ((type === 'email') ? document.getElementById('inp-email').value : originalData['email']).replace(/[.#$[\]]/g, "_");
+      const emailKey = originalData['email'].replace(/[.#$[\]]/g, "_");
       const snap = await db.ref("verificationCodes/" + emailKey).once('value');
       const data = snap.val();
-      const msg = document.getElementById(`vmsg-${type}`);
       const now = new Date().getTime();
 
       if (data && data.code === code && (now - data.timestamp) < 300000) {
-        msg.innerText = "Verified ✅"; msg.style.color = "green";
-        document.getElementById(`inp-${type}`).disabled = true;
-        document.getElementById(`code-${type}`).disabled = true;
-        verificationStates[type] = true;
+        document.getElementById(`vmsg-${fId}`).innerText = "Verified ✅"; 
+        document.getElementById(`vmsg-${fId}`).style.color = "green";
+        document.getElementById(`inp-${fId}`).disabled = true;
+        document.getElementById(`code-${fId}`).disabled = true;
+        verificationStates[fId] = true;
       } else {
-        msg.innerText = "Invalid/Expired ❌"; msg.style.color = "red";
+        document.getElementById(`vmsg-${fId}`).innerText = "Invalid/Expired ❌"; 
+        document.getElementById(`vmsg-${fId}`).style.color = "red";
       }
       checkAllValidations();
     }
@@ -230,32 +248,39 @@
 
   function checkAllValidations() {
     let allValid = true;
-    let needsEmailV = false, needsMobileV = false;
-
+    
     fieldRules.forEach(r => {
-      const input = document.getElementById(`inp-${r.field_id}`);
-      if (input && (!input.disabled || originalData[r.field_id])) {
+      const fId = r.Field_ID || r.field_id;
+      const input = document.getElementById(`inp-${fId}`);
+      const err = document.getElementById(`err-${fId}`);
+      const panel = document.getElementById(`panel-${fId}`);
+      
+      if (input && (!input.disabled || originalData[fId])) {
         const val = input.value.trim();
-        let valid = val !== "";
-        if (r.field_validation === 'MOB') valid = /^[6-9]\d{9}$/.test(val);
-        if (r.field_validation === 'EMAIL') valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
-        if (!valid) allValid = false;
+        let valid = (val !== "");
         
-        if (r.field_id === 'email' && val !== originalData['email'] && valid) needsEmailV = true;
-        if (r.field_id === 'mobile' && val !== originalData['mobile'] && valid) needsMobileV = true;
+        // Dynamic Validation Rules
+        const vRule = r.field_validation || r.Field_Validation;
+        if (vRule === 'MOB') valid = /^[6-9]\d{9}$/.test(val);
+        if (vRule === 'EMAIL') valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+        if (vRule === 'PIN') valid = /^\d{6}$/.test(val);
+
+        if (!valid) {
+            allValid = false;
+            if (val !== "") { err.innerText = r.error_msg || "Invalid"; err.style.display = 'block'; }
+        } else { err.style.display = 'none'; }
+
+        // Dynamic Verification Panel Trigger
+        if (r.Edit_Behavior === 'Editable_Verify' && !input.disabled) {
+           if (val !== originalData[fId] && !verificationStates[fId]) {
+              panel.style.display = 'block';
+              allValid = false;
+           } else {
+              panel.style.display = 'none';
+           }
+        }
       }
     });
-
-    if (needsEmailV && !verificationStates.email) {
-      document.getElementById('panel-email').style.display = 'block';
-      document.getElementById('vbtn-email').innerText = `Verify New Email`;
-      allValid = false;
-    }
-    if (needsMobileV && !verificationStates.mobile) {
-      document.getElementById('panel-mobile').style.display = 'block';
-      document.getElementById('vbtn-mobile').innerText = `Verify Mobile via Registered Email`;
-      allValid = false;
-    }
 
     document.getElementById('btn-master-update').disabled = !allValid;
     if (document.getElementById('btn-register')) document.getElementById('btn-register').disabled = !allValid;
@@ -273,13 +298,16 @@
         edit_count: isUpdate ? (originalData.edit_count || 0) + 1 : 0
     };
     
-    fieldRules.forEach(r => { payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; });
+    fieldRules.forEach(r => { 
+        const fId = r.Field_ID || r.field_id;
+        payload[fId] = document.getElementById(`inp-${fId}`).value; 
+    });
     
     try {
       await db.ref('registrations/' + finalRegId).update(payload);
       fetch(`${SCRIPT_URL}?action=sendEmail&regId=${finalRegId}&eventId=${eventId}`, { mode: 'no-cors' });
       const snap = await db.ref(`htmlStorage/${eventId}/thank`).once('value');
-      document.getElementById('app').innerHTML = snap.val() || "<h2>Registration Successful!</h2>";
+      document.getElementById('app').innerHTML = snap.val() || "<h2>Success!</h2>";
     } catch (e) { alert("Error saving"); location.reload(); }
   }
 
