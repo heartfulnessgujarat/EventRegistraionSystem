@@ -27,31 +27,30 @@
     .item { padding: 12px; cursor: pointer; border-bottom: 1px solid #f1f1f1; font-size: 14px; }
     .item:hover { background: #e8eaf6; }
     #loader { text-align: center; padding: 40px; color: #1a237e; display: none; }
-    .resend-link { font-size: 11px; color: #1a237e; text-decoration: underline; cursor: pointer; font-weight: bold; }
-    .timer-text { font-size: 11px; color: #666; font-style: italic; }
+    .lockout-msg { color: #d32f2f; font-weight: bold; text-align: center; margin-top: 10px; display: none; font-size: 13px; }
   </style>
 </head>
 <body>
 
 <div class="card" id="app">
-  <div id="loading-init"><h2>Loading registration form...</h2></div>
+  <div id="loading-init"><h2>Checking event status...</h2></div>
   <div id="form-content" style="display:none;">
     <h2 id="title"></h2>
     <p class="subtitle" id="subtitle"></p>
     <div id="dynamic-fields"></div>
+    <div id="lockout-notice" class="lockout-msg">⚠️ Maximum 3 edits reached for this registration.</div>
     <div id="btns-start" style="display:none; flex-direction:column; gap:10px;">
-      <button id="btn-register" class="primary-btn" disabled onclick="submitData()">Confirm Registration</button>
-      <button class="primary-btn" style="background:#455a64;" onclick="enableEditMode()">I want to edit my details</button>
+      <button id="btn-register" class="primary-btn" disabled onclick="submitData(false)">Confirm Registration</button>
+      <button id="btn-edit-trigger" class="primary-btn" style="background:#455a64;" onclick="enableEditMode()">I want to edit my details</button>
     </div>
-    <button id="btn-master-update" class="primary-btn" style="display:none;" disabled onclick="submitData()">DETAILS UPDATED, REGISTER ME</button>
+    <button id="btn-master-update" class="primary-btn" style="display:none;" disabled onclick="submitData(true)">DETAILS UPDATED, REGISTER ME</button>
   </div>
   <div id="loader"><h3>Processing...</h3></div>
 </div>
 
 <script>
-  // UPDATE THIS URL AFTER NEW DEPLOYMENT
+  // REPLACE THIS WITH YOUR NEW DEPLOYMENT URL
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw_3Vis6yzISxizKfoWghXW2jk6Bm5xYj2CYyf-Qkrl89yuKyujX9FuQ3rkWE-MszQGjA/exec";
-
   
   const firebaseConfig = { databaseURL: "https://ferrari-reg-2026-default-rtdb.asia-southeast1.firebasedatabase.app" };
   firebase.initializeApp(firebaseConfig);
@@ -59,14 +58,25 @@
   const eventId = (new URLSearchParams(window.location.search).get('id') || 'EVT001').toUpperCase();
 
   let fieldRules = [], masterData = [], locData = [], eventConfig = {};
-  let originalData = {}; 
+  let originalData = {}, currentRegId = "";
   let verificationStates = { email: false, mobile: false };
 
   async function init() {
     try {
-      const configSnap = await db.ref('config/eventConfig').once('value');
-      eventConfig = (configSnap.val() || {})[eventId] || { title: "Registration" };
-      document.getElementById('title').innerHTML = eventConfig.title;
+      const configSnap = await db.ref('config/eventConfig/' + eventId).once('value');
+      eventConfig = configSnap.val() || {};
+      
+      const now = new Date();
+      const start = new Date(eventConfig.reg_start_date);
+      const end = new Date(eventConfig.reg_end_date);
+      const isActive = eventConfig.event_status === "ACTIVE";
+
+      if (!isActive || now < start || now > end) {
+        document.getElementById('app').innerHTML = `<h2>Registration Closed</h2><p style="text-align:center;">${eventConfig.closed_msg || 'This registration is currently inactive or the date has expired.'}</p>`;
+        return;
+      }
+
+      document.getElementById('title').innerHTML = eventConfig.title || "Registration";
       document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
       const rulesSnap = await db.ref('config/fieldRules').once('value');
       fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
@@ -91,16 +101,15 @@
           ${canEdit ? `<span class="edit-link" id="edit-link-${r.field_id}" onclick="unlockField('${r.field_id}')">Edit</span>` : ''}
         </div>
         <input type="text" id="inp-${r.field_id}" oninput="onInputChange('${r.field_id}', this.value)" disabled autocomplete="off">
-        <div class="help-text" id="help-${r.field_id}">${r.field_help_text || r.Field_Help_Text || ''}</div>
+        <div class="help-text" id="help-${r.field_id}">${r.field_help_text || ''}</div>
         <div class="error-msg-text" id="err-${r.field_id}"></div>
         <div class="dropdown" id="res-${r.field_id}"></div>
         ${(r.field_id === 'email' || r.field_id === 'mobile') ? `
           <div class="verify-panel" id="panel-${r.field_id}">
             <button class="verify-btn" id="vbtn-${r.field_id}" onclick="sendCode('${r.field_id}')"></button>
             <div id="box-${r.field_id}" style="display:none;">
-              <input type="text" placeholder="Enter 6-digit code" id="code-${r.field_id}" oninput="verifyCodeInput('${r.field_id}', this.value)">
+              <input type="text" placeholder="6-digit code" id="code-${r.field_id}" oninput="verifyCodeInput('${r.field_id}', this.value)">
               <div id="vmsg-${r.field_id}" style="font-size:12px; margin-top:5px; font-weight:bold;"></div>
-              <div id="resend-container-${r.field_id}" style="margin-top:8px;"></div>
             </div>
           </div>
         ` : ''}
@@ -114,8 +123,7 @@
   }
 
   async function onInputChange(fId, val) {
-    if (fId === 'full_name') handleSearch(fId, val);
-    if (fId === 'centre') handleSearch(fId, val);
+    if (fId === 'full_name' || fId === 'centre') handleSearch(fId, val);
     checkAllValidations();
   }
 
@@ -146,21 +154,21 @@
   }
 
   function selectParticipant(p) {
+    currentRegId = p.registration_id || "";
+    originalData = JSON.parse(JSON.stringify(p)); // Deep copy
     fieldRules.forEach(r => {
       const el = document.getElementById(`inp-${r.field_id}`);
-      if (el) {
-        el.value = p[r.field_id] || '';
-        originalData[r.field_id] = el.value;
-        if (r.field_id === 'full_name') {
-          el.disabled = true;
-          const helpEl = document.getElementById('help-full_name');
-          if (helpEl && helpEl.innerText.trim() !== "") helpEl.style.display = 'block';
-        }
-        if (r.initial_state !== 'Hidden') document.getElementById(`cont-${r.field_id}`).style.display = 'block';
-      }
+      if (el) { el.value = p[r.field_id] || ''; }
+      if (r.initial_state !== 'Hidden') document.getElementById(`cont-${r.field_id}`).style.display = 'block';
     });
     document.getElementById('res-full_name').style.display = 'none';
+    document.getElementById('inp-full_name').disabled = true;
     document.getElementById('btns-start').style.display = 'flex';
+    
+    if ((p.edit_count || 0) >= 3) {
+      document.getElementById('btn-edit-trigger').style.display = 'none';
+      document.getElementById('lockout-notice').style.display = 'block';
+    }
     checkAllValidations();
   }
 
@@ -175,60 +183,29 @@
     document.getElementById('btns-start').style.display = 'none';
     document.getElementById('btn-master-update').style.display = 'block';
     fieldRules.forEach(r => {
-      const link = document.getElementById(`edit-link-${r.field_id}`);
-      if (link) link.style.display = 'inline';
-      const helpEl = document.getElementById(`help-${r.field_id}`);
-      if (helpEl && helpEl.innerText.trim() !== "") helpEl.style.display = 'block';
+      if (['email', 'mobile', 'centre', 'pincode'].includes(r.field_id)) {
+        document.getElementById(`edit-link-${r.field_id}`).style.display = 'inline';
+      }
+      const help = document.getElementById(`help-${r.field_id}`);
+      if (help && help.innerText.trim() !== "") help.style.display = 'block';
     });
   }
 
   function unlockField(fId) {
     document.getElementById(`inp-${fId}`).disabled = false;
-    document.getElementById(`inp-${fId}`).focus();
     document.getElementById(`edit-link-${fId}`).style.display = 'none';
   }
 
-  // --- START NEW SECURITY LOGIC (Expiry & Resend) ---
   function sendCode(type) {
     const targetEmail = (type === 'email') ? document.getElementById('inp-email').value : originalData['email'];
     const btn = document.getElementById(`vbtn-${type}`);
-    btn.disabled = true;
-    btn.innerText = "Sending Verification Code...";
-    btn.style.background = "#ddd";
-
+    btn.disabled = true; btn.innerText = "Sending...";
     fetch(`${SCRIPT_URL}?action=sendVerificationCode&email=${encodeURIComponent(targetEmail)}&eventId=${eventId}`, { mode: 'no-cors' });
-
     setTimeout(() => {
-      document.getElementById(`panel-${type}`).style.backgroundColor = "#e3f2fd";
       btn.style.display = "none";
       document.getElementById(`box-${type}`).style.display = "block";
       document.getElementById(`vmsg-${type}`).innerText = `Code sent to ${targetEmail}`;
-      startResendTimer(type);
-    }, 1500);
-  }
-
-  function startResendTimer(type) {
-    const container = document.getElementById(`resend-container-${type}`);
-    let seconds = 30;
-    container.innerHTML = `<span class="timer-text">Resend available in ${seconds}s</span>`;
-    
-    const interval = setInterval(() => {
-      seconds--;
-      if (seconds > 0) {
-        container.innerHTML = `<span class="timer-text">Resend available in ${seconds}s</span>`;
-      } else {
-        clearInterval(interval);
-        container.innerHTML = `<span class="resend-link" onclick="resendCode('${type}')">Resend Verification Code</span>`;
-      }
-    }, 1000);
-  }
-
-  function resendCode(type) {
-    document.getElementById(`box-${type}`).style.display = "none";
-    const btn = document.getElementById(`vbtn-${type}`);
-    btn.style.display = "block";
-    btn.style.background = "#fbc02d";
-    sendCode(type);
+    }, 1200);
   }
 
   async function verifyCodeInput(type, code) {
@@ -237,95 +214,73 @@
       const snap = await db.ref("verificationCodes/" + emailKey).once('value');
       const data = snap.val();
       const msg = document.getElementById(`vmsg-${type}`);
-
-      if (!data) {
-        msg.innerText = "No code found ❌"; msg.style.color = "red";
-        return;
-      }
-
-      // 5 MINUTE EXPIRY CHECK
       const now = new Date().getTime();
-      const isExpired = (now - data.timestamp) > 300000;
 
-      if (isExpired) {
-        msg.innerText = "Code Expired ❌ Please Resend.";
-        msg.style.color = "red";
-        verificationStates[type] = false;
-      } else if (data.code === code) {
-        msg.innerText = "Code Verified ✅";
-        msg.style.color = "green";
+      if (data && data.code === code && (now - data.timestamp) < 300000) {
+        msg.innerText = "Verified ✅"; msg.style.color = "green";
         document.getElementById(`inp-${type}`).disabled = true;
         document.getElementById(`code-${type}`).disabled = true;
         verificationStates[type] = true;
       } else {
-        msg.innerText = "Code is not matching ❌";
-        msg.style.color = "red";
-        verificationStates[type] = false;
+        msg.innerText = "Invalid/Expired ❌"; msg.style.color = "red";
       }
       checkAllValidations();
     }
   }
-  // --- END NEW SECURITY LOGIC ---
-
-  function validateField(id, value, rule) {
-    if (!rule || rule === 'NULL' || value.trim() === "") return value.trim() !== "";
-    const val = value.trim();
-    if (rule === 'MOB') return /^[6-9]\d{9}$/.test(val);
-    if (rule === 'PIN') return /^\d{6}$/.test(val);
-    if (rule === 'EMAIL') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
-    return true;
-  }
 
   function checkAllValidations() {
     let allValid = true;
-    let needsEmailV = false;
-    let needsMobileV = false;
+    let needsEmailV = false, needsMobileV = false;
 
     fieldRules.forEach(r => {
       const input = document.getElementById(`inp-${r.field_id}`);
-      const err = document.getElementById(`err-${r.field_id}`);
       if (input && (!input.disabled || originalData[r.field_id])) {
-        let valid = validateField(r.field_id, input.value, r.field_validation);
-        if (!valid && input.value !== "") {
-          err.innerText = r.error_msg || "Invalid Entry";
-          err.style.display = "block";
-          allValid = false;
-        } else { err.style.display = "none"; }
-        input.style.border = valid ? '1px solid #ced4da' : '2px solid red';
+        const val = input.value.trim();
+        let valid = val !== "";
+        if (r.field_validation === 'MOB') valid = /^[6-9]\d{9}$/.test(val);
+        if (r.field_validation === 'EMAIL') valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
         if (!valid) allValid = false;
-        if (r.field_id === 'email' && input.value !== originalData['email'] && valid) needsEmailV = true;
-        if (r.field_id === 'mobile' && input.value !== originalData['mobile'] && valid) needsMobileV = true;
+        
+        if (r.field_id === 'email' && val !== originalData['email'] && valid) needsEmailV = true;
+        if (r.field_id === 'mobile' && val !== originalData['mobile'] && valid) needsMobileV = true;
       }
     });
 
     if (needsEmailV && !verificationStates.email) {
       document.getElementById('panel-email').style.display = 'block';
-      document.getElementById('vbtn-email').innerText = `Send code to ${document.getElementById('inp-email').value}`;
+      document.getElementById('vbtn-email').innerText = `Verify New Email`;
       allValid = false;
-    } else if (!needsEmailV && document.getElementById('panel-email')) { document.getElementById('panel-email').style.display = 'none'; }
-
+    }
     if (needsMobileV && !verificationStates.mobile) {
       document.getElementById('panel-mobile').style.display = 'block';
-      document.getElementById('vbtn-mobile').innerText = `Send code to registered email: ${originalData['email']}`;
+      document.getElementById('vbtn-mobile').innerText = `Verify Mobile via Registered Email`;
       allValid = false;
-    } else if (!needsMobileV && document.getElementById('panel-mobile')) { document.getElementById('panel-mobile').style.display = 'none'; }
+    }
 
     document.getElementById('btn-master-update').disabled = !allValid;
     if (document.getElementById('btn-register')) document.getElementById('btn-register').disabled = !allValid;
   }
 
-  async function submitData() {
+  async function submitData(isUpdate) {
     document.getElementById('form-content').style.display = 'none';
     document.getElementById('loader').style.display = 'block';
-    const regId = `${eventId}REG${Date.now()}`;
-    const payload = { registration_id: regId, event_id: eventId, timestamp: new Date().toISOString() };
+    
+    const finalRegId = isUpdate ? currentRegId : `${eventId}REG${Date.now()}`;
+    const payload = { 
+        registration_id: finalRegId, 
+        event_id: eventId, 
+        timestamp: new Date().toISOString(),
+        edit_count: isUpdate ? (originalData.edit_count || 0) + 1 : 0
+    };
+    
     fieldRules.forEach(r => { payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; });
+    
     try {
-      await db.ref('registrations/' + regId).set(payload);
-      fetch(`${SCRIPT_URL}?action=sendEmail&regId=${regId}&eventId=${eventId}`, { mode: 'no-cors' });
+      await db.ref('registrations/' + finalRegId).update(payload);
+      fetch(`${SCRIPT_URL}?action=sendEmail&regId=${finalRegId}&eventId=${eventId}`, { mode: 'no-cors' });
       const snap = await db.ref(`htmlStorage/${eventId}/thank`).once('value');
-      document.getElementById('app').innerHTML = snap.val() || "<h2>Success!</h2>";
-    } catch (e) { alert("Error"); location.reload(); }
+      document.getElementById('app').innerHTML = snap.val() || "<h2>Registration Successful!</h2>";
+    } catch (e) { alert("Error saving"); location.reload(); }
   }
 
   init();
