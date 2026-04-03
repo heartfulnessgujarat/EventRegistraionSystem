@@ -1,57 +1,174 @@
-<script>
-  // ... [Keep Firebase Init and start() function] ...
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: sans-serif; background: #f0f2f5; padding: 20px; display: flex; justify-content: center; }
+    .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+    .field-group { margin-bottom: 15px; position: relative; }
+    .label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    label { font-weight: bold; font-size: 12px; color: #1a237e; }
+    .tiny-edit { font-size: 11px; color: red; cursor: pointer; text-decoration: underline; display: none; }
+    input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+    .dropdown { position: absolute; background: white; border: 1px solid #ddd; width: 100%; z-index: 100; max-height: 150px; overflow-y: auto; display: none; }
+    .item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; font-size: 13px; }
+    .item:hover { background: #f0f0f0; }
+    .primary-btn { width: 100%; padding: 12px; background: #1a237e; color: white; border: none; border-radius: 6px; cursor: pointer; margin-top: 10px; }
+    .primary-btn:disabled { background: #ccc; cursor: not-allowed; }
+    .v-box { background: #fffde7; padding: 10px; border-radius: 6px; margin-top: 5px; display: none; border: 1px solid #ffd54f; }
+  </style>
+</head>
+<body>
 
-  // FIX: ADDED CENTRE SEARCH TO TYPING HANDLER
-  async function handleTyping(fId, val) {
-    const rule = fieldRules.find(r => r.Field_ID === fId);
+<div class="card">
+  <div id="loading">Initializing...</div>
+  <div id="main-ui" style="display:none;">
+    <h3 id="title" style="text-align:center;"></h3>
+    <div id="fields"></div>
+    <div id="initial-btns" style="display:none; margin-top:15px;">
+      <button id="btn-confirm" class="primary-btn" onclick="submit(false)">Confirm Registration</button>
+      <button class="primary-btn" style="background:#546e7a;" onclick="showEditUI()">I want to edit</button>
+    </div>
+    <button id="btn-save" class="primary-btn" style="display:none;" disabled onclick="submit(true)">Update & Register</button>
+  </div>
+  <div id="thank-you" style="display:none;"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+<script>
+  const SCRIPT_URL = "YOUR_NEW_DEPLOYED_URL";
+  const firebaseConfig = { databaseURL: "https://ferrari-reg-2026-default-rtdb.asia-southeast1.firebasedatabase.app" };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  const eventId = (new URLSearchParams(window.location.search).get('id') || 'EVT001').toUpperCase();
+  let fieldRules = [], originalData = {}, locations = [], verifiedFields = {};
+
+  async function init() {
+    const config = (await db.ref(`config/eventConfig/${eventId}`).once('value')).val();
+    if (!config || config.event_status !== "ACTIVE") { document.getElementById('loading').innerText = "Event Inactive"; return; }
     
-    // NAME SEARCH
+    document.getElementById('title').innerText = config.title;
+    const rules = (await db.ref('config/fieldRules').once('value')).val();
+    fieldRules = Object.values(rules || {}).filter(r => r.Event_ID === eventId);
+    locations = Object.values((await db.ref('config/locations').once('value')).val() || {});
+
+    renderFields();
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('main-ui').style.display = 'block';
+  }
+
+  function renderFields() {
+    const container = document.getElementById('fields');
+    fieldRules.forEach(r => {
+      const isName = (r.Field_ID === 'full_name');
+      const canEdit = ['Editable','Editable_Verify','Editable_Lookup'].includes(r.Edit_Behavior);
+      container.insertAdjacentHTML('beforeend', `
+        <div class="field-group" id="group-${r.Field_ID}" style="display: ${r.Initial_State==='Visible'?'block':'none'}">
+          <div class="label-row">
+            <label>${r.Display_Label}</label>
+            ${canEdit ? `<span class="tiny-edit" id="edit-${r.Field_ID}" onclick="unlock('${r.Field_ID}')">Edit</span>` : ''}
+          </div>
+          <input type="text" id="inp-${r.Field_ID}" ${isName?'':'disabled'} autocomplete="off" oninput="handleTyping('${r.Field_ID}', this.value)">
+          <div class="dropdown" id="drop-${r.Field_ID}"></div>
+          <div class="v-box" id="vbox-${r.Field_ID}">
+            <button onclick="sendOTP('${r.Field_ID}')" id="vbtn-${r.Field_ID}">Verify Change</button>
+            <input type="text" id="otp-${r.Field_ID}" placeholder="Enter Code" style="display:none; margin-top:5px;" oninput="checkOTP('${r.Field_ID}', this.value)">
+          </div>
+        </div>`);
+    });
+  }
+
+  async function handleTyping(fId, val) {
+    // 1. Search Logic
     if (fId === 'full_name' && val.length >= 3) {
       const snap = await db.ref('masterData').once('value');
-      const items = Object.values(snap.val() || {}).filter(x => x.full_name.toLowerCase().includes(val.toLowerCase())).slice(0,5);
-      showDrop(fId, items, 'user');
-    } 
-    
-    // CENTRE SEARCH (RESTORED)
+      showDrop(fId, Object.values(snap.val()).filter(x => x.full_name.toLowerCase().includes(val.toLowerCase())).slice(0,5), 'user');
+    }
     if (fId === 'centre' && val.length >= 2) {
-      const matches = locations.filter(x => x.centre.toLowerCase().includes(val.toLowerCase())).slice(0,8);
-      showDrop(fId, matches, 'loc');
+      showDrop(fId, locations.filter(x => x.centre.toLowerCase().includes(val.toLowerCase())).slice(0,5), 'loc');
     }
 
-    // VERIFICATION TRIGGER
+    // 2. Verification check
+    const rule = fieldRules.find(r => r.Field_ID === fId);
     if (rule && rule.Edit_Behavior === 'Editable_Verify') {
-      const isChanged = (val.trim() !== String(originalData[fId] || "").trim());
-      verificationMap[fId] = !isChanged;
-      document.getElementById(`vbox-${fId}`).style.display = isChanged ? 'block' : 'none';
+      const isDiff = (val.trim() !== String(originalData[fId] || "").trim());
+      verifiedFields[fId] = !isDiff;
+      document.getElementById(`vbox-${fId}`).style.display = isDiff ? 'block' : 'none';
     }
     validate();
   }
 
-  // FIX: VALIDATION RULES (MOB/PIN)
+  function showDrop(fId, items, type) {
+    const d = document.getElementById(`drop-${fId}`);
+    d.innerHTML = items.map(i => `<div class="item" onclick="select('${fId}', ${JSON.stringify(i).replace(/"/g, '&quot;')}, '${type}')">${type==='user'?i.full_name:i.centre}</div>`).join('');
+    d.style.display = items.length ? 'block' : 'none';
+  }
+
+  function select(fId, data, type) {
+    if (type === 'user') {
+      originalData = data;
+      fieldRules.forEach(r => {
+        const inp = document.getElementById(`inp-${r.Field_ID}`);
+        if (inp) {
+          inp.value = data[r.Field_ID] || "";
+          document.getElementById(`group-${r.Field_ID}`).style.display = (r.Initial_State==='Hidden'?'none':'block');
+          if (r.Edit_Behavior === 'Editable_Verify') verifiedFields[r.Field_ID] = true;
+        }
+      });
+      document.getElementById('inp-full_name').disabled = true;
+      document.getElementById('initial-btns').style.display = 'block';
+    } else {
+      document.getElementById('inp-centre').value = data.centre;
+      if(document.getElementById('inp-zone')) document.getElementById('inp-zone').value = data.zone;
+      if(document.getElementById('inp-district')) document.getElementById('inp-district').value = data.district;
+    }
+    document.getElementById(`drop-${fId}`).style.display = 'none';
+    validate();
+  }
+
+  function showEditUI() {
+    document.getElementById('initial-btns').style.display = 'none';
+    document.getElementById('btn-save').style.display = 'block';
+    fieldRules.forEach(r => { if(document.getElementById(`edit-${r.Field_ID}`)) document.getElementById(`edit-${r.Field_ID}`).style.display = 'inline'; });
+  }
+
+  function unlock(fId) {
+    document.getElementById(`inp-${fId}`).disabled = false;
+    document.getElementById(`inp-${fId}`).focus();
+    document.getElementById(`edit-${fId}`).style.display = 'none';
+  }
+
   function validate() {
     let ok = true;
     fieldRules.forEach(r => {
       const input = document.getElementById(`inp-${r.Field_ID}`);
       if (!input) return;
-      const val = input.value.trim();
-      const validationType = r.field_validation;
-      
-      // If visible and empty -> fail
-      if (r.Initial_State !== 'Hidden' && !val) ok = false;
-      
-      // Mobile Validation (10 digits)
-      if (val && validationType === 'MOB' && !/^[6-9]\d{9}$/.test(val)) ok = false;
-      
-      // Pincode Validation (6 digits)
-      if (val && validationType === 'PIN' && !/^\d{6}$/.test(val)) ok = false;
-      
-      // Verification check
-      if (r.Edit_Behavior === 'Editable_Verify' && verificationMap[r.Field_ID] === false) ok = false;
+      const v = input.value.trim();
+      if (r.Initial_State !== 'Hidden' && !v) ok = false;
+      if (v && r.field_validation === 'MOB' && !/^[6-9]\d{9}$/.test(v)) ok = false;
+      if (v && r.field_validation === 'PIN' && !/^\d{6}$/.test(v)) ok = false;
+      if (r.Edit_Behavior === 'Editable_Verify' && verifiedFields[r.Field_ID] === false) ok = false;
     });
-    
-    document.getElementById('btn-update').disabled = !ok;
+    document.getElementById('btn-save').disabled = !ok;
     document.getElementById('btn-confirm').disabled = !ok;
   }
 
-  // ... [Keep select(), showTinyButtons(), and unlock() functions] ...
+  async function submit(isUpdate) {
+    const payload = { event_id: eventId, timestamp: new Date().toISOString() };
+    fieldRules.forEach(r => payload[r.Field_ID] = document.getElementById(`inp-${r.Field_ID}`).value);
+    const id = isUpdate ? originalData.registration_id : `REG${Date.now()}`;
+    await db.ref(`registrations/${id}`).update(payload);
+    
+    // FETCH THANK YOU HTML FROM FIREBASE
+    const thankHTML = (await db.ref(`htmlStorage/${eventId}/thank`).once('value')).val();
+    document.getElementById('main-ui').style.display = 'none';
+    document.getElementById('thank-you').style.display = 'block';
+    document.getElementById('thank-you').innerHTML = thankHTML || "<h2>Registration Successful!</h2>";
+  }
+
+  init();
 </script>
+</body>
+</html>
