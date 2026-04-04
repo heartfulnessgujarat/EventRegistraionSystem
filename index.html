@@ -23,7 +23,7 @@
     .verify-btn { background: #fbc02d; color: #333; border: none; padding: 10px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 12px; width: 100%; margin-bottom: 10px; }
     .primary-btn { width: 100%; padding: 15px; background: #1a237e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
     .primary-btn:disabled { opacity: 0.5; cursor: not-allowed; background: #999; }
-    .dropdown { border: 1px solid #ddd; max-height: 200px; overflow-y: auto; background: white; position: absolute; width: 100%; z-index: 1000; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .dropdown { border: 1px solid #ddd; max-height: 200px; overflow-y: auto; background: white; position: absolute; width: 100%; z-index: 9999; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
     .item { padding: 12px; cursor: pointer; border-bottom: 1px solid #f1f1f1; font-size: 14px; }
     .item:hover { background: #e8eaf6; }
     #loader { text-align: center; padding: 40px; color: #1a237e; display: none; }
@@ -49,10 +49,7 @@
 </div>
 
 <script>
-  // UPDATE THIS URL AFTER NEW DEPLOYMENT
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzwSadaScogOKgB563LDSTwgFGsNMHg7zW10LoWM4mcUwIrIAvj_zMtOs3FSvAfjeWDMA/exec";
-
-
   const firebaseConfig = { databaseURL: "https://ferrari-reg-2026-default-rtdb.asia-southeast1.firebasedatabase.app" };
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
@@ -119,56 +116,36 @@
     checkAllValidations();
   }
 
-
-async function handleSearch(fId, val) {
+  async function handleSearch(fId, val) {
     const resDiv = document.getElementById(`res-${fId}`);
-    if (val.length < 3) { 
-      resDiv.style.display = 'none'; 
-      return; 
-    }
+    if (val.length < 3) { resDiv.style.display = 'none'; return; }
 
     if (fId === 'full_name') {
-      // 1. Fetch data if not already loaded
       if (masterData.length === 0) { 
         const snap = await db.ref('masterData').once('value'); 
-        const rawData = snap.val();
-        
-        if (!rawData) {
-          console.error("Firebase returned NULL for masterData!");
-          masterData = [];
-        } else {
-          // Standardize data to an array
-          masterData = Array.isArray(rawData) ? rawData : Object.values(rawData);
-          console.log("Master Data loaded into form:", masterData);
-        }
+        const raw = snap.val() || {};
+        masterData = Array.isArray(raw) ? raw : Object.values(raw);
+        console.log("Master data check:", masterData[0]); // Check fields in console
       }
       
-      // 2. Perform Case-Insensitive Search
       const searchVal = val.toLowerCase();
       const filtered = masterData.filter(x => {
-        // We look for 'full_name' specifically from our Firebase Sync
-        const nameInData = x.full_name ? String(x.full_name).toLowerCase() : "";
-        return nameInData.includes(searchVal);
+        // FLEXIBLE SEARCH: Check 'full_name' or 'Full Name' or 'fullName'
+        const n = x.full_name || x['Full Name'] || x['fullname'] || "";
+        return String(n).toLowerCase().includes(searchVal);
       });
-
-      console.log(`Searching for: "${searchVal}" | Found: ${filtered.length} matches`);
       renderDropdown(resDiv, filtered.slice(0, 8), 'name');
 
     } else if (fId === 'centre') {
-      // Location Search Logic
       if (locData.length === 0) { 
         const snap = await db.ref('config/locations').once('value'); 
         locData = Object.values(snap.val() || {}); 
       }
       const locVal = val.toLowerCase();
-      const filteredLocs = locData.filter(x => 
-        x.centre?.toLowerCase().includes(locVal)
-      );
-      renderDropdown(resDiv, filteredLocs.slice(0, 8), 'loc');
+      const filtered = locData.filter(x => x.centre?.toLowerCase().includes(locVal));
+      renderDropdown(resDiv, filtered.slice(0, 8), 'loc');
     }
   }
-
-
 
   function renderDropdown(div, list, type) {
     div.innerHTML = '';
@@ -177,10 +154,13 @@ async function handleSearch(fId, val) {
       list.forEach(item => {
         const d = document.createElement('div');
         d.className = 'item';
-        d.textContent = type === 'loc' ? item.centre : item.full_name;
+        // Display flexible name
+        d.textContent = type === 'loc' ? item.centre : (item.full_name || item['Full Name'] || "Unknown");
         d.onclick = () => type === 'loc' ? selectLocation(item) : selectParticipant(item);
         div.appendChild(d);
       });
+    } else {
+      div.style.display = 'none';
     }
   }
 
@@ -188,7 +168,8 @@ async function handleSearch(fId, val) {
     fieldRules.forEach(r => {
       const el = document.getElementById(`inp-${r.field_id}`);
       if (el) {
-        el.value = p[r.field_id] || '';
+        // Handle flexible headers from sheet (e.g. if 'Full Name' is in sheet but 'full_name' in rules)
+        el.value = p[r.field_id] || p[r.field_id.replace('_',' ')] || p['Full Name'] || '';
         originalData[r.field_id] = el.value;
         if (r.field_id === 'full_name') {
           el.disabled = true;
@@ -227,21 +208,16 @@ async function handleSearch(fId, val) {
     document.getElementById(`edit-link-${fId}`).style.display = 'none';
   }
 
-  // --- START NEW SECURITY LOGIC (Expiry & Resend) ---
   function sendCode(type) {
     const targetEmail = (type === 'email') ? document.getElementById('inp-email').value : originalData['email'];
     const btn = document.getElementById(`vbtn-${type}`);
     btn.disabled = true;
-    btn.innerText = "Sending Verification Code...";
-    btn.style.background = "#ddd";
-
+    btn.innerText = "Sending Code...";
     fetch(`${SCRIPT_URL}?action=sendVerificationCode&email=${encodeURIComponent(targetEmail)}&eventId=${eventId}`, { mode: 'no-cors' });
-
     setTimeout(() => {
       document.getElementById(`panel-${type}`).style.backgroundColor = "#e3f2fd";
       btn.style.display = "none";
       document.getElementById(`box-${type}`).style.display = "block";
-      document.getElementById(`vmsg-${type}`).innerText = `Code sent to ${targetEmail}`;
       startResendTimer(type);
     }, 1500);
   }
@@ -249,24 +225,16 @@ async function handleSearch(fId, val) {
   function startResendTimer(type) {
     const container = document.getElementById(`resend-container-${type}`);
     let seconds = 30;
-    container.innerHTML = `<span class="timer-text">Resend available in ${seconds}s</span>`;
-    
     const interval = setInterval(() => {
       seconds--;
-      if (seconds > 0) {
-        container.innerHTML = `<span class="timer-text">Resend available in ${seconds}s</span>`;
-      } else {
-        clearInterval(interval);
-        container.innerHTML = `<span class="resend-link" onclick="resendCode('${type}')">Resend Verification Code</span>`;
-      }
+      if (seconds > 0) { container.innerHTML = `<span class="timer-text">Resend in ${seconds}s</span>`; } 
+      else { clearInterval(interval); container.innerHTML = `<span class="resend-link" onclick="resendCode('${type}')">Resend Code</span>`; }
     }, 1000);
   }
 
   function resendCode(type) {
     document.getElementById(`box-${type}`).style.display = "none";
-    const btn = document.getElementById(`vbtn-${type}`);
-    btn.style.display = "block";
-    btn.style.background = "#fbc02d";
+    document.getElementById(`vbtn-${type}`).style.display = "block";
     sendCode(type);
   }
 
@@ -276,35 +244,17 @@ async function handleSearch(fId, val) {
       const snap = await db.ref("verificationCodes/" + emailKey).once('value');
       const data = snap.val();
       const msg = document.getElementById(`vmsg-${type}`);
-
-      if (!data) {
-        msg.innerText = "No code found ❌"; msg.style.color = "red";
-        return;
-      }
-
-      // 5 MINUTE EXPIRY CHECK
-      const now = new Date().getTime();
-      const isExpired = (now - data.timestamp) > 300000;
-
-      if (isExpired) {
-        msg.innerText = "Code Expired ❌ Please Resend.";
-        msg.style.color = "red";
-        verificationStates[type] = false;
-      } else if (data.code === code) {
-        msg.innerText = "Code Verified ✅";
-        msg.style.color = "green";
+      if (data && data.code === code && (new Date().getTime() - data.timestamp < 300000)) {
+        msg.innerText = "Verified ✅"; msg.style.color = "green";
         document.getElementById(`inp-${type}`).disabled = true;
-        document.getElementById(`code-${type}`).disabled = true;
         verificationStates[type] = true;
       } else {
-        msg.innerText = "Code is not matching ❌";
-        msg.style.color = "red";
+        msg.innerText = "Invalid or Expired ❌"; msg.style.color = "red";
         verificationStates[type] = false;
       }
       checkAllValidations();
     }
   }
-  // --- END NEW SECURITY LOGIC ---
 
   function validateField(id, value, rule) {
     if (!rule || rule === 'NULL' || value.trim() === "") return value.trim() !== "";
@@ -317,38 +267,19 @@ async function handleSearch(fId, val) {
 
   function checkAllValidations() {
     let allValid = true;
-    let needsEmailV = false;
-    let needsMobileV = false;
-
+    let needsEmailV = false, needsMobileV = false;
     fieldRules.forEach(r => {
       const input = document.getElementById(`inp-${r.field_id}`);
-      const err = document.getElementById(`err-${r.field_id}`);
       if (input && (!input.disabled || originalData[r.field_id])) {
         let valid = validateField(r.field_id, input.value, r.field_validation);
-        if (!valid && input.value !== "") {
-          err.innerText = r.error_msg || "Invalid Entry";
-          err.style.display = "block";
-          allValid = false;
-        } else { err.style.display = "none"; }
         input.style.border = valid ? '1px solid #ced4da' : '2px solid red';
         if (!valid) allValid = false;
         if (r.field_id === 'email' && input.value !== originalData['email'] && valid) needsEmailV = true;
         if (r.field_id === 'mobile' && input.value !== originalData['mobile'] && valid) needsMobileV = true;
       }
     });
-
-    if (needsEmailV && !verificationStates.email) {
-      document.getElementById('panel-email').style.display = 'block';
-      document.getElementById('vbtn-email').innerText = `Send code to ${document.getElementById('inp-email').value}`;
-      allValid = false;
-    } else if (!needsEmailV && document.getElementById('panel-email')) { document.getElementById('panel-email').style.display = 'none'; }
-
-    if (needsMobileV && !verificationStates.mobile) {
-      document.getElementById('panel-mobile').style.display = 'block';
-      document.getElementById('vbtn-mobile').innerText = `Send code to registered email: ${originalData['email']}`;
-      allValid = false;
-    } else if (!needsMobileV && document.getElementById('panel-mobile')) { document.getElementById('panel-mobile').style.display = 'none'; }
-
+    if (needsEmailV && !verificationStates.email) { document.getElementById('panel-email').style.display = 'block'; allValid = false; }
+    if (needsMobileV && !verificationStates.mobile) { document.getElementById('panel-mobile').style.display = 'block'; allValid = false; }
     document.getElementById('btn-master-update').disabled = !allValid;
     if (document.getElementById('btn-register')) document.getElementById('btn-register').disabled = !allValid;
   }
@@ -363,8 +294,8 @@ async function handleSearch(fId, val) {
       await db.ref('registrations/' + regId).set(payload);
       fetch(`${SCRIPT_URL}?action=sendEmail&regId=${regId}&eventId=${eventId}`, { mode: 'no-cors' });
       const snap = await db.ref(`htmlStorage/${eventId}/thank`).once('value');
-      document.getElementById('app').innerHTML = snap.val() || "<h2>Success!</h2>";
-    } catch (e) { alert("Error"); location.reload(); }
+      document.getElementById('app').innerHTML = snap.val() || "<h2>Registration Complete!</h2>";
+    } catch (e) { alert("Error saving data"); location.reload(); }
   }
 
   init();
