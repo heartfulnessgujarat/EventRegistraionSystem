@@ -119,32 +119,56 @@
     checkAllValidations();
   }
 
-  async function handleSearch(fId, val) {
+
+async function handleSearch(fId, val) {
     const resDiv = document.getElementById(`res-${fId}`);
-    if (val.length < 3) { resDiv.style.display = 'none'; return; }
+    if (val.length < 3) { 
+      resDiv.style.display = 'none'; 
+      return; 
+    }
+
     if (fId === 'full_name') {
+      // 1. Fetch data if not already loaded
+      if (masterData.length === 0) { 
+        const snap = await db.ref('masterData').once('value'); 
+        const rawData = snap.val();
+        
+        if (!rawData) {
+          console.error("Firebase returned NULL for masterData!");
+          masterData = [];
+        } else {
+          // Standardize data to an array
+          masterData = Array.isArray(rawData) ? rawData : Object.values(rawData);
+          console.log("Master Data loaded into form:", masterData);
+        }
+      }
       
-     // if (masterData.length === 0) { const snap = await db.ref('masterData').once('value'); masterData = Object.values(snap.val() || {}); }
-if (masterData.length === 0) { 
-  const snap = await db.ref('masterData').once('value'); 
-  const rawData = snap.val();
-  
-  if (!rawData) {
-    console.error("Firebase returned NULL for masterData. Check root path!");
-    masterData = [];
-  } else {
-    // If it's already an array, use it. If it's an object, convert to array.
-    masterData = Array.isArray(rawData) ? rawData : Object.values(rawData);
-    console.log("Master Data loaded successfully:", masterData);
-  }
-}
-      
-      renderDropdown(resDiv, masterData.filter(x => x.full_name?.toLowerCase().includes(val.toLowerCase())).slice(0, 8), 'name');
+      // 2. Perform Case-Insensitive Search
+      const searchVal = val.toLowerCase();
+      const filtered = masterData.filter(x => {
+        // We look for 'full_name' specifically from our Firebase Sync
+        const nameInData = x.full_name ? String(x.full_name).toLowerCase() : "";
+        return nameInData.includes(searchVal);
+      });
+
+      console.log(`Searching for: "${searchVal}" | Found: ${filtered.length} matches`);
+      renderDropdown(resDiv, filtered.slice(0, 8), 'name');
+
     } else if (fId === 'centre') {
-      if (locData.length === 0) { const snap = await db.ref('config/locations').once('value'); locData = Object.values(snap.val() || {}); }
-      renderDropdown(resDiv, locData.filter(x => x.centre?.toLowerCase().includes(val.toLowerCase())).slice(0, 8), 'loc');
+      // Location Search Logic
+      if (locData.length === 0) { 
+        const snap = await db.ref('config/locations').once('value'); 
+        locData = Object.values(snap.val() || {}); 
+      }
+      const locVal = val.toLowerCase();
+      const filteredLocs = locData.filter(x => 
+        x.centre?.toLowerCase().includes(locVal)
+      );
+      renderDropdown(resDiv, filteredLocs.slice(0, 8), 'loc');
     }
   }
+
+
 
   function renderDropdown(div, list, type) {
     div.innerHTML = '';
