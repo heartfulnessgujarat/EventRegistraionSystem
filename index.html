@@ -1,171 +1,331 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Event Registration 2026</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
   <style>
-    body { font-family: sans-serif; background: #f0f2f5; padding: 20px; display: flex; justify-content: center; }
-    .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
-    .field-group { margin-bottom: 15px; position: relative; }
-    .label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-    label { font-weight: bold; font-size: 12px; color: #1a237e; }
-    .tiny-edit { font-size: 11px; color: red; cursor: pointer; text-decoration: underline; display: none; }
-    input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-    .dropdown { position: absolute; background: white; border: 1px solid #ddd; width: 100%; z-index: 100; max-height: 150px; overflow-y: auto; display: none; }
-    .item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; font-size: 13px; }
-    .item:hover { background: #f0f0f0; }
-    .primary-btn { width: 100%; padding: 12px; background: #1a237e; color: white; border: none; border-radius: 6px; cursor: pointer; margin-top: 10px; }
-    .primary-btn:disabled { background: #ccc; cursor: not-allowed; }
-    .v-box { background: #fffde7; padding: 10px; border-radius: 6px; margin-top: 5px; display: none; border: 1px solid #ffd54f; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
+    .card { width: 100%; max-width: 450px; background: white; padding: 35px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+    h2 { color: #1a237e; margin-bottom: 5px; text-align: center; }
+    .subtitle { color: #666; font-size: 14px; text-align: center; margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
+    .field-container { margin-bottom: 20px; position: relative; }
+    .label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    label { font-weight: 700; font-size: 13px; color: #1a237e; }
+    .edit-link { font-size: 11px; color: #1a237e; cursor: pointer; font-weight: bold; text-decoration: underline; display: none; }
+    input { width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+    input:disabled { background: #f8f9fa; color: #6c757d; }
+    .help-text { font-size: 11px; color: #5c6bc0; margin-top: 4px; font-style: italic; display: none; font-weight: 500; line-height: 1.3; }
+    .error-msg-text { color: #d32f2f; font-size: 12px; margin-top: 5px; font-weight: bold; display: none; }
+    .verify-panel { background: #fffde7; border: 1px solid #fbc02d; padding: 10px; border-radius: 8px; margin-top: 10px; display: none; transition: all 0.3s; }
+    .verify-btn { background: #fbc02d; color: #333; border: none; padding: 10px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 12px; width: 100%; margin-bottom: 10px; }
+    .primary-btn { width: 100%; padding: 15px; background: #1a237e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+    .primary-btn:disabled { opacity: 0.5; cursor: not-allowed; background: #999; }
+    .dropdown { border: 1px solid #ddd; max-height: 200px; overflow-y: auto; background: white; position: absolute; width: 100%; z-index: 1000; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .item { padding: 12px; cursor: pointer; border-bottom: 1px solid #f1f1f1; font-size: 14px; }
+    .item:hover { background: #e8eaf6; }
+    #loader { text-align: center; padding: 40px; color: #1a237e; display: none; }
+    .resend-link { font-size: 11px; color: #1a237e; text-decoration: underline; cursor: pointer; font-weight: bold; }
+    .timer-text { font-size: 11px; color: #666; font-style: italic; }
   </style>
 </head>
 <body>
 
-<div class="card">
-  <div id="loading">Initializing...</div>
-  <div id="main-ui" style="display:none;">
-    <h3 id="title" style="text-align:center;"></h3>
-    <div id="fields"></div>
-    <div id="initial-btns" style="display:none; margin-top:15px;">
-      <button id="btn-confirm" class="primary-btn" onclick="submit(false)">Confirm Registration</button>
-      <button class="primary-btn" style="background:#546e7a;" onclick="showEditUI()">I want to edit</button>
+<div class="card" id="app">
+  <div id="loading-init"><h2>Loading registration form...</h2></div>
+  <div id="form-content" style="display:none;">
+    <h2 id="title"></h2>
+    <p class="subtitle" id="subtitle"></p>
+    <div id="dynamic-fields"></div>
+    <div id="btns-start" style="display:none; flex-direction:column; gap:10px;">
+      <button id="btn-register" class="primary-btn" disabled onclick="submitData()">Confirm Registration</button>
+      <button class="primary-btn" style="background:#455a64;" onclick="enableEditMode()">I want to edit my details</button>
     </div>
-    <button id="btn-save" class="primary-btn" style="display:none;" disabled onclick="submit(true)">Update & Register</button>
+    <button id="btn-master-update" class="primary-btn" style="display:none;" disabled onclick="submitData()">DETAILS UPDATED, REGISTER ME</button>
   </div>
-  <div id="thank-you" style="display:none;"></div>
+  <div id="loader"><h3>Processing...</h3></div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-
 <script>
-  const SCRIPT_URL = "YOUR_NEW_DEPLOYED_URL";
+  // UPDATE THIS URL AFTER NEW DEPLOYMENT
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw_3Vis6yzISxizKfoWghXW2jk6Bm5xYj2CYyf-Qkrl89yuKyujX9FuQ3rkWE-MszQGjA/exec";
+
+  
   const firebaseConfig = { databaseURL: "https://ferrari-reg-2026-default-rtdb.asia-southeast1.firebasedatabase.app" };
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
-
   const eventId = (new URLSearchParams(window.location.search).get('id') || 'EVT001').toUpperCase();
-  let fieldRules = [], originalData = {}, locations = [], verifiedFields = {};
+
+  let fieldRules = [], masterData = [], locData = [], eventConfig = {};
+  let originalData = {}; 
+  let verificationStates = { email: false, mobile: false };
 
   async function init() {
-    const config = (await db.ref(`config/eventConfig/${eventId}`).once('value')).val();
-    if (!config || config.event_status !== "ACTIVE") { document.getElementById('loading').innerText = "Event Inactive"; return; }
-    
-    document.getElementById('title').innerText = config.title;
-    const rules = (await db.ref('config/fieldRules').once('value')).val();
-    fieldRules = Object.values(rules || {}).filter(r => r.Event_ID === eventId);
-    locations = Object.values((await db.ref('config/locations').once('value')).val() || {});
-
-    renderFields();
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('main-ui').style.display = 'block';
+    try {
+      const configSnap = await db.ref('config/eventConfig').once('value');
+      eventConfig = (configSnap.val() || {})[eventId] || { title: "Registration" };
+      document.getElementById('title').innerHTML = eventConfig.title;
+      document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
+      const rulesSnap = await db.ref('config/fieldRules').once('value');
+      fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
+      renderForm();
+      document.getElementById('loading-init').style.display = 'none';
+      document.getElementById('form-content').style.display = 'block';
+    } catch (e) { console.error(e); }
   }
 
-  function renderFields() {
-    const container = document.getElementById('fields');
+  function renderForm() {
+    const container = document.getElementById('dynamic-fields');
+    container.innerHTML = '';
     fieldRules.forEach(r => {
-      const isName = (r.Field_ID === 'full_name');
-      const canEdit = ['Editable','Editable_Verify','Editable_Lookup'].includes(r.Edit_Behavior);
-      container.insertAdjacentHTML('beforeend', `
-        <div class="field-group" id="group-${r.Field_ID}" style="display: ${r.Initial_State==='Visible'?'block':'none'}">
-          <div class="label-row">
-            <label>${r.Display_Label}</label>
-            ${canEdit ? `<span class="tiny-edit" id="edit-${r.Field_ID}" onclick="unlock('${r.Field_ID}')">Edit</span>` : ''}
+      const div = document.createElement('div');
+      div.className = 'field-container';
+      div.id = `cont-${r.field_id}`;
+      div.style.display = (r.initial_state === 'Visible') ? 'block' : 'none';
+      const canEdit = ['email', 'mobile', 'centre', 'pincode'].includes(r.field_id);
+      div.innerHTML = `
+        <div class="label-row">
+          <label>${r.display_label || r.field_id}</label>
+          ${canEdit ? `<span class="edit-link" id="edit-link-${r.field_id}" onclick="unlockField('${r.field_id}')">Edit</span>` : ''}
+        </div>
+        <input type="text" id="inp-${r.field_id}" oninput="onInputChange('${r.field_id}', this.value)" disabled autocomplete="off">
+        <div class="help-text" id="help-${r.field_id}">${r.field_help_text || r.Field_Help_Text || ''}</div>
+        <div class="error-msg-text" id="err-${r.field_id}"></div>
+        <div class="dropdown" id="res-${r.field_id}"></div>
+        ${(r.field_id === 'email' || r.field_id === 'mobile') ? `
+          <div class="verify-panel" id="panel-${r.field_id}">
+            <button class="verify-btn" id="vbtn-${r.field_id}" onclick="sendCode('${r.field_id}')"></button>
+            <div id="box-${r.field_id}" style="display:none;">
+              <input type="text" placeholder="Enter 6-digit code" id="code-${r.field_id}" oninput="verifyCodeInput('${r.field_id}', this.value)">
+              <div id="vmsg-${r.field_id}" style="font-size:12px; margin-top:5px; font-weight:bold;"></div>
+              <div id="resend-container-${r.field_id}" style="margin-top:8px;"></div>
+            </div>
           </div>
-          <input type="text" id="inp-${r.Field_ID}" ${isName?'':'disabled'} autocomplete="off" oninput="handleTyping('${r.Field_ID}', this.value)">
-          <div class="dropdown" id="drop-${r.Field_ID}"></div>
-          <div class="v-box" id="vbox-${r.Field_ID}">
-            <button onclick="sendOTP('${r.Field_ID}')" id="vbtn-${r.Field_ID}">Verify Change</button>
-            <input type="text" id="otp-${r.Field_ID}" placeholder="Enter Code" style="display:none; margin-top:5px;" oninput="checkOTP('${r.Field_ID}', this.value)">
-          </div>
-        </div>`);
+        ` : ''}
+      `;
+      container.appendChild(div);
+      if (r.field_id === 'full_name') {
+        div.style.display = 'block';
+        document.getElementById('inp-full_name').disabled = false;
+      }
     });
   }
 
-  async function handleTyping(fId, val) {
-    // 1. Search Logic
-    if (fId === 'full_name' && val.length >= 3) {
-      const snap = await db.ref('masterData').once('value');
-      showDrop(fId, Object.values(snap.val()).filter(x => x.full_name.toLowerCase().includes(val.toLowerCase())).slice(0,5), 'user');
-    }
-    if (fId === 'centre' && val.length >= 2) {
-      showDrop(fId, locations.filter(x => x.centre.toLowerCase().includes(val.toLowerCase())).slice(0,5), 'loc');
-    }
-
-    // 2. Verification check
-    const rule = fieldRules.find(r => r.Field_ID === fId);
-    if (rule && rule.Edit_Behavior === 'Editable_Verify') {
-      const isDiff = (val.trim() !== String(originalData[fId] || "").trim());
-      verifiedFields[fId] = !isDiff;
-      document.getElementById(`vbox-${fId}`).style.display = isDiff ? 'block' : 'none';
-    }
-    validate();
+  async function onInputChange(fId, val) {
+    if (fId === 'full_name') handleSearch(fId, val);
+    if (fId === 'centre') handleSearch(fId, val);
+    checkAllValidations();
   }
 
-  function showDrop(fId, items, type) {
-    const d = document.getElementById(`drop-${fId}`);
-    d.innerHTML = items.map(i => `<div class="item" onclick="select('${fId}', ${JSON.stringify(i).replace(/"/g, '&quot;')}, '${type}')">${type==='user'?i.full_name:i.centre}</div>`).join('');
-    d.style.display = items.length ? 'block' : 'none';
+  async function handleSearch(fId, val) {
+    const resDiv = document.getElementById(`res-${fId}`);
+    if (val.length < 3) { resDiv.style.display = 'none'; return; }
+    if (fId === 'full_name') {
+      if (masterData.length === 0) { const snap = await db.ref('masterData').once('value'); masterData = Object.values(snap.val() || {}); }
+      renderDropdown(resDiv, masterData.filter(x => x.full_name?.toLowerCase().includes(val.toLowerCase())).slice(0, 8), 'name');
+    } else if (fId === 'centre') {
+      if (locData.length === 0) { const snap = await db.ref('config/locations').once('value'); locData = Object.values(snap.val() || {}); }
+      renderDropdown(resDiv, locData.filter(x => x.centre?.toLowerCase().includes(val.toLowerCase())).slice(0, 8), 'loc');
+    }
   }
 
-  function select(fId, data, type) {
-    if (type === 'user') {
-      originalData = data;
-      fieldRules.forEach(r => {
-        const inp = document.getElementById(`inp-${r.Field_ID}`);
-        if (inp) {
-          inp.value = data[r.Field_ID] || "";
-          document.getElementById(`group-${r.Field_ID}`).style.display = (r.Initial_State==='Hidden'?'none':'block');
-          if (r.Edit_Behavior === 'Editable_Verify') verifiedFields[r.Field_ID] = true;
-        }
+  function renderDropdown(div, list, type) {
+    div.innerHTML = '';
+    if (list.length > 0) {
+      div.style.display = 'block';
+      list.forEach(item => {
+        const d = document.createElement('div');
+        d.className = 'item';
+        d.textContent = type === 'loc' ? item.centre : item.full_name;
+        d.onclick = () => type === 'loc' ? selectLocation(item) : selectParticipant(item);
+        div.appendChild(d);
       });
-      document.getElementById('inp-full_name').disabled = true;
-      document.getElementById('initial-btns').style.display = 'block';
-    } else {
-      document.getElementById('inp-centre').value = data.centre;
-      if(document.getElementById('inp-zone')) document.getElementById('inp-zone').value = data.zone;
-      if(document.getElementById('inp-district')) document.getElementById('inp-district').value = data.district;
     }
-    document.getElementById(`drop-${fId}`).style.display = 'none';
-    validate();
   }
 
-  function showEditUI() {
-    document.getElementById('initial-btns').style.display = 'none';
-    document.getElementById('btn-save').style.display = 'block';
-    fieldRules.forEach(r => { if(document.getElementById(`edit-${r.Field_ID}`)) document.getElementById(`edit-${r.Field_ID}`).style.display = 'inline'; });
+  function selectParticipant(p) {
+    fieldRules.forEach(r => {
+      const el = document.getElementById(`inp-${r.field_id}`);
+      if (el) {
+        el.value = p[r.field_id] || '';
+        originalData[r.field_id] = el.value;
+        if (r.field_id === 'full_name') {
+          el.disabled = true;
+          const helpEl = document.getElementById('help-full_name');
+          if (helpEl && helpEl.innerText.trim() !== "") helpEl.style.display = 'block';
+        }
+        if (r.initial_state !== 'Hidden') document.getElementById(`cont-${r.field_id}`).style.display = 'block';
+      }
+    });
+    document.getElementById('res-full_name').style.display = 'none';
+    document.getElementById('btns-start').style.display = 'flex';
+    checkAllValidations();
   }
 
-  function unlock(fId) {
+  function selectLocation(l) {
+    document.getElementById('inp-centre').value = l.centre;
+    ['district', 'zone'].forEach(f => { if(document.getElementById(`inp-${f}`)) document.getElementById(`inp-${f}`).value = l[f] || ''; });
+    document.getElementById('res-centre').style.display = 'none';
+    checkAllValidations();
+  }
+
+  function enableEditMode() {
+    document.getElementById('btns-start').style.display = 'none';
+    document.getElementById('btn-master-update').style.display = 'block';
+    fieldRules.forEach(r => {
+      const link = document.getElementById(`edit-link-${r.field_id}`);
+      if (link) link.style.display = 'inline';
+      const helpEl = document.getElementById(`help-${r.field_id}`);
+      if (helpEl && helpEl.innerText.trim() !== "") helpEl.style.display = 'block';
+    });
+  }
+
+  function unlockField(fId) {
     document.getElementById(`inp-${fId}`).disabled = false;
     document.getElementById(`inp-${fId}`).focus();
-    document.getElementById(`edit-${fId}`).style.display = 'none';
+    document.getElementById(`edit-link-${fId}`).style.display = 'none';
   }
 
-  function validate() {
-    let ok = true;
-    fieldRules.forEach(r => {
-      const input = document.getElementById(`inp-${r.Field_ID}`);
-      if (!input) return;
-      const v = input.value.trim();
-      if (r.Initial_State !== 'Hidden' && !v) ok = false;
-      if (v && r.field_validation === 'MOB' && !/^[6-9]\d{9}$/.test(v)) ok = false;
-      if (v && r.field_validation === 'PIN' && !/^\d{6}$/.test(v)) ok = false;
-      if (r.Edit_Behavior === 'Editable_Verify' && verifiedFields[r.Field_ID] === false) ok = false;
-    });
-    document.getElementById('btn-save').disabled = !ok;
-    document.getElementById('btn-confirm').disabled = !ok;
+  // --- START NEW SECURITY LOGIC (Expiry & Resend) ---
+  function sendCode(type) {
+    const targetEmail = (type === 'email') ? document.getElementById('inp-email').value : originalData['email'];
+    const btn = document.getElementById(`vbtn-${type}`);
+    btn.disabled = true;
+    btn.innerText = "Sending Verification Code...";
+    btn.style.background = "#ddd";
+
+    fetch(`${SCRIPT_URL}?action=sendVerificationCode&email=${encodeURIComponent(targetEmail)}&eventId=${eventId}`, { mode: 'no-cors' });
+
+    setTimeout(() => {
+      document.getElementById(`panel-${type}`).style.backgroundColor = "#e3f2fd";
+      btn.style.display = "none";
+      document.getElementById(`box-${type}`).style.display = "block";
+      document.getElementById(`vmsg-${type}`).innerText = `Code sent to ${targetEmail}`;
+      startResendTimer(type);
+    }, 1500);
   }
 
-  async function submit(isUpdate) {
-    const payload = { event_id: eventId, timestamp: new Date().toISOString() };
-    fieldRules.forEach(r => payload[r.Field_ID] = document.getElementById(`inp-${r.Field_ID}`).value);
-    const id = isUpdate ? originalData.registration_id : `REG${Date.now()}`;
-    await db.ref(`registrations/${id}`).update(payload);
+  function startResendTimer(type) {
+    const container = document.getElementById(`resend-container-${type}`);
+    let seconds = 30;
+    container.innerHTML = `<span class="timer-text">Resend available in ${seconds}s</span>`;
     
-    // FETCH THANK YOU HTML FROM FIREBASE
-    const thankHTML = (await db.ref(`htmlStorage/${eventId}/thank`).once('value')).val();
-    document.getElementById('main-ui').style.display = 'none';
-    document.getElementById('thank-you').style.display = 'block';
-    document.getElementById('thank-you').innerHTML = thankHTML || "<h2>Registration Successful!</h2>";
+    const interval = setInterval(() => {
+      seconds--;
+      if (seconds > 0) {
+        container.innerHTML = `<span class="timer-text">Resend available in ${seconds}s</span>`;
+      } else {
+        clearInterval(interval);
+        container.innerHTML = `<span class="resend-link" onclick="resendCode('${type}')">Resend Verification Code</span>`;
+      }
+    }, 1000);
+  }
+
+  function resendCode(type) {
+    document.getElementById(`box-${type}`).style.display = "none";
+    const btn = document.getElementById(`vbtn-${type}`);
+    btn.style.display = "block";
+    btn.style.background = "#fbc02d";
+    sendCode(type);
+  }
+
+  async function verifyCodeInput(type, code) {
+    if (code.length === 6) {
+      const emailKey = ((type === 'email') ? document.getElementById('inp-email').value : originalData['email']).replace(/[.#$[\]]/g, "_");
+      const snap = await db.ref("verificationCodes/" + emailKey).once('value');
+      const data = snap.val();
+      const msg = document.getElementById(`vmsg-${type}`);
+
+      if (!data) {
+        msg.innerText = "No code found ❌"; msg.style.color = "red";
+        return;
+      }
+
+      // 5 MINUTE EXPIRY CHECK
+      const now = new Date().getTime();
+      const isExpired = (now - data.timestamp) > 300000;
+
+      if (isExpired) {
+        msg.innerText = "Code Expired ❌ Please Resend.";
+        msg.style.color = "red";
+        verificationStates[type] = false;
+      } else if (data.code === code) {
+        msg.innerText = "Code Verified ✅";
+        msg.style.color = "green";
+        document.getElementById(`inp-${type}`).disabled = true;
+        document.getElementById(`code-${type}`).disabled = true;
+        verificationStates[type] = true;
+      } else {
+        msg.innerText = "Code is not matching ❌";
+        msg.style.color = "red";
+        verificationStates[type] = false;
+      }
+      checkAllValidations();
+    }
+  }
+  // --- END NEW SECURITY LOGIC ---
+
+  function validateField(id, value, rule) {
+    if (!rule || rule === 'NULL' || value.trim() === "") return value.trim() !== "";
+    const val = value.trim();
+    if (rule === 'MOB') return /^[6-9]\d{9}$/.test(val);
+    if (rule === 'PIN') return /^\d{6}$/.test(val);
+    if (rule === 'EMAIL') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+    return true;
+  }
+
+  function checkAllValidations() {
+    let allValid = true;
+    let needsEmailV = false;
+    let needsMobileV = false;
+
+    fieldRules.forEach(r => {
+      const input = document.getElementById(`inp-${r.field_id}`);
+      const err = document.getElementById(`err-${r.field_id}`);
+      if (input && (!input.disabled || originalData[r.field_id])) {
+        let valid = validateField(r.field_id, input.value, r.field_validation);
+        if (!valid && input.value !== "") {
+          err.innerText = r.error_msg || "Invalid Entry";
+          err.style.display = "block";
+          allValid = false;
+        } else { err.style.display = "none"; }
+        input.style.border = valid ? '1px solid #ced4da' : '2px solid red';
+        if (!valid) allValid = false;
+        if (r.field_id === 'email' && input.value !== originalData['email'] && valid) needsEmailV = true;
+        if (r.field_id === 'mobile' && input.value !== originalData['mobile'] && valid) needsMobileV = true;
+      }
+    });
+
+    if (needsEmailV && !verificationStates.email) {
+      document.getElementById('panel-email').style.display = 'block';
+      document.getElementById('vbtn-email').innerText = `Send code to ${document.getElementById('inp-email').value}`;
+      allValid = false;
+    } else if (!needsEmailV && document.getElementById('panel-email')) { document.getElementById('panel-email').style.display = 'none'; }
+
+    if (needsMobileV && !verificationStates.mobile) {
+      document.getElementById('panel-mobile').style.display = 'block';
+      document.getElementById('vbtn-mobile').innerText = `Send code to registered email: ${originalData['email']}`;
+      allValid = false;
+    } else if (!needsMobileV && document.getElementById('panel-mobile')) { document.getElementById('panel-mobile').style.display = 'none'; }
+
+    document.getElementById('btn-master-update').disabled = !allValid;
+    if (document.getElementById('btn-register')) document.getElementById('btn-register').disabled = !allValid;
+  }
+
+  async function submitData() {
+    document.getElementById('form-content').style.display = 'none';
+    document.getElementById('loader').style.display = 'block';
+    const regId = `${eventId}REG${Date.now()}`;
+    const payload = { registration_id: regId, event_id: eventId, timestamp: new Date().toISOString() };
+    fieldRules.forEach(r => { payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; });
+    try {
+      await db.ref('registrations/' + regId).set(payload);
+      fetch(`${SCRIPT_URL}?action=sendEmail&regId=${regId}&eventId=${eventId}`, { mode: 'no-cors' });
+      const snap = await db.ref(`htmlStorage/${eventId}/thank`).once('value');
+      document.getElementById('app').innerHTML = snap.val() || "<h2>Success!</h2>";
+    } catch (e) { alert("Error"); location.reload(); }
   }
 
   init();
