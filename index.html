@@ -123,7 +123,22 @@
     const resDiv = document.getElementById(`res-${fId}`);
     if (val.length < 3) { resDiv.style.display = 'none'; return; }
     if (fId === 'full_name') {
-      if (masterData.length === 0) { const snap = await db.ref('masterData').once('value'); masterData = Object.values(snap.val() || {}); }
+      
+     // if (masterData.length === 0) { const snap = await db.ref('masterData').once('value'); masterData = Object.values(snap.val() || {}); }
+if (masterData.length === 0) { 
+  const snap = await db.ref('masterData').once('value'); 
+  const rawData = snap.val();
+  
+  if (!rawData) {
+    console.error("Firebase returned NULL for masterData. Check root path!");
+    masterData = [];
+  } else {
+    // If it's already an array, use it. If it's an object, convert to array.
+    masterData = Array.isArray(rawData) ? rawData : Object.values(rawData);
+    console.log("Master Data loaded successfully:", masterData);
+  }
+}
+      
       renderDropdown(resDiv, masterData.filter(x => x.full_name?.toLowerCase().includes(val.toLowerCase())).slice(0, 8), 'name');
     } else if (fId === 'centre') {
       if (locData.length === 0) { const snap = await db.ref('config/locations').once('value'); locData = Object.values(snap.val() || {}); }
