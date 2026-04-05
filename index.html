@@ -379,19 +379,55 @@ function checkAllValidations() {
     if (document.getElementById('btn-register')) document.getElementById('btn-register').disabled = !allValid;
   }
 
-  async function submitData() {
+
+async function submitData() {
     document.getElementById('form-content').style.display = 'none';
     document.getElementById('loader').style.display = 'block';
+
+    // 1. Calculate IST Time (+5:30)
+    const now = new Date();
+    const offset = 5.5 * 60 * 60 * 1000; 
+    const istDate = new Date(now.getTime() + offset);
+    
+    // 2. Format as: DD-MM-YYYY HH:mm:ss
+    const day = String(istDate.getUTCDate()).padStart(2, '0');
+    const month = String(istDate.getUTCMonth() + 1).padStart(2, '0');
+    const year = istDate.getUTCFullYear();
+    const hours = String(istDate.getUTCHours()).padStart(2, '0');
+    const mins = String(istDate.getUTCMinutes()).padStart(2, '0');
+    const secs = String(istDate.getUTCSeconds()).padStart(2, '0');
+    
+    const istTimestamp = `${day}-${month}-${year} ${hours}:${mins}:${secs}`;
+
     const regId = `${eventId}REG${Date.now()}`;
-    const payload = { registration_id: regId, event_id: eventId, timestamp: new Date().toISOString() };
-    fieldRules.forEach(r => { payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; });
+    
+    // 3. Build Payload with IST Timestamp
+    const payload = { 
+      registration_id: regId, 
+      event_id: eventId, 
+      timestamp: istTimestamp 
+    };
+
+    fieldRules.forEach(r => { 
+      payload[r.field_id] = document.getElementById(`inp-${r.field_id}`).value; 
+    });
+
     try {
+      // 4. Save to Firebase
       await db.ref('registrations/' + regId).set(payload);
+      
+      // 5. Trigger Google Sheet Sync & Email
       fetch(`${SCRIPT_URL}?action=sendEmail&regId=${regId}&eventId=${eventId}`, { mode: 'no-cors' });
+      
+      // 6. Show Thank You Screen
       const snap = await db.ref(`htmlStorage/${eventId}/thank`).once('value');
       document.getElementById('app').innerHTML = snap.val() || "<h2>Registration Complete!</h2>";
-    } catch (e) { alert("Error saving data"); location.reload(); }
+    } catch (e) { 
+      alert("Error saving data"); 
+      location.reload(); 
+    }
   }
+  
 
   init();
 </script>
