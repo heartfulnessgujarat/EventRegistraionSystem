@@ -212,20 +212,39 @@ function renderForm() {
     document.getElementById(`edit-link-${fId}`).style.display = 'none';
   }
 
+  
   function sendCode(type) {
+    // Reset attempts for the new code
+    verificationAttempts[type] = 0;
+    const msg = document.getElementById(`vmsg-${type}`);
+    if (msg) msg.style.display = "none";
+
     const targetEmail = (type === 'email') ? document.getElementById('inp-email').value : originalData['email'];
     const btn = document.getElementById(`vbtn-${type}`);
+    
     btn.disabled = true;
     btn.innerText = "Sending Code...";
+    
     fetch(`${SCRIPT_URL}?action=sendVerificationCode&email=${encodeURIComponent(targetEmail)}&eventId=${eventId}`, { mode: 'no-cors' });
+    
     setTimeout(() => {
       document.getElementById(`panel-${type}`).style.backgroundColor = "#e3f2fd";
       btn.style.display = "none";
       document.getElementById(`box-${type}`).style.display = "block";
+      
+      // Clear the input box in case an old code was there
+      const codeInp = document.getElementById(`code-${type}`);
+      if (codeInp) {
+        codeInp.value = "";
+        codeInp.disabled = false;
+      }
+      
       startResendTimer(type);
     }, 1500);
   }
-
+  
+  
+  
   function startResendTimer(type) {
     const container = document.getElementById(`resend-container-${type}`);
     let seconds = 30;
