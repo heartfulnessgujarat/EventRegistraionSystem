@@ -73,7 +73,8 @@
     } catch (e) { console.error(e); }
   }
 
-  function renderForm() {
+
+function renderForm() {
     const container = document.getElementById('dynamic-fields');
     container.innerHTML = '';
     fieldRules.forEach(r => {
@@ -88,15 +89,17 @@
           ${canEdit ? `<span class="edit-link" id="edit-link-${r.field_id}" onclick="unlockField('${r.field_id}')">Edit</span>` : ''}
         </div>
         <input type="text" id="inp-${r.field_id}" oninput="onInputChange('${r.field_id}', this.value)" disabled autocomplete="off">
-        <div class="help-text" id="help-${r.field_id}">${r.field_help_text || r.Field_Help_Text || ''}</div>
+        <div class="help-text" id="help-${r.field_id}">${r.field_help_text || ''}</div>
         <div class="error-msg-text" id="err-${r.field_id}"></div>
         <div class="dropdown" id="res-${r.field_id}"></div>
+        
+        <div id="vmsg-${r.field_id}" style="font-size:13px; margin-top:5px; font-weight:bold; display:none;"></div>
+
         ${(r.field_id === 'email' || r.field_id === 'mobile') ? `
           <div class="verify-panel" id="panel-${r.field_id}">
             <button class="verify-btn" id="vbtn-${r.field_id}" onclick="sendCode('${r.field_id}')"></button>
             <div id="box-${r.field_id}" style="display:none;">
               <input type="text" placeholder="Enter 6-digit code" id="code-${r.field_id}" oninput="verifyCodeInput('${r.field_id}', this.value)">
-              <div id="vmsg-${r.field_id}" style="font-size:12px; margin-top:5px; font-weight:bold;"></div>
               <div id="resend-container-${r.field_id}" style="margin-top:8px;"></div>
             </div>
           </div>
@@ -109,6 +112,7 @@
       }
     });
   }
+
 
   async function onInputChange(fId, val) {
     if (fId === 'full_name') handleSearch(fId, val);
