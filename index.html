@@ -265,21 +265,53 @@
     return true;
   }
 
-  function checkAllValidations() {
+
+
+function checkAllValidations() {
     let allValid = true;
-    let needsEmailV = false, needsMobileV = false;
+    
     fieldRules.forEach(r => {
       const input = document.getElementById(`inp-${r.field_id}`);
-      if (input && (!input.disabled || originalData[r.field_id])) {
-        let valid = validateField(r.field_id, input.value, r.field_validation);
-        input.style.border = valid ? '1px solid #ced4da' : '2px solid red';
-        if (!valid) allValid = false;
-        if (r.field_id === 'email' && input.value !== originalData['email'] && valid) needsEmailV = true;
-        if (r.field_id === 'mobile' && input.value !== originalData['mobile'] && valid) needsMobileV = true;
+      const errDiv = document.getElementById(`err-${r.field_id}`);
+      
+      if (input) {
+        // 1. Run Validation
+        let isValid = validateField(r.field_id, input.value, r.field_validation);
+        let isChanged = input.value !== (originalData[r.field_id] || "");
+
+        // 2. Handle Visual Feedback (Border & Error Message)
+        if (!isValid && input.value.trim() !== "") {
+          input.style.border = '2px solid red';
+          if (errDiv) {
+            errDiv.innerText = r.error_msg || "Invalid input"; // Pulls from Google Sheet
+            errDiv.style.display = 'block';
+          }
+          allValid = false;
+        } else {
+          input.style.border = '1px solid #ced4da';
+          if (errDiv) errDiv.style.display = 'none';
+        }
+
+        // 3. The "Yellow Button" Gate (Email/Mobile)
+        if (r.field_id === 'email' || r.field_id === 'mobile') {
+          const panel = document.getElementById(`panel-${r.field_id}`);
+          const vBtn = document.getElementById(`vbtn-${r.field_id}`);
+          
+          // Only show if VALID (Layer 1 pass) AND CHANGED
+          if (isValid && isChanged && !verificationStates[r.field_id]) {
+            vBtn.innerText = `Click here to send Verification Code to ${input.value}`;
+            panel.style.display = 'block';
+            allValid = false; // Block submission until verified
+          } else if (!isChanged || verificationStates[r.field_id]) {
+            panel.style.display = 'none';
+          }
+        }
+        
+        // Final catch for empty required fields
+        if (input.value.trim() === "" && r.initial_state === 'Visible') allValid = false;
       }
     });
-    if (needsEmailV && !verificationStates.email) { document.getElementById('panel-email').style.display = 'block'; allValid = false; }
-    if (needsMobileV && !verificationStates.mobile) { document.getElementById('panel-mobile').style.display = 'block'; allValid = false; }
+
     document.getElementById('btn-master-update').disabled = !allValid;
     if (document.getElementById('btn-register')) document.getElementById('btn-register').disabled = !allValid;
   }
