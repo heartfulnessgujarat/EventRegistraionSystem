@@ -380,32 +380,52 @@ function checkAllValidations() {
   }
 
 async function submitData() {
-    // 1. Calculate IST Time (+5:30)
-    const now = new Date();
-    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const istDate = new Date(utc + (3600000 * 5.5));
-    
-    // 2. Format as: DD-MM-YYYY HH:mm:ss
-    const day = String(istDate.getDate()).padStart(2, '0');
-    const month = String(istDate.getMonth() + 1).padStart(2, '0');
-    const year = istDate.getFullYear();
-    const hours = String(istDate.getHours()).padStart(2, '0');
-    const mins = String(istDate.getMinutes()).padStart(2, '0');
-    const secs = String(istDate.getSeconds()).padStart(2, '0');
-    
-    const istTimestamp = `${day}-${month}-${year} ${hours}:${mins}:${secs}`;
-
-    // 3. Build your payload using the new istTimestamp
-    const payload = { 
-      event_id: eventId, 
-      timestamp: istTimestamp // This replaces the old .toISOString()
-    };
-
-    // ... (rest of your field mapping and Firebase .set logic)
-  }
-
-
+  // 1. Calculate IST Time (+5:30)
+  const now = new Date();
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const istDate = new Date(utc + (3600000 * 5.5));
   
+  // 2. Format as: DD-MM-YYYY HH:mm:ss
+  const day = String(istDate.getDate()).padStart(2, '0');
+  const month = String(istDate.getMonth() + 1).padStart(2, '0');
+  const year = istDate.getFullYear();
+  const hours = String(istDate.getHours()).padStart(2, '0');
+  const mins = String(istDate.getMinutes()).padStart(2, '0');
+  const secs = String(istDate.getSeconds()).padStart(2, '0');
+  
+  const istTimestamp = `${day}-${month}-${year} ${hours}:${mins}:${secs}`;
+
+  // 3. Generate the Registration ID (matching your requested formula)
+  // Format: EventID + REG + TimestampDigits
+  const regId = eventId + "REG" + istDate.getTime();
+
+  // 4. Collect Form Data
+  const formData = {
+    registration_id: regId,
+    timestamp: istTimestamp,
+    event_id: eventId,
+    full_name: document.getElementById('full_name').value,
+    mobile: document.getElementById('mobile').value,
+    email: document.getElementById('email').value,
+    pincode: document.getElementById('pincode').value,
+    zone: document.getElementById('zone').value,
+    district: document.getElementById('district').value,
+    centre: document.getElementById('centre').value
+  };
+
+  // 5. Send to Firebase
+  try {
+    await firebase.database().ref('registrations/' + regId).set(formData);
+    
+    // Show success and clear form
+    alert("Registration Successful! ID: " + regId);
+    document.getElementById('registrationForm').reset();
+    
+  } catch (error) {
+    console.error("Firebase Error:", error);
+    alert("Submission failed. Please check your connection.");
+  }
+}  
   init();
 </script>
 </body>
