@@ -267,33 +267,52 @@ async function verifyCodeInput(type, code) {
       const emailKey = ((type === 'email') ? document.getElementById('inp-email').value : originalData['email']).replace(/[.#$[\]]/g, "_");
       const snap = await db.ref("verificationCodes/" + emailKey).once('value');
       const data = snap.val();
+      
       const msg = document.getElementById(`vmsg-${type}`);
       const panel = document.getElementById(`panel-${type}`);
+      const codeInp = document.getElementById(`code-${type}`);
 
       if (data && data.code === code && (new Date().getTime() - data.timestamp < 300000)) {
-        // SUCCESS STATE
+        // --- SUCCESS ---
         msg.innerText = "Verified ✅"; 
-        msg.style.color = "#2e7d32"; // Nice Dark Green
+        msg.style.color = "#2e7d32";
         msg.style.display = "block";
-        
-        // Hide the yellow box entirely
         if (panel) panel.style.display = "none";
-        
-        // Lock the input and set state
         document.getElementById(`inp-${type}`).disabled = true;
         verificationStates[type] = true;
-        
+        verificationAttempts[type] = 0; // Reset
         checkAllValidations();
       } else {
-        // FAILURE STATE
-        // We will keep the panel visible so they can see the error
-        msg.innerText = "Invalid or Expired ❌"; 
-        msg.style.color = "#d32f2f";
-        msg.style.display = "block";
+        // --- FAILURE ---
+        verificationAttempts[type]++;
+        
+        if (verificationAttempts[type] >= 3) {
+          // LOCKOUT after 3rd attempt
+          msg.innerText = "Too many failed attempts. Please try again after some time.";
+          msg.style.color = "#d32f2f";
+          msg.style.display = "block";
+          codeInp.disabled = true;
+          codeInp.value = "LOCKED";
+          // Hide the resend link to prevent immediate bypass
+          const resendCont = document.getElementById(`resend-container-${type}`);
+          if (resendCont) resendCont.style.display = "none";
+        } else {
+          // WARNING for Attempt 1 and 2
+          msg.innerText = `Invalid Code. Attempt ${verificationAttempts[type]} of 3.`;
+          msg.style.color = "#d32f2f";
+          msg.style.display = "block";
+          
+          // AUTO-CLEAR after 1 second delay
+          setTimeout(() => {
+            codeInp.value = "";
+            codeInp.focus();
+          }, 1000);
+        }
         verificationStates[type] = false;
       }
     }
   }
+
 
 
 
