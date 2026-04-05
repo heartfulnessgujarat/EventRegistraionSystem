@@ -242,23 +242,41 @@ function renderForm() {
     sendCode(type);
   }
 
-  async function verifyCodeInput(type, code) {
+
+async function verifyCodeInput(type, code) {
     if (code.length === 6) {
       const emailKey = ((type === 'email') ? document.getElementById('inp-email').value : originalData['email']).replace(/[.#$[\]]/g, "_");
       const snap = await db.ref("verificationCodes/" + emailKey).once('value');
       const data = snap.val();
       const msg = document.getElementById(`vmsg-${type}`);
+      const panel = document.getElementById(`panel-${type}`);
+
       if (data && data.code === code && (new Date().getTime() - data.timestamp < 300000)) {
-        msg.innerText = "Verified ✅"; msg.style.color = "green";
+        // SUCCESS STATE
+        msg.innerText = "Verified ✅"; 
+        msg.style.color = "#2e7d32"; // Nice Dark Green
+        msg.style.display = "block";
+        
+        // Hide the yellow box entirely
+        if (panel) panel.style.display = "none";
+        
+        // Lock the input and set state
         document.getElementById(`inp-${type}`).disabled = true;
         verificationStates[type] = true;
+        
+        checkAllValidations();
       } else {
-        msg.innerText = "Invalid or Expired ❌"; msg.style.color = "red";
+        // FAILURE STATE
+        // We will keep the panel visible so they can see the error
+        msg.innerText = "Invalid or Expired ❌"; 
+        msg.style.color = "#d32f2f";
+        msg.style.display = "block";
         verificationStates[type] = false;
       }
-      checkAllValidations();
     }
   }
+
+
 
   function validateField(id, value, rule) {
     if (!rule || rule === 'NULL' || value.trim() === "") return value.trim() !== "";
