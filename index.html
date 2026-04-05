@@ -59,6 +59,7 @@
   let originalData = {}; 
   let verificationStates = { email: false, mobile: false };
 
+  let verificationAttempts = { email: 0, mobile: 0 };
   async function init() {
     try {
       const configSnap = await db.ref('config/eventConfig').once('value');
