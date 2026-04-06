@@ -123,37 +123,42 @@ function renderForm() {
     checkAllValidations();
   }
 
-  async function handleSearch(fId, val) {
-    const resDiv = document.getElementById(`res-${fId}`);
-    if (val.length < 3) { resDiv.style.display = 'none'; return; }
 
-    if (fId === 'full_name') {
-      if (masterData.length === 0) { 
-        const snap = await db.ref('masterData').once('value'); 
-        const raw = snap.val() || {};
-        masterData = Array.isArray(raw) ? raw : Object.values(raw);
-        console.log("Master data check:", masterData[0]); // Check fields in console
-      }
-      
-      const searchVal = val.toLowerCase();
-      const filtered = masterData.filter(x => {
-        // FLEXIBLE SEARCH: Check 'full_name' or 'Full Name' or 'fullName'
-        const n = x.full_name || x['Full Name'] || x['fullname'] || "";
-        return String(n).toLowerCase().includes(searchVal);
-      });
-      renderDropdown(resDiv, filtered.slice(0, 8), 'name');
+async function handleSearch(fId, val) {
+  const resDiv = document.getElementById(`res-${fId}`);
+  if (val.length < 3) { resDiv.style.display = 'none'; return; }
 
-    } else if (fId === 'centre') {
-      if (locData.length === 0) { 
-        const snap = await db.ref('config/locations').once('value'); 
-        locData = Object.values(snap.val() || {}); 
-      }
-      const locVal = val.toLowerCase();
-      const filtered = locData.filter(x => x.centre?.toLowerCase().includes(locVal));
-      renderDropdown(resDiv, filtered.slice(0, 8), 'loc');
+  // 1. Find the Rule for this specific field
+  const rule = fieldRules.find(r => r.field_id === fId);
+  const lookupTab = rule ? rule.lookup_tab : null;
+
+  if (fId === 'full_name' && lookupTab) {
+    // 2. DYNAMIC FETCH: Use the tab name from the Google Sheet rule!
+    if (masterData.length === 0) { 
+      const snap = await db.ref(lookupTab).once('value'); 
+      const raw = snap.val() || {};
+      masterData = Array.isArray(raw) ? raw : Object.values(raw);
     }
-  }
+    
+    const searchVal = val.toLowerCase();
+    const filtered = masterData.filter(x => {
+      // Use the lookup_column from your rules to find the right key
+      const searchKey = rule.lookup_column || 'full_name';
+      const n = x[searchKey] || x['full_name'] || "";
+      return String(n).toLowerCase().includes(searchVal);
+    });
+    renderDropdown(resDiv, filtered.slice(0, 8), 'name');
 
+  } else if (fId === 'centre') {
+    // We keep this as is for now, or point it to Master_Internal_DB if needed
+    const searchVal = val.toLowerCase();
+    const filtered = masterData.filter(x => x.centre?.toLowerCase().includes(searchVal));
+    renderDropdown(resDiv, filtered.slice(0, 8), 'loc');
+  }
+}
+
+
+  
   function renderDropdown(div, list, type) {
     div.innerHTML = '';
     if (list.length > 0) {
