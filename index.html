@@ -295,7 +295,7 @@ async function init() {
     return true;
   }
 
-  function checkAllValidations() {
+function checkAllValidations() {
     let allValid = true;
     fieldRules.forEach(r => {
       const input = document.getElementById(`inp-${r.field_id}`);
@@ -304,6 +304,7 @@ async function init() {
         let isValid = validateField(r.field_id, input.value, r.field_validation);
         let isChanged = input.value !== (originalData[r.field_id] || "");
         
+        // 1. Handle Basic Visual Borders/Errors
         if (!isValid && input.value.trim() !== "") {
           input.style.border = '2px solid red';
           if (errDiv) { errDiv.innerText = r.error_msg || "Invalid input"; errDiv.style.display = 'block'; }
@@ -313,34 +314,43 @@ async function init() {
           if (errDiv) errDiv.style.display = 'none';
         }
 
-        // --- THE 0.01% FIX: YELLOW BUTTON LOGIC ---
+        // 2. Handle Verification Logic (Email/Mobile)
         if (r.field_id === 'email' || r.field_id === 'mobile') {
           const panel = document.getElementById(`panel-${r.field_id}`);
           const vBtn = document.getElementById(`vbtn-${r.field_id}`);
           const msg = document.getElementById(`vmsg-${r.field_id}`);
 
-          // Only show yellow button if data is currently valid AND changed AND not verified
-          if (isValid && isChanged && !verificationStates[r.field_id]) {
+          // IF ALREADY VERIFIED: Keep the tick, hide the yellow panel
+          if (verificationStates[r.field_id]) {
+            if (msg) msg.style.display = 'block'; 
+            if (panel) panel.style.display = 'none';
+          } 
+          // IF VALID & CHANGED BUT NOT YET VERIFIED: Show yellow panel
+          else if (isValid && isChanged) {
             vBtn.innerText = `Click here to send Verification Code to ${input.value}`;
-            panel.style.display = 'block'; 
+            panel.style.display = 'block';
+            if (msg) msg.style.display = 'none';
             allValid = false;
-          } else {
-            // IMMEDIATELY hide panel if 11th digit added or data becomes invalid
-            panel.style.display = 'none';
-            // If the data changed after a verification was successful, reset the tick!
-            if (isChanged) {
-              verificationStates[r.field_id] = false;
-              if (msg) msg.style.display = 'none';
-            }
+          } 
+          // IF INVALID OR NOT CHANGED: Hide everything
+          else {
+            if (panel) panel.style.display = 'none';
+            if (!isChanged && msg) msg.style.display = 'none';
           }
         }
         
+        // 3. Final Check for Required Fields
         if (input.value.trim() === "" && r.initial_state === 'Visible') allValid = false;
       }
     });
-    document.getElementById('btn-master-update').disabled = !allValid;
-    if (document.getElementById('btn-register')) document.getElementById('btn-register').disabled = !allValid;
+
+    // Enable/Disable the Submit buttons
+    const masterBtn = document.getElementById('btn-master-update');
+    const regBtn = document.getElementById('btn-register');
+    if (masterBtn) masterBtn.disabled = !allValid;
+    if (regBtn) regBtn.disabled = !allValid;
   }
+
 
 async function submitData() {
     const now = new Date();
