@@ -27,12 +27,10 @@
     .item { padding: 12px; cursor: pointer; border-bottom: 1px solid #f1f1f1; font-size: 14px; }
     .item:hover { background: #e8eaf6; }
     
-    /* SUCCESS SCREEN & IMAGE GUARD */
     #success-screen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; z-index: 9999; overflow-y: auto; }
     .thank-you-wrapper { max-width: 800px; margin: 0 auto; padding: 40px 20px; }
     .thank-you-wrapper img { max-width: 100% !important; height: auto !important; display: block; margin: 20px auto; border-radius: 10px; }
 
-    /* PROCESSING OVERLAY */
     #processing-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 10000; text-align: center; padding-top: 25vh; }
     .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #1a237e; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -77,18 +75,14 @@
   let originalData = {}; 
   let verificationStates = { email: false, mobile: false };
 
-
 async function init() {
     try {
-      // 1. Fetch the Basic Event Config (Titles, Subtitles, etc.)
       const configSnap = await db.ref('config/eventConfig').once('value');
       eventConfig = (configSnap.val() || {})[eventId] || { title: "Registration" };
       
-      // 2. Fetch only the "Thank You" HTML directly from the Storage node
       const htmlSnap = await db.ref('htmlStorage/' + eventId + '/thank').once('value');
       eventConfig.final_html = htmlSnap.val() || "<h2>Registration Successful!</h2>";
 
-      // 3. Render the Form
       document.getElementById('title').innerHTML = eventConfig.title;
       document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
       const rulesSnap = await db.ref('config/fieldRules').once('value');
@@ -100,9 +94,6 @@ async function init() {
       
     } catch (e) { console.error("Initialization Error:", e); }
   }
-
-
-
 
   function renderForm() {
     const container = document.getElementById('dynamic-fields');
@@ -137,256 +128,3 @@ async function init() {
       if (r.field_id === 'full_name') {
         div.style.display = 'block';
         document.getElementById('inp-full_name').disabled = false;
-      }
-    });
-  }
-
-  async function onInputChange(fId, val) {
-    if (fId === 'full_name' || fId === 'centre') handleSearch(fId, val);
-    checkAllValidations();
-  }
-
-  async function handleSearch(fId, val) {
-    const resDiv = document.getElementById(`res-${fId}`);
-    if (val.length < 3) { resDiv.style.display = 'none'; return; }
-    const rule = fieldRules.find(r => r.field_id === fId);
-    const lookupTab = rule ? rule.lookup_tab : null;
-    if (fId === 'full_name' && lookupTab) {
-      if (masterData.length === 0) { 
-        const snap = await db.ref(lookupTab).once('value'); 
-        const raw = snap.val() || {};
-        masterData = Array.isArray(raw) ? raw : Object.values(raw);
-      }
-      const searchVal = val.toLowerCase();
-      const filtered = masterData.filter(x => {
-        const searchKey = rule.lookup_column || 'full_name';
-        const n = x[searchKey] || x['full_name'] || "";
-        return String(n).toLowerCase().includes(searchVal);
-      });
-      renderDropdown(resDiv, filtered.slice(0, 8), 'name');
-    } else if (fId === 'centre') {
-      const searchVal = val.toLowerCase();
-      const filtered = masterData.filter(x => x.centre?.toLowerCase().includes(searchVal));
-      renderDropdown(resDiv, filtered.slice(0, 8), 'loc');
-    }
-  }
-
-  function renderDropdown(div, list, type) {
-    div.innerHTML = '';
-    if (list.length > 0) {
-      div.style.display = 'block';
-      list.forEach(item => {
-        const d = document.createElement('div');
-        d.className = 'item';
-        d.textContent = type === 'loc' ? item.centre : (item.full_name || item['Full Name'] || "Unknown");
-        d.onclick = () => type === 'loc' ? selectLocation(item) : selectParticipant(item);
-        div.appendChild(d);
-      });
-    } else { div.style.display = 'none'; }
-  }
-
-  function selectParticipant(p) {
-    fieldRules.forEach(r => {
-      const el = document.getElementById(`inp-${r.field_id}`);
-      const cont = document.getElementById(`cont-${r.field_id}`);
-      const editLink = document.getElementById(`edit-link-${r.field_id}`);
-      if (el) {
-        const masterValue = p[r.field_id] || p[r.field_id.replace('_',' ')] || "";
-        el.value = masterValue;
-        originalData[r.field_id] = masterValue;
-        cont.style.display = (r.initial_state === 'Hidden') ? 'none' : 'block';
-        el.disabled = true;
-        if (editLink) editLink.style.display = 'none';
-      }
-    });
-    document.getElementById('res-full_name').style.display = 'none';
-    document.getElementById('btns-start').style.display = 'flex';
-    document.getElementById('inp-full_name').disabled = true;
-    checkAllValidations();
-  }
-
-  function selectLocation(l) {
-    document.getElementById('inp-centre').value = l.centre;
-    ['district', 'zone'].forEach(f => { if(document.getElementById(`inp-${f}`)) document.getElementById(`inp-${f}`).value = l[f] || ''; });
-    document.getElementById('res-centre').style.display = 'none';
-    checkAllValidations();
-  }
-
-  function enableEditMode() {
-    document.getElementById('btns-start').style.display = 'none';
-    document.getElementById('btn-master-update').style.display = 'block';
-    fieldRules.forEach(r => {
-      const editLink = document.getElementById(`edit-link-${r.field_id}`);
-      const helpEl = document.getElementById(`help-${r.field_id}`);
-      const canBeEdited = ['Editable', 'Editable_Verify', 'Editable_Lookup'].includes(r.edit_behavior);
-      if (editLink && canBeEdited) editLink.style.display = 'inline';
-      if (helpEl && helpEl.innerText.trim() !== "") helpEl.style.display = 'block';
-    });
-  }
-
-  function unlockField(fId) {
-    document.getElementById(`inp-${fId}`).disabled = false;
-    document.getElementById(`inp-${fId}`).focus();
-    document.getElementById(`edit-link-${fId}`).style.display = 'none';
-  }
-
-  function sendCode(type) {
-    verificationAttempts[type] = 0;
-    const msg = document.getElementById(`vmsg-${type}`);
-    if (msg) msg.style.display = "none";
-    const targetEmail = (type === 'email') ? document.getElementById('inp-email').value : originalData['email'];
-    const btn = document.getElementById(`vbtn-${type}`);
-    btn.disabled = true;
-    btn.innerText = "Sending Code...";
-    fetch(`${SCRIPT_URL}?action=sendVerificationCode&email=${encodeURIComponent(targetEmail)}&eventId=${eventId}`, { mode: 'no-cors' });
-    setTimeout(() => {
-      document.getElementById(`panel-${type}`).style.backgroundColor = "#e3f2fd";
-      btn.style.display = "none";
-      document.getElementById(`box-${type}`).style.display = "block";
-      const codeInp = document.getElementById(`code-${type}`);
-      if (codeInp) { codeInp.value = ""; codeInp.disabled = false; }
-      startResendTimer(type);
-    }, 1500);
-  }
-
-  function startResendTimer(type) {
-    const container = document.getElementById(`resend-container-${type}`);
-    let seconds = 30;
-    const interval = setInterval(() => {
-      seconds--;
-      if (seconds > 0) { container.innerHTML = `<span class="timer-text">Resend in ${seconds}s</span>`; } 
-      else { clearInterval(interval); container.innerHTML = `<span class="resend-link" onclick="resendCode('${type}')">Resend Code</span>`; }
-    }, 1000);
-  }
-
-  function resendCode(type) {
-    document.getElementById(`box-${type}`).style.display = "none";
-    document.getElementById(`vbtn-${type}`).style.display = "block";
-    sendCode(type);
-  }
-
-  async function verifyCodeInput(type, code) {
-    if (code.length === 6) {
-      const emailKey = ((type === 'email') ? document.getElementById('inp-email').value : originalData['email']).replace(/[.#$[\]]/g, "_");
-      const snap = await db.ref("verificationCodes/" + emailKey).once('value');
-      const data = snap.val();
-      const msg = document.getElementById(`vmsg-${type}`);
-      const panel = document.getElementById(`panel-${type}`);
-      const codeInp = document.getElementById(`code-${type}`);
-      if (data && data.code === code && (new Date().getTime() - data.timestamp < 300000)) {
-        msg.innerText = "Verified ✅"; msg.style.color = "#2e7d32"; msg.style.display = "block";
-        if (panel) panel.style.display = "none";
-        document.getElementById(`inp-${type}`).disabled = true;
-        verificationStates[type] = true;
-        verificationAttempts[type] = 0;
-        checkAllValidations();
-      } else {
-        verificationAttempts[type]++;
-        if (verificationAttempts[type] >= 3) {
-          msg.innerText = "Too many failed attempts."; msg.style.color = "#d32f2f"; msg.style.display = "block";
-          codeInp.disabled = true; codeInp.value = "LOCKED";
-        } else {
-          msg.innerText = `Invalid Code. Attempt ${verificationAttempts[type]} of 3.`;
-          msg.style.color = "#d32f2f"; msg.style.display = "block";
-          setTimeout(() => { codeInp.value = ""; codeInp.focus(); }, 1000);
-        }
-        verificationStates[type] = false;
-      }
-    }
-  }
-
-  function validateField(id, value, rule) {
-    if (!rule || rule === 'NULL' || value.trim() === "") return value.trim() !== "";
-    const val = value.trim();
-    if (rule === 'MOB') return /^[6-9]\d{9}$/.test(val);
-    if (rule === 'PIN') return /^\d{6}$/.test(val);
-    if (rule === 'EMAIL') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
-    return true;
-  }
-
-  function checkAllValidations() {
-    let allValid = true;
-    fieldRules.forEach(r => {
-      const input = document.getElementById(`inp-${r.field_id}`);
-      const errDiv = document.getElementById(`err-${r.field_id}`);
-      if (input) {
-        let isValid = validateField(r.field_id, input.value, r.field_validation);
-        let isChanged = input.value !== (originalData[r.field_id] || "");
-        if (!isValid && input.value.trim() !== "") {
-          input.style.border = '2px solid red';
-          if (errDiv) { errDiv.innerText = r.error_msg || "Invalid input"; errDiv.style.display = 'block'; }
-          allValid = false;
-        } else {
-          input.style.border = '1px solid #ced4da';
-          if (errDiv) errDiv.style.display = 'none';
-        }
-        if (r.field_id === 'email' || r.field_id === 'mobile') {
-          const panel = document.getElementById(`panel-${r.field_id}`);
-          const vBtn = document.getElementById(`vbtn-${r.field_id}`);
-          if (isValid && isChanged && !verificationStates[r.field_id]) {
-            vBtn.innerText = `Click here to send Verification Code to ${input.value}`;
-            panel.style.display = 'block'; allValid = false;
-          } else if (!isChanged || verificationStates[r.field_id]) { panel.style.display = 'none'; }
-        }
-        if (input.value.trim() === "" && r.initial_state === 'Visible') allValid = false;
-      }
-    });
-    document.getElementById('btn-master-update').disabled = !allValid;
-    if (document.getElementById('btn-register')) document.getElementById('btn-register').disabled = !allValid;
-  }
-
-async function submitData() {
-    const now = new Date();
-    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const istDate = new Date(utc + (3600000 * 5.5));
-    const istTimestamp = `${String(istDate.getDate()).padStart(2, '0')}-${String(istDate.getMonth() + 1).padStart(2, '0')}-${istDate.getFullYear()} ${String(istDate.getHours()).padStart(2, '0')}:${String(istDate.getMinutes()).padStart(2, '0')}:${String(istDate.getSeconds()).padStart(2, '0')}`;
-    const regId = eventId + "REG" + istDate.getTime();
-    
-    const formData = {
-      registration_id: regId,
-      timestamp: istTimestamp,
-      email_sent: "No", 
-      ...eventConfig
-    };
-
-    fieldRules.forEach(r => {
-      const input = document.getElementById(`inp-${r.field_id}`);
-      if (input) formData[r.field_id] = input.value.trim();
-    });
-
-    try {
-      // 1. Enter Processing Mode
-      document.getElementById('app').style.display = 'none';
-      document.getElementById('processing-overlay').style.display = 'block';
-
-      // 2. Save Registration to Firebase
-      await db.ref('registrations/' + regId).set(formData);
-      
-      // 3. TRIGGER THE EMAIL ENGINE (Code.gs)
-      // This tells your Apps Script: "Data is saved, now send the email for this Reg ID"
-      const scriptUrl = "https://script.google.com/macros/s/AKfycbyPbae3F_Vm2q25LWZF1G59O0V2XRrokeqxNkLvZetTKl19HM4QubILy17nPe65Q-L-zw/exec"; 
-      fetch(`${scriptUrl}?action=sendEmail&regId=${regId}&eventId=${eventId}`)
-        .then(() => console.log("Email trigger sent to server."))
-        .catch(err => console.error("Email trigger failed:", err));
-
-      // 4. Grab the HTML we fetched during init()
-      const thankYouHTML = eventConfig.final_html || "<h2>Registration Successful!</h2>";
-      document.getElementById('success-content').innerHTML = thankYouHTML;
-
-      // 5. Reveal the Success Screen
-      document.getElementById('processing-overlay').style.display = 'none';
-      document.getElementById('success-screen').style.display = 'block';
-      
-    } catch (error) {
-      console.error("Firebase Error:", error);
-      document.getElementById('processing-overlay').style.display = 'none';
-      document.getElementById('app').style.display = 'block';
-      alert("Submission failed. Please check your connection and try again.");
-    }
-}
-  
-  
-  init();
-</script>
-</body>
-</html>
