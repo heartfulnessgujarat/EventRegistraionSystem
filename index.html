@@ -260,16 +260,29 @@ function selectParticipant(p) {
     checkAllValidations();
   }
 
-  function enableEditMode() {
-    document.getElementById('btns-start').style.display = 'none';
-    document.getElementById('btn-master-update').style.display = 'block';
-    fieldRules.forEach(r => {
-      const link = document.getElementById(`edit-link-${r.field_id}`);
-      if (link) link.style.display = 'inline';
-      const helpEl = document.getElementById(`help-${r.field_id}`);
-      if (helpEl && helpEl.innerText.trim() !== "") helpEl.style.display = 'block';
-    });
-  }
+
+function enableEditMode() {
+  document.getElementById('btns-start').style.display = 'none';
+  document.getElementById('btn-master-update').style.display = 'block';
+  
+  fieldRules.forEach(r => {
+    const editLink = document.getElementById(`edit-link-${r.field_id}`);
+    const helpEl = document.getElementById(`help-${r.field_id}`);
+
+    // ONLY show the Edit link if the behavior allows it (Editable, Editable_Verify, Editable_Lookup)
+    const canBeEdited = ['Editable', 'Editable_Verify', 'Editable_Lookup'].includes(r.edit_behavior);
+    
+    if (editLink && canBeEdited) {
+      editLink.style.display = 'inline';
+    }
+
+    // Always show help text in edit mode if it exists
+    if (helpEl && helpEl.innerText.trim() !== "") {
+      helpEl.style.display = 'block';
+    }
+  });
+}
+
 
   function unlockField(fId) {
     document.getElementById(`inp-${fId}`).disabled = false;
