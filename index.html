@@ -203,25 +203,55 @@ async function handleSearch(fId, val) {
     }
   }
 
-  function selectParticipant(p) {
-    fieldRules.forEach(r => {
-      const el = document.getElementById(`inp-${r.field_id}`);
-      if (el) {
-        // Handle flexible headers from sheet (e.g. if 'Full Name' is in sheet but 'full_name' in rules)
-        el.value = p[r.field_id] || p[r.field_id.replace('_',' ')] || p['Full Name'] || '';
-        originalData[r.field_id] = el.value;
-        if (r.field_id === 'full_name') {
-          el.disabled = true;
-          const helpEl = document.getElementById('help-full_name');
-          if (helpEl && helpEl.innerText.trim() !== "") helpEl.style.display = 'block';
-        }
-        if (r.initial_state !== 'Hidden') document.getElementById(`cont-${r.field_id}`).style.display = 'block';
+
+function selectParticipant(p) {
+  fieldRules.forEach(r => {
+    const el = document.getElementById(`inp-${r.field_id}`);
+    const cont = document.getElementById(`cont-${r.field_id}`);
+    const editLink = document.getElementById(`edit-link-${r.field_id}`);
+
+    if (el) {
+      // 1. DYNAMIC DATA FILL
+      // Looks for field_id (e.g. 'full_name') in the Master DB record
+      const masterValue = p[r.field_id] || p[r.field_id.replace('_',' ')] || "";
+      el.value = masterValue;
+      originalData[r.field_id] = masterValue;
+
+      // 2. VISIBILITY LOGIC
+      // If rule says 'Hidden', keep it hidden. Otherwise, show it now that data is present.
+      if (r.initial_state === 'Hidden') {
+        cont.style.display = 'none';
+      } else {
+        cont.style.display = 'block';
       }
-    });
-    document.getElementById('res-full_name').style.display = 'none';
-    document.getElementById('btns-start').style.display = 'flex';
-    checkAllValidations();
-  }
+
+      // 3. EDIT BEHAVIOR LOGIC (The "Remarks Table" Rule)
+      // We disable the input by default once a participant is selected.
+      el.disabled = true;
+
+      if (editLink) {
+        // If behavior is 'ReadOnly' or 'Locked', the Edit link NEVER appears.
+        if (r.edit_behavior === 'ReadOnly' || r.edit_behavior === 'Locked') {
+          editLink.style.display = 'none';
+        } else {
+          // For 'Editable' or 'Editable_Verify', we keep it hidden FOR NOW.
+          // It will only appear when the user clicks "I want to edit my details".
+          editLink.style.display = 'none';
+        }
+      }
+    }
+  });
+
+  // 4. UI TRANSITION
+  document.getElementById('res-full_name').style.display = 'none';
+  document.getElementById('btns-start').style.display = 'flex';
+  
+  // Disable the search box itself now that a name is selected
+  document.getElementById('inp-full_name').disabled = true;
+  
+  checkAllValidations();
+}
+
 
   function selectLocation(l) {
     document.getElementById('inp-centre').value = l.centre;
