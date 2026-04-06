@@ -362,12 +362,18 @@ async function submitData() {
       // 2. Save Registration to Firebase
       await db.ref('registrations/' + regId).set(formData);
       
-      // 3. Grab the HTML we fetched during init()
-      // We use eventConfig.final_html which was populated in the new init()
+      // 3. TRIGGER THE EMAIL ENGINE (Code.gs)
+      // This tells your Apps Script: "Data is saved, now send the email for this Reg ID"
+      const scriptUrl = "https://script.google.com/macros/s/AKfycbyPbae3F_Vm2q25LWZF1G59O0V2XRrokeqxNkLvZetTKl19HM4QubILy17nPe65Q-L-zw/exec"; 
+      fetch(`${scriptUrl}?action=sendEmail&regId=${regId}&eventId=${eventId}`)
+        .then(() => console.log("Email trigger sent to server."))
+        .catch(err => console.error("Email trigger failed:", err));
+
+      // 4. Grab the HTML we fetched during init()
       const thankYouHTML = eventConfig.final_html || "<h2>Registration Successful!</h2>";
       document.getElementById('success-content').innerHTML = thankYouHTML;
 
-      // 4. Reveal the Success Screen
+      // 5. Reveal the Success Screen
       document.getElementById('processing-overlay').style.display = 'none';
       document.getElementById('success-screen').style.display = 'block';
       
@@ -378,8 +384,6 @@ async function submitData() {
       alert("Submission failed. Please check your connection and try again.");
     }
 }
-
-
   
   
   init();
