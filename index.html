@@ -80,18 +80,45 @@
 function renderForm() {
     const container = document.getElementById('dynamic-fields');
     container.innerHTML = '';
-    fieldRules.forEach(r => {
-      const div = document.createElement('div');
-      div.className = 'field-container';
-      div.id = `cont-${r.field_id}`;
-      div.style.display = (r.initial_state === 'Visible') ? 'block' : 'none';
-      const canEdit = ['email', 'mobile', 'centre', 'pincode'].includes(r.field_id);
-      div.innerHTML = `
-        <div class="label-row">
-          <label>${r.display_label || r.field_id}</label>
-          ${canEdit ? `<span class="edit-link" id="edit-link-${r.field_id}" onclick="unlockField('${r.field_id}')">Edit</span>` : ''}
-        </div>
-        <input type="text" id="inp-${r.field_id}" oninput="onInputChange('${r.field_id}', this.value)" disabled autocomplete="off">
+  //  fieldRules.forEach(r => {
+
+fieldRules.forEach(r => {
+  const div = document.createElement('div');
+  div.className = 'field-container';
+  div.id = `cont-${r.field_id}`;
+  
+  // DYNAMIC VISIBILITY
+  div.style.display = (r.initial_state === 'Hidden') ? 'none' : 'block';
+
+  // DYNAMIC LOCKING: Only show "Edit" link if the rule says it's "Locked"
+  // If it's "Visible", it's already open for input.
+  const isLocked = (r.initial_state === 'Locked');
+
+  div.innerHTML = `
+    <div class="label-row">
+      <label>${r.display_label || r.field_id}</label>
+      ${isLocked ? `<span class="edit-link" id="edit-link-${r.field_id}" style="display:none;" onclick="unlockField('${r.field_id}')">Edit</span>` : ''}
+    </div>
+    <input type="text" id="inp-${r.field_id}" oninput="onInputChange('${r.field_id}', this.value)" disabled autocomplete="off">
+  
+
+
+
+      
+//      const div = document.createElement('div');
+  //    div.className = 'field-container';
+    //  div.id = `cont-${r.field_id}`;
+    //  div.style.display = (r.initial_state === 'Visible') ? 'block' : 'none';
+    //  const canEdit = ['email', 'mobile', 'centre', 'pincode'].includes(r.field_id);
+    //  div.innerHTML = `
+    //    <div class="label-row">
+      //    <label>${r.display_label || r.field_id}</label>
+    //      ${canEdit ? `<span class="edit-link" id="edit-link-${r.field_id}" onclick="unlockField('${r.field_id}')">Edit</span>` : ''}
+  //      </div>
+//        <input type="text" id="inp-${r.field_id}" oninput="onInputChange('${r.field_id}', this.value)" disabled autocomplete="off">
+
+
+  
         <div class="help-text" id="help-${r.field_id}">${r.field_help_text || ''}</div>
         <div class="error-msg-text" id="err-${r.field_id}"></div>
         <div class="dropdown" id="res-${r.field_id}"></div>
