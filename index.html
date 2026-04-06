@@ -351,50 +351,79 @@ function checkAllValidations() {
     if (regBtn) regBtn.disabled = !allValid;
   }
 
-
 async function submitData() {
-    const now = new Date();
-    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const istDate = new Date(utc + (3600000 * 5.5));
-    const istTimestamp = `${String(istDate.getDate()).padStart(2, '0')}-${String(istDate.getMonth() + 1).padStart(2, '0')}-${istDate.getFullYear()} ${String(istDate.getHours()).padStart(2, '0')}:${String(istDate.getMinutes()).padStart(2, '0')}:${String(istDate.getSeconds()).padStart(2, '0')}`;
-    const regId = eventId + "REG" + istDate.getTime();
-    
-    const formData = {
-      registration_id: regId,
-      timestamp: istTimestamp,
-      email_sent: "No", 
-      ...eventConfig
-    };
-
-    fieldRules.forEach(r => {
-      const input = document.getElementById(`inp-${r.field_id}`);
-      if (input) formData[r.field_id] = input.value.trim();
-    });
-
     try {
-      document.getElementById('app').style.display = 'none';
-      document.getElementById('processing-overlay').style.display = 'block';
+        document.getElementById('app').style.display = 'none';
+        document.getElementById('processing-overlay').style.display = 'block';
 
-      await db.ref('registrations/' + regId).set(formData);
-      
-      const scriptUrl = "https://script.google.com/macros/s/AKfycbyPbae3F_Vm2q25LWZF1G59O0V2XRrokeqxNkLvZetTKl19HM4QubILy17nPe65Q-L-zw/exec"; 
-      fetch(`${scriptUrl}?action=sendEmail&regId=${regId}&eventId=${eventId}`)
-        .then(() => console.log("Email trigger sent to server."))
-        .catch(err => console.error("Email trigger failed:", err));
+        // 1. THE TICKET DISPENSER (Get the next sequence number)
+        const counterRef = db.ref('counters/' + eventId);
+        const transactionResult = await counterRef.transaction((currentValue) => {
+            return (currentValue || 0) + 1;
+        });
 
-      const thankYouHTML = eventConfig.final_html || "<h2>Registration Successful!</h2>";
-      document.getElementById('success-content').innerHTML = thankYouHTML;
+        const currentCount = transactionResult.snapshot.val();
+        const paddedCount = String(currentCount).padStart(3, '0');
 
-      document.getElementById('processing-overlay').style.display = 'none';
-      document.getElementById('success-screen').style.display = 'block';
-      
+        // 2. GENERATE IST COMPONENTS
+        const now = new Date();
+        const istNow = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+        
+        // Format for Registration_ID (e.g., 07-APR-2026)
+        const dd = String(istNow.getUTCDate()).padStart(2, '0');
+        const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+        const mmm = months[istNow.getUTCMonth()];
+        const yyyy = istNow.getUTCFullYear();
+        
+        // Time with Milliseconds for ID (hhmmssms)
+        const hhmmssms = istNow.getUTCHours().toString().padStart(2, '0') + 
+                         istNow.getUTCMinutes().toString().padStart(2, '0') + 
+                         istNow.getUTCSeconds().toString().padStart(2, '0') + 
+                         istNow.getUTCMilliseconds().toString().padStart(3, '0');
+
+        // Readable Timestamp for the record (DD-MM-YYYY HH:MM:SS)
+        const istTimestamp = `${dd}-${String(istNow.getUTCMonth() + 1).padStart(2, '0')}-${yyyy} ${String(istNow.getUTCHours()).padStart(2, '0')}:${String(istNow.getUTCMinutes()).padStart(2, '0')}:${String(istNow.getUTCSeconds()).padStart(2, '0')}`;
+
+        // 3. THE NEW HUMAN-READABLE ID
+        const regId = `${eventId}-REG-${dd}-${mmm}-${yyyy}-${hhmmssms}-${paddedCount}`;
+
+        // 4. PREPARE DATA
+        const formData = {
+            registration_id: regId,
+            timestamp: istTimestamp,
+            email_sent: "No",
+            ...eventConfig
+        };
+
+        fieldRules.forEach(r => {
+            const input = document.getElementById(`inp-${r.field_id}`);
+            if (input) formData[r.field_id] = input.value.trim();
+        });
+
+        // 5. SAVE TO FIREBASE
+        await db.ref('registrations/' + regId).set(formData);
+
+        // 6. TRIGGER EMAIL
+        const scriptUrl = "https://script.google.com/macros/s/AKfycbyPbae3F_Vm2q25LWZF1G59O0V2XRrokeqxNkLvZetTKl19HM4QubILy17nPe65Q-L-zw/exec"; 
+        fetch(`${scriptUrl}?action=sendEmail&regId=${regId}&eventId=${eventId}`)
+            .then(() => console.log("Email trigger sent to server."))
+            .catch(err => console.error("Email trigger failed:", err));
+
+        // 7. SUCCESS SCREEN
+        const thankYouHTML = eventConfig.final_html || "<h2>Registration Successful!</h2>";
+        document.getElementById('success-content').innerHTML = thankYouHTML;
+        document.getElementById('processing-overlay').style.display = 'none';
+        document.getElementById('success-screen').style.display = 'block';
+
     } catch (error) {
-      console.error("Firebase Error:", error);
-      document.getElementById('processing-overlay').style.display = 'none';
-      document.getElementById('app').style.display = 'block';
-      alert("Submission failed. Please check your connection and try again.");
+        console.error("Submission Error:", error);
+        document.getElementById('processing-overlay').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        alert("Submission failed. Please check your connection and try again.");
     }
 }
+
+
   
   init();
 </script>
