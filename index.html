@@ -77,19 +77,32 @@
   let originalData = {}; 
   let verificationStates = { email: false, mobile: false };
 
-  async function init() {
+
+async function init() {
     try {
+      // 1. Fetch the Basic Event Config (Titles, Subtitles, etc.)
       const configSnap = await db.ref('config/eventConfig').once('value');
       eventConfig = (configSnap.val() || {})[eventId] || { title: "Registration" };
+      
+      // 2. Fetch only the "Thank You" HTML directly from the Storage node
+      const htmlSnap = await db.ref('htmlStorage/' + eventId + '/thank').once('value');
+      eventConfig.final_html = htmlSnap.val() || "<h2>Registration Successful!</h2>";
+
+      // 3. Render the Form
       document.getElementById('title').innerHTML = eventConfig.title;
       document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
       const rulesSnap = await db.ref('config/fieldRules').once('value');
       fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
+      
       renderForm();
       document.getElementById('loading-init').style.display = 'none';
       document.getElementById('form-content').style.display = 'block';
-    } catch (e) { console.error(e); }
+      
+    } catch (e) { console.error("Initialization Error:", e); }
   }
+
+
+
 
   function renderForm() {
     const container = document.getElementById('dynamic-fields');
