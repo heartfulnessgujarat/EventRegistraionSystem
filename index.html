@@ -379,6 +379,7 @@ function checkAllValidations() {
     if (document.getElementById('btn-register')) document.getElementById('btn-register').disabled = !allValid;
   }
 
+
 async function submitData() {
   // 1. Calculate IST Time (+5:30)
   const now = new Date();
@@ -395,37 +396,47 @@ async function submitData() {
   
   const istTimestamp = `${day}-${month}-${year} ${hours}:${mins}:${secs}`;
 
-  // 3. Generate the Registration ID (matching your requested formula)
-  // Format: EventID + REG + TimestampDigits
+  // 3. Generate the Registration ID
   const regId = eventId + "REG" + istDate.getTime();
 
-  // 4. Collect Form Data
+  // 4. Collect Form Data Dynamically (THE LEVEL 2 FIX)
   const formData = {
     registration_id: regId,
     timestamp: istTimestamp,
-    event_id: eventId,
-    full_name: document.getElementById('full_name').value,
-    mobile: document.getElementById('mobile').value,
-    email: document.getElementById('email').value,
-    pincode: document.getElementById('pincode').value,
-    zone: document.getElementById('zone').value,
-    district: document.getElementById('district').value,
-    centre: document.getElementById('centre').value
+    ...eventConfig // <--- INJECTS ALL 22 COLUMNS (event_type, etc.) AUTOMATICALLY
   };
 
-  // 5. Send to Firebase
+  // 5. Loop through your Field Rules to grab User Input
+  fieldRules.forEach(r => {
+    const input = document.getElementById(`inp-${r.field_id}`);
+    if (input) {
+      // We trim the value to ensure no accidental spaces are saved
+      formData[r.field_id] = input.value.trim();
+    }
+  });
+
+  // 6. Push to Firebase "registrations" Node
   try {
-    await firebase.database().ref('registrations/' + regId).set(formData);
+    document.getElementById('form-content').style.display = 'none';
+    document.getElementById('loader').style.display = 'block';
+
+    await db.ref('registrations/' + regId).set(formData);
     
-    // Show success and clear form
-    alert("Registration Successful! ID: " + regId);
-    document.getElementById('registrationForm').reset();
+    // 7. Success Action
+    alert("Registration Successful!\nYour ID is: " + regId);
+    
+    // Refresh the page to clear the form for the next user
+    window.location.reload();
     
   } catch (error) {
     console.error("Firebase Error:", error);
-    alert("Submission failed. Please check your connection.");
+    document.getElementById('loader').style.display = 'none';
+    document.getElementById('form-content').style.display = 'block';
+    alert("Submission failed. Please check your internet connection and try again.");
   }
-}  
+}
+
+
   init();
 </script>
 </body>
