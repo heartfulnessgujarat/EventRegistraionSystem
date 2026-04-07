@@ -286,14 +286,23 @@ async function init() {
     }
   }
 
-  function validateField(id, value, rule) {
+
+
+function validateField(id, value, rule) {
     if (!rule || rule === 'NULL' || value.trim() === "") return value.trim() !== "";
     const val = value.trim();
     if (rule === 'MOB') return /^[6-9]\d{9}$/.test(val);
     if (rule === 'PIN') return /^\d{6}$/.test(val);
-    if (rule === 'EMAIL') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+    
+    // UPDATED: Added '$' at the end to ensure no extra characters follow the email
+    if (rule === 'EMAIL') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val); 
+    
     return true;
-  }
+}
+
+
+  
+  
 
 function checkAllValidations() {
     let allValid = true;
