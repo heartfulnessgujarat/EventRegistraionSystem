@@ -188,7 +188,7 @@ async function handleSearch(fId, val) {
   }
 }
 
-  function renderDropdown(div, list, type) {
+function renderDropdown(div, list, type) {
   div.innerHTML = '';
   
   if (list.length > 0) {
@@ -196,24 +196,28 @@ async function handleSearch(fId, val) {
     
     list.forEach(val => {
       const d = document.createElement('div');
-      d.className = 'item'; // Matches your current CSS
-      d.textContent = val;  // 'val' is now just the clean string (e.g., "Vadodara")
+      d.className = 'item'; 
+      d.textContent = val; // This is the string (e.g., "Vinay Chavda")
       
       d.onclick = () => {
         if (type === 'loc') {
-          // If it's a location, we just update the input and hide dropdown
           const input = document.getElementById('inp-centre');
           input.value = val;
           div.style.display = 'none';
-          // Trigger validation
           onInputChange('centre', val);
         } else {
-          // If it's a name, we find that person in masterData to auto-fill the rest
-          const person = masterData.find(x => 
-            String(x.full_name || x['Full Name'] || "").trim() === val
-          );
+          // Find the actual participant object in masterData to fill the rest of the form
+          const person = masterData.find(x => {
+            const name = x.full_name || x['Full Name'] || "";
+            return String(name).trim() === val;
+          });
+          
           if (person) {
-            selectParticipant(person);
+            selectParticipant(person); // This fills the phone, email, etc.
+            div.style.display = 'none';
+          } else {
+            // Fallback: If for some reason we can't find the object, just fill the name
+            document.getElementById('inp-full_name').value = val;
             div.style.display = 'none';
           }
         }
@@ -224,6 +228,8 @@ async function handleSearch(fId, val) {
     div.style.display = 'none'; 
   }
 }
+
+
   function selectParticipant(p) {
     fieldRules.forEach(r => {
       const el = document.getElementById(`inp-${r.field_id}`);
