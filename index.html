@@ -188,7 +188,6 @@ async function handleSearch(fId, val) {
   }
 }
 
-
 function renderDropdown(div, list, type) {
   div.innerHTML = '';
   
@@ -200,30 +199,33 @@ function renderDropdown(div, list, type) {
       d.className = 'item'; 
       d.textContent = val; 
       
-      d.onclick = (e) => {
-        // Prevent any background clicks from re-triggering the search
-        e.stopPropagation();
-
+      d.onclick = () => {
         if (type === 'loc') {
-          const input = document.getElementById('inp-centre');
-          input.value = val;
-          // FORCE HIDE BOTH POSSIBLE DROPDOWNS
-          document.getElementById('res-centre').style.display = 'none';
-          onInputChange('centre', val);
+          // 1. Find the object that matches this unique centre name
+          const locObject = masterData.find(x => x.centre === val);
+          
+          if (locObject) {
+            // 2. Call your ORIGINAL function (this keeps all your old features!)
+            selectLocation(locObject); 
+          } else {
+            // Fallback if no object found
+            document.getElementById('inp-centre').value = val;
+          }
         } else {
+          // 1. Find the participant object that matches this unique name
           const person = masterData.find(x => {
             const name = x.full_name || x['Full Name'] || "";
             return String(name).trim() === val;
           });
           
           if (person) {
+            // 2. Call your ORIGINAL function
             selectParticipant(person); 
-          } else {
-            document.getElementById('inp-full_name').value = val;
           }
-          // FORCE HIDE BOTH POSSIBLE DROPDOWNS
-          document.getElementById('res-full_name').style.display = 'none';
         }
+        
+        // 3. ALWAYS hide the dropdown after any selection
+        div.style.display = 'none';
       };
       div.appendChild(d);
     });
@@ -231,7 +233,6 @@ function renderDropdown(div, list, type) {
     div.style.display = 'none'; 
   }
 }
-
 
 
   function selectParticipant(p) {
