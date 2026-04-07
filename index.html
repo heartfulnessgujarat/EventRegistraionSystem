@@ -468,37 +468,45 @@ async function submitData() {
 
 
 function manualFormatCheck() {
-    const emailInput = document.getElementById('inp-email');
-    const emailVal = emailInput.value.trim();
-    const vBtn = document.getElementById('vbtn-email');
-    const checkBtn = document.getElementById('vcheck-email');
-    const msg = document.getElementById('vmsg-email');
+  const emailInput = document.getElementById('inp-email');
+  const emailVal = emailInput.value.trim(); // This handles the space-trimming
+  const vBtn = document.getElementById('vbtn-email');
+  const checkBtn = document.getElementById('vcheck-email');
+  const msg = document.getElementById('vmsg-email');
 
-    const strictRegex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,6}$/;
+  // Strict Regex Shield
+  const strictRegex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,6}$/;
 
-    if (strictRegex.test(emailVal)) {
-      checkBtn.style.display = 'none';
-      vBtn.style.display = 'block';
-      vBtn.innerText = `Format Accepted! Click to Verify ${emailVal}`;
-      emailInput.style.border = '1px solid #ced4da';
-      if (msg) {
-        msg.innerText = "Email Format Accepted ✅";
-        msg.style.color = "#2e7d32";
-        msg.style.display = "block";
-      }
-    } else {
-      let errorNote = "Please check for typos or extra characters.";
-      if (!emailVal.includes("@")) errorNote = "Missing '@' symbol.";
-      else if (!emailVal.includes(".")) errorNote = "Missing a dot (e.g., .com).";
-      else if (/\s/.test(emailVal)) errorNote = "Spaces are not allowed.";
-
-      alert("❌ FORMAT ISSUE\n\n" + errorNote);
-      vBtn.style.display = 'none';
-      emailInput.style.border = '2px solid red';
-      emailInput.focus();
+  if (strictRegex.test(emailVal)) {
+    // 1. Hide the Gray Button
+    checkBtn.style.display = 'none';
+    
+    // 2. Reveal the Yellow Button with your EXACT requested wording
+    vBtn.style.display = 'block';
+    vBtn.innerText = `Format accepted, click here to send verification code to ${emailVal}`;
+    
+    // 3. Clear any red borders and show success message
+    emailInput.style.border = '1px solid #ced4da';
+    if (msg) {
+      msg.innerText = "Format Accepted ✅";
+      msg.style.color = "#2e7d32";
+      msg.style.display = "block";
     }
+  } else {
+    // GUIDANCE: If it fails
+    let errorNote = "Please check for typos or extra characters.";
+    if (!emailVal.includes("@")) errorNote = "Missing '@' symbol.";
+    else if (!emailVal.includes(".")) errorNote = "Missing a dot (e.g., .com).";
+    else if (/\s/.test(emailVal)) errorNote = "Spaces are not allowed within the email.";
+
+    alert("❌ FORMAT ISSUE\n\n" + errorNote);
+    vBtn.style.display = 'none';
+    emailInput.style.border = '2px solid red';
+    emailInput.focus();
   }
- 
+}
+
+
 
   
   init();
