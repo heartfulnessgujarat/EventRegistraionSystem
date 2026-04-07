@@ -21,15 +21,24 @@
         overflow: hidden; 
     }
 
-    /* NEW: HEADER IMAGE CONTAINER */
+    /* FIXED: HEADER IMAGE CONTAINER WITH ROUNDED TOP */
     .header-image-container {
         width: 100%;
-        max-height: 180px; 
+        height: 180px; 
         overflow: hidden;
         display: none; 
         border-bottom: 3px solid #1a237e;
+        border-radius: 15px 15px 0 0; /* Ensures image matches card curves */
     }
-    #event-header-img { width: 100%; height: 180px; object-fit: cover; display: block; }
+
+    /* FIXED: OBJECT-FIT COVER FOR PERFECT ALIGNMENT */
+    #event-header-img { 
+        width: 100%; 
+        height: 100%; 
+        object-fit: cover; 
+        object-position: center; 
+        display: block; 
+    }
 
     /* FORM CONTENT PADDING */
     #form-content { padding: 20px 30px; }
@@ -37,7 +46,7 @@
     h2 { color: #1a237e; margin: 10px 0 5px 0; text-align: center; font-size: 22px; }
     .subtitle { color: #666; font-size: 13px; text-align: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
     
-    /* COMPACT FIELDS: Reduced margins to solve the scroll issue */
+    /* COMPACT FIELDS */
     .field-container { margin-bottom: 12px; position: relative; } 
     .label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
     label { font-weight: 700; font-size: 12px; color: #1a237e; }
@@ -76,24 +85,19 @@
     .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #1a237e; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 </style>  
-
-  
 </head>
 <body>
 
 <div class="card" id="app">
   <div id="loading-init"><h2>Loading registration form...</h2></div>
 
+  <div id="header-img-cont" class="header-image-container">
+      <img id="event-header-img" src="" alt="Event Banner">
+  </div>
 
   <div id="form-content" style="display:none;">
-    <div id="header-img-cont" class="header-image-container">
-        <img id="event-header-img" src="" alt="Event Banner">
-    </div>
-    
     <h2 id="title"></h2>
-
-  
-        <p class="subtitle" id="subtitle"></p>
+    <p class="subtitle" id="subtitle"></p>
     <div id="dynamic-fields"></div>
     <div id="btns-start" style="display:none; flex-direction:column; gap:10px;">
       <button id="btn-register" class="primary-btn" disabled onclick="submitData()">Confirm Registration</button>
@@ -106,7 +110,6 @@
 <div id="success-screen">
     <div id="success-content" class="thank-you-card"></div>
 </div>
-  
     
 <div id="processing-overlay">
     <div class="spinner"></div>
@@ -135,27 +138,23 @@ async function init() {
       const htmlSnap = await db.ref('htmlStorage/' + eventId + '/thank').once('value');
       eventConfig.final_html = htmlSnap.val() || "<h2>Registration Successful!</h2>";
 
-
-      
       document.getElementById('title').innerHTML = eventConfig.title;
 
-// --- START: HEADER IMAGE LOGIC ---
+      // --- FIXED: DYNAMIC HEADER IMAGE LOGIC ---
       if (eventConfig.event_title_image_url) {
         const imgId = eventConfig.event_title_image_url.trim();
-        // This converts your Google Drive ID into a real image link
-        const directLink = `https://lh3.googleusercontent.com/d/${imgId}`;
+        // Use the proper Google Drive direct link format
+        const directLink = `https://lh3.googleusercontent.com/u/0/d/${imgId}`;
         
         const imgEl = document.getElementById('event-header-img');
         const contEl = document.getElementById('header-img-cont');
         
         if (imgEl && contEl) {
           imgEl.src = directLink;
-          contEl.style.display = 'block'; // This reveals the image
+          contEl.style.display = 'block';
         }
       }
-      // --- END: HEADER IMAGE LOGIC ---
-
-           
+      
       document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
       const rulesSnap = await db.ref('config/fieldRules').once('value');
       fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
@@ -189,17 +188,14 @@ function renderForm() {
       <div id="vmsg-${r.field_id}" style="font-size:13px; margin-top:5px; font-weight:bold; display:none;"></div>
       ${(r.field_id === 'email' || r.field_id === 'mobile') ? `
         <div class="verify-panel" id="panel-${r.field_id}">
-          
           ${r.field_id === 'email' ? `
             <button type="button" class="verify-btn" id="vcheck-email" 
               style="background:#455a64; color:white; margin-bottom:10px;" 
               onclick="manualFormatCheck()">Check Email Format</button>
           ` : ''}
-
           <button class="verify-btn" id="vbtn-${r.field_id}" 
             style="display: ${r.field_id === 'email' ? 'none' : 'block'};" 
             onclick="sendCode('${r.field_id}')"></button>
-          
           <div id="box-${r.field_id}" style="display:none;">
             <input type="text" placeholder="Enter 6-digit code" id="code-${r.field_id}" oninput="verifyCodeInput('${r.field_id}', this.value)">
             <div id="resend-container-${r.field_id}" style="margin-top:8px;"></div>
@@ -215,13 +211,10 @@ function renderForm() {
   });
 }
 
-  
-  
-  async function onInputChange(fId, val) {
-    if (fId === 'full_name' || fId === 'centre') handleSearch(fId, val);
-    checkAllValidations();
-  }
-
+async function onInputChange(fId, val) {
+  if (fId === 'full_name' || fId === 'centre') handleSearch(fId, val);
+  checkAllValidations();
+}
 
 async function handleSearch(fId, val) {
   const resDiv = document.getElementById(`res-${fId}`);
@@ -239,7 +232,6 @@ async function handleSearch(fId, val) {
   const searchVal = val.toLowerCase();
 
   if (fId === 'full_name') {
-    // We get the unique names
     const allMatches = masterData
       .filter(x => {
         const n = x.full_name || x['Full Name'] || "";
@@ -262,199 +254,159 @@ async function handleSearch(fId, val) {
 
 function renderDropdown(div, list, type) {
   div.innerHTML = '';
-  
   if (list.length > 0) {
     div.style.display = 'block';
-    
     list.forEach(val => {
       const d = document.createElement('div');
       d.className = 'item'; 
       d.textContent = val; 
-      
       d.onclick = () => {
         if (type === 'loc') {
-          // 1. Find the object that matches this unique centre name
           const locObject = masterData.find(x => x.centre === val);
-          
-          if (locObject) {
-            // 2. Call your ORIGINAL function (this keeps all your old features!)
-            selectLocation(locObject); 
-          } else {
-            // Fallback if no object found
-            document.getElementById('inp-centre').value = val;
-          }
+          if (locObject) selectLocation(locObject); 
+          else document.getElementById('inp-centre').value = val;
         } else {
-          // 1. Find the participant object that matches this unique name
           const person = masterData.find(x => {
             const name = x.full_name || x['Full Name'] || "";
             return String(name).trim() === val;
           });
-          
-          if (person) {
-            // 2. Call your ORIGINAL function
-            selectParticipant(person); 
-          }
+          if (person) selectParticipant(person); 
         }
-        
-        // 3. ALWAYS hide the dropdown after any selection
         div.style.display = 'none';
       };
       div.appendChild(d);
     });
-  } else { 
-    div.style.display = 'none'; 
-  }
+  } else { div.style.display = 'none'; }
 }
 
+function selectParticipant(p) {
+  fieldRules.forEach(r => {
+    const el = document.getElementById(`inp-${r.field_id}`);
+    const cont = document.getElementById(`cont-${r.field_id}`);
+    const editLink = document.getElementById(`edit-link-${r.field_id}`);
+    if (el) {
+      const masterValue = p[r.field_id] || p[r.field_id.replace('_',' ')] || "";
+      el.value = masterValue;
+      originalData[r.field_id] = masterValue;
+      cont.style.display = (r.initial_state === 'Hidden') ? 'none' : 'block';
+      el.disabled = true;
+      if (editLink) editLink.style.display = 'none';
+    }
+  });
+  document.getElementById('res-full_name').style.display = 'none';
+  document.getElementById('btns-start').style.display = 'flex';
+  document.getElementById('inp-full_name').disabled = true;
+  checkAllValidations();
+}
 
-  function selectParticipant(p) {
-    fieldRules.forEach(r => {
-      const el = document.getElementById(`inp-${r.field_id}`);
-      const cont = document.getElementById(`cont-${r.field_id}`);
-      const editLink = document.getElementById(`edit-link-${r.field_id}`);
-      if (el) {
-        const masterValue = p[r.field_id] || p[r.field_id.replace('_',' ')] || "";
-        el.value = masterValue;
-        originalData[r.field_id] = masterValue;
-        cont.style.display = (r.initial_state === 'Hidden') ? 'none' : 'block';
-        el.disabled = true;
-        if (editLink) editLink.style.display = 'none';
-      }
-    });
-    document.getElementById('res-full_name').style.display = 'none';
-    document.getElementById('btns-start').style.display = 'flex';
-    document.getElementById('inp-full_name').disabled = true;
-    checkAllValidations();
-  }
+function selectLocation(l) {
+  document.getElementById('inp-centre').value = l.centre;
+  ['district', 'zone'].forEach(f => { if(document.getElementById(`inp-${f}`)) document.getElementById(`inp-${f}`).value = l[f] || ''; });
+  document.getElementById('res-centre').style.display = 'none';
+  checkAllValidations();
+}
 
-  function selectLocation(l) {
-    document.getElementById('inp-centre').value = l.centre;
-    ['district', 'zone'].forEach(f => { if(document.getElementById(`inp-${f}`)) document.getElementById(`inp-${f}`).value = l[f] || ''; });
-    document.getElementById('res-centre').style.display = 'none';
-    checkAllValidations();
-  }
-
-  function enableEditMode() {
-    document.getElementById('btns-start').style.display = 'none';
-    document.getElementById('btn-master-update').style.display = 'block';
-    fieldRules.forEach(r => {
-      const editLink = document.getElementById(`edit-link-${r.field_id}`);
-      const helpEl = document.getElementById(`help-${r.field_id}`);
-      const canBeEdited = ['Editable', 'Editable_Verify', 'Editable_Lookup'].includes(r.edit_behavior);
-      if (editLink && canBeEdited) editLink.style.display = 'inline';
-      if (helpEl && helpEl.innerText.trim() !== "") helpEl.style.display = 'block';
-    });
-  }
+function enableEditMode() {
+  document.getElementById('btns-start').style.display = 'none';
+  document.getElementById('btn-master-update').style.display = 'block';
+  fieldRules.forEach(r => {
+    const editLink = document.getElementById(`edit-link-${r.field_id}`);
+    const helpEl = document.getElementById(`help-${r.field_id}`);
+    const canBeEdited = ['Editable', 'Editable_Verify', 'Editable_Lookup'].includes(r.edit_behavior);
+    if (editLink && canBeEdited) editLink.style.display = 'inline';
+    if (helpEl && helpEl.innerText.trim() !== "") helpEl.style.display = 'block';
+  });
+}
 
 function unlockField(id) {
   const inp = document.getElementById(`inp-${id}`);
   const editLink = document.getElementById(`edit-link-${id}`);
-  
   inp.disabled = false;
   inp.focus();
   if (editLink) editLink.style.display = 'none';
-
   if (id === 'email') {
-    // Show Gray Button
     const checkBtn = document.getElementById('vcheck-email');
     if (checkBtn) checkBtn.style.display = 'block';
-    
-    // FORCE Yellow Button to stay hidden, even if it was visible from a previous attempt
     const vBtn = document.getElementById('vbtn-email');
     if (vBtn) vBtn.style.display = 'none';
-
-    // Reset any previous success messages
     const msg = document.getElementById('vmsg-email');
     if (msg) msg.style.display = 'none';
   }
 }
 
-  
+function sendCode(type) {
+  verificationAttempts[type] = 0;
+  const msg = document.getElementById(`vmsg-${type}`);
+  if (msg) msg.style.display = "none";
+  const targetEmail = (type === 'email') ? document.getElementById('inp-email').value : originalData['email'];
+  const btn = document.getElementById(`vbtn-${type}`);
+  btn.disabled = true;
+  btn.innerText = "Sending Code...";
+  fetch(`${SCRIPT_URL}?action=sendVerificationCode&email=${encodeURIComponent(targetEmail)}&eventId=${eventId}`, { mode: 'no-cors' });
+  setTimeout(() => {
+    document.getElementById(`panel-${type}`).style.backgroundColor = "#e3f2fd";
+    btn.style.display = "none";
+    document.getElementById(`box-${type}`).style.display = "block";
+    const codeInp = document.getElementById(`code-${type}`);
+    if (codeInp) { codeInp.value = ""; codeInp.disabled = false; }
+    startResendTimer(type);
+  }, 1500);
+}
 
-  
-    
-  function sendCode(type) {
-    verificationAttempts[type] = 0;
+function startResendTimer(type) {
+  const container = document.getElementById(`resend-container-${type}`);
+  let seconds = 30;
+  const interval = setInterval(() => {
+    seconds--;
+    if (seconds > 0) { container.innerHTML = `<span class="timer-text">Resend in ${seconds}s</span>`; } 
+    else { clearInterval(interval); container.innerHTML = `<span class="resend-link" onclick="resendCode('${type}')">Resend Code</span>`; }
+  }, 1000);
+}
+
+function resendCode(type) {
+  document.getElementById(`box-${type}`).style.display = "none";
+  document.getElementById(`vbtn-${type}`).style.display = "block";
+  sendCode(type);
+}
+
+async function verifyCodeInput(type, code) {
+  if (code.length === 6) {
+    const emailKey = ((type === 'email') ? document.getElementById('inp-email').value : originalData['email']).replace(/[.#$[\]]/g, "_");
+    const snap = await db.ref("verificationCodes/" + emailKey).once('value');
+    const data = snap.val();
     const msg = document.getElementById(`vmsg-${type}`);
-    if (msg) msg.style.display = "none";
-    const targetEmail = (type === 'email') ? document.getElementById('inp-email').value : originalData['email'];
-    const btn = document.getElementById(`vbtn-${type}`);
-    btn.disabled = true;
-    btn.innerText = "Sending Code...";
-    fetch(`${SCRIPT_URL}?action=sendVerificationCode&email=${encodeURIComponent(targetEmail)}&eventId=${eventId}`, { mode: 'no-cors' });
-    setTimeout(() => {
-      document.getElementById(`panel-${type}`).style.backgroundColor = "#e3f2fd";
-      btn.style.display = "none";
-      document.getElementById(`box-${type}`).style.display = "block";
-      const codeInp = document.getElementById(`code-${type}`);
-      if (codeInp) { codeInp.value = ""; codeInp.disabled = false; }
-      startResendTimer(type);
-    }, 1500);
-  }
-
-  function startResendTimer(type) {
-    const container = document.getElementById(`resend-container-${type}`);
-    let seconds = 30;
-    const interval = setInterval(() => {
-      seconds--;
-      if (seconds > 0) { container.innerHTML = `<span class="timer-text">Resend in ${seconds}s</span>`; } 
-      else { clearInterval(interval); container.innerHTML = `<span class="resend-link" onclick="resendCode('${type}')">Resend Code</span>`; }
-    }, 1000);
-  }
-
-  function resendCode(type) {
-    document.getElementById(`box-${type}`).style.display = "none";
-    document.getElementById(`vbtn-${type}`).style.display = "block";
-    sendCode(type);
-  }
-
-  async function verifyCodeInput(type, code) {
-    if (code.length === 6) {
-      const emailKey = ((type === 'email') ? document.getElementById('inp-email').value : originalData['email']).replace(/[.#$[\]]/g, "_");
-      const snap = await db.ref("verificationCodes/" + emailKey).once('value');
-      const data = snap.val();
-      const msg = document.getElementById(`vmsg-${type}`);
-      const panel = document.getElementById(`panel-${type}`);
-      const codeInp = document.getElementById(`code-${type}`);
-      if (data && data.code === code && (new Date().getTime() - data.timestamp < 300000)) {
-        msg.innerText = "Verified ✅"; msg.style.color = "#2e7d32"; msg.style.display = "block";
-        if (panel) panel.style.display = "none";
-        document.getElementById(`inp-${type}`).disabled = true;
-        verificationStates[type] = true;
-        verificationAttempts[type] = 0;
-        checkAllValidations();
+    const panel = document.getElementById(`panel-${type}`);
+    const codeInp = document.getElementById(`code-${type}`);
+    if (data && data.code === code && (new Date().getTime() - data.timestamp < 300000)) {
+      msg.innerText = "Verified ✅"; msg.style.color = "#2e7d32"; msg.style.display = "block";
+      if (panel) panel.style.display = "none";
+      document.getElementById(`inp-${type}`).disabled = true;
+      verificationStates[type] = true;
+      verificationAttempts[type] = 0;
+      checkAllValidations();
+    } else {
+      verificationAttempts[type]++;
+      if (verificationAttempts[type] >= 3) {
+        msg.innerText = "Too many failed attempts."; msg.style.color = "#d32f2f"; msg.style.display = "block";
+        codeInp.disabled = true; codeInp.value = "LOCKED";
       } else {
-        verificationAttempts[type]++;
-        if (verificationAttempts[type] >= 3) {
-          msg.innerText = "Too many failed attempts."; msg.style.color = "#d32f2f"; msg.style.display = "block";
-          codeInp.disabled = true; codeInp.value = "LOCKED";
-        } else {
-          msg.innerText = `Invalid Code. Attempt ${verificationAttempts[type]} of 3.`;
-          msg.style.color = "#d32f2f"; msg.style.display = "block";
-          setTimeout(() => { codeInp.value = ""; codeInp.focus(); }, 1000);
-        }
-        verificationStates[type] = false;
+        msg.innerText = `Invalid Code. Attempt ${verificationAttempts[type]} of 3.`;
+        msg.style.color = "#d32f2f"; msg.style.display = "block";
+        setTimeout(() => { codeInp.value = ""; codeInp.focus(); }, 1000);
       }
+      verificationStates[type] = false;
     }
   }
-
-
+}
 
 function validateField(id, value, rule) {
     if (!rule || rule === 'NULL' || value.trim() === "") return value.trim() !== "";
     const val = value.trim();
     if (rule === 'MOB') return /^[6-9]\d{9}$/.test(val);
     if (rule === 'PIN') return /^\d{6}$/.test(val);
-    
-    // UPDATED: Added '$' at the end to ensure no extra characters follow the email
     if (rule === 'EMAIL') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val); 
-    
     return true;
 }
-
-
-  
-  
 
 function checkAllValidations() {
     let allValid = true;
@@ -465,7 +417,6 @@ function checkAllValidations() {
         let isValid = validateField(r.field_id, input.value, r.field_validation);
         let isChanged = input.value !== (originalData[r.field_id] || "");
         
-        // 1. Handle Basic Visual Borders/Errors
         if (!isValid && input.value.trim() !== "") {
           input.style.border = '2px solid red';
           if (errDiv) { errDiv.innerText = r.error_msg || "Invalid input"; errDiv.style.display = 'block'; }
@@ -475,37 +426,28 @@ function checkAllValidations() {
           if (errDiv) errDiv.style.display = 'none';
         }
 
-        // 2. Handle Verification Logic (Email/Mobile)
         if (r.field_id === 'email' || r.field_id === 'mobile') {
           const panel = document.getElementById(`panel-${r.field_id}`);
           const vBtn = document.getElementById(`vbtn-${r.field_id}`);
           const msg = document.getElementById(`vmsg-${r.field_id}`);
 
-          // IF ALREADY VERIFIED: Keep the tick, hide the yellow panel
           if (verificationStates[r.field_id]) {
             if (msg) msg.style.display = 'block'; 
             if (panel) panel.style.display = 'none';
-          } 
-          // IF VALID & CHANGED BUT NOT YET VERIFIED: Show yellow panel
-          else if (isValid && isChanged) {
+          } else if (isValid && isChanged) {
             vBtn.innerText = `Click here to send Verification Code to ${input.value}`;
             panel.style.display = 'block';
             if (msg) msg.style.display = 'none';
             allValid = false;
-          } 
-          // IF INVALID OR NOT CHANGED: Hide everything
-          else {
+          } else {
             if (panel) panel.style.display = 'none';
             if (!isChanged && msg) msg.style.display = 'none';
           }
         }
-        
-        // 3. Final Check for Required Fields
         if (input.value.trim() === "" && r.initial_state === 'Visible') allValid = false;
       }
     });
 
-    // Enable/Disable the Submit buttons
     const masterBtn = document.getElementById('btn-master-update');
     const regBtn = document.getElementById('btn-register');
     if (masterBtn) masterBtn.disabled = !allValid;
@@ -517,7 +459,6 @@ async function submitData() {
         document.getElementById('app').style.display = 'none';
         document.getElementById('processing-overlay').style.display = 'block';
 
-        // 1. THE TICKET DISPENSER (Get the next sequence number)
         const counterRef = db.ref('counters/' + eventId);
         const transactionResult = await counterRef.transaction((currentValue) => {
             return (currentValue || 0) + 1;
@@ -526,51 +467,31 @@ async function submitData() {
         const currentCount = transactionResult.snapshot.val();
         const paddedCount = String(currentCount).padStart(3, '0');
 
-        // 2. GENERATE IST COMPONENTS
         const now = new Date();
         const istNow = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
-        
-        // Format for Registration_ID (e.g., 07-APR-2026)
         const dd = String(istNow.getUTCDate()).padStart(2, '0');
         const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
         const mmm = months[istNow.getUTCMonth()];
         const yyyy = istNow.getUTCFullYear();
-        
-        // Time with Milliseconds for ID (hhmmssms)
         const hhmmssms = istNow.getUTCHours().toString().padStart(2, '0') + 
                          istNow.getUTCMinutes().toString().padStart(2, '0') + 
                          istNow.getUTCSeconds().toString().padStart(2, '0') + 
                          istNow.getUTCMilliseconds().toString().padStart(3, '0');
 
-        // Readable Timestamp for the record (DD-MM-YYYY HH:MM:SS)
         const istTimestamp = `${dd}-${String(istNow.getUTCMonth() + 1).padStart(2, '0')}-${yyyy} ${String(istNow.getUTCHours()).padStart(2, '0')}:${String(istNow.getUTCMinutes()).padStart(2, '0')}:${String(istNow.getUTCSeconds()).padStart(2, '0')}`;
-
-        // 3. THE NEW HUMAN-READABLE ID
         const regId = `${eventId}-REG-${dd}-${mmm}-${yyyy}-${hhmmssms}-${paddedCount}`;
 
-        // 4. PREPARE DATA
-        const formData = {
-            registration_id: regId,
-            timestamp: istTimestamp,
-            email_sent: "No",
-            ...eventConfig
-        };
-
+        const formData = { registration_id: regId, timestamp: istTimestamp, email_sent: "No", ...eventConfig };
         fieldRules.forEach(r => {
             const input = document.getElementById(`inp-${r.field_id}`);
             if (input) formData[r.field_id] = input.value.trim();
         });
 
-        // 5. SAVE TO FIREBASE
         await db.ref('registrations/' + regId).set(formData);
-
-        // 6. TRIGGER EMAIL
-        const scriptUrl = "https://script.google.com/macros/s/AKfycbyPbae3F_Vm2q25LWZF1G59O0V2XRrokeqxNkLvZetTKl19HM4QubILy17nPe65Q-L-zw/exec"; 
-        fetch(`${scriptUrl}?action=sendEmail&regId=${regId}&eventId=${eventId}`)
-            .then(() => console.log("Email trigger sent to server."))
+        fetch(`${SCRIPT_URL}?action=sendEmail&regId=${regId}&eventId=${eventId}`)
+            .then(() => console.log("Email trigger sent."))
             .catch(err => console.error("Email trigger failed:", err));
 
-        // 7. SUCCESS SCREEN
         const thankYouHTML = eventConfig.final_html || "<h2>Registration Successful!</h2>";
         document.getElementById('success-content').innerHTML = thankYouHTML;
         document.getElementById('processing-overlay').style.display = 'none';
@@ -580,53 +501,32 @@ async function submitData() {
         console.error("Submission Error:", error);
         document.getElementById('processing-overlay').style.display = 'none';
         document.getElementById('app').style.display = 'block';
-        alert("Submission failed. Please check your connection and try again.");
+        alert("Submission failed. Please try again.");
     }
 }
 
-
 function manualFormatCheck() {
   const emailInput = document.getElementById('inp-email');
-  const emailVal = emailInput.value.trim(); // This handles the space-trimming
+  const emailVal = emailInput.value.trim();
   const vBtn = document.getElementById('vbtn-email');
   const checkBtn = document.getElementById('vcheck-email');
   const msg = document.getElementById('vmsg-email');
-
-  // Strict Regex Shield
   const strictRegex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,6}$/;
 
   if (strictRegex.test(emailVal)) {
-    // 1. Hide the Gray Button
     checkBtn.style.display = 'none';
-    
-    // 2. Reveal the Yellow Button with your EXACT requested wording
     vBtn.style.display = 'block';
     vBtn.innerText = `Format accepted, click here to send verification code to ${emailVal}`;
-    
-    // 3. Clear any red borders and show success message
     emailInput.style.border = '1px solid #ced4da';
-    if (msg) {
-      msg.innerText = "Format Accepted ✅";
-      msg.style.color = "#2e7d32";
-      msg.style.display = "block";
-    }
+    if (msg) { msg.innerText = "Format Accepted ✅"; msg.style.color = "#2e7d32"; msg.style.display = "block"; }
   } else {
-    // GUIDANCE: If it fails
-    let errorNote = "Please check for typos or extra characters.";
-    if (!emailVal.includes("@")) errorNote = "Missing '@' symbol.";
-    else if (!emailVal.includes(".")) errorNote = "Missing a dot (e.g., .com).";
-    else if (/\s/.test(emailVal)) errorNote = "Spaces are not allowed within the email.";
-
-    alert("❌ FORMAT ISSUE\n\n" + errorNote);
+    alert("❌ FORMAT ISSUE\n\nPlease check for typos, spaces, or missing dots.");
     vBtn.style.display = 'none';
     emailInput.style.border = '2px solid red';
     emailInput.focus();
   }
 }
 
-
-
-  
   init();
 </script>
 </body>
