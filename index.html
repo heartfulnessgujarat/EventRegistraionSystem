@@ -228,12 +228,30 @@ function renderForm() {
     });
   }
 
-  function unlockField(fId) {
-    document.getElementById(`inp-${fId}`).disabled = false;
-    document.getElementById(`inp-${fId}`).focus();
-    document.getElementById(`edit-link-${fId}`).style.display = 'none';
-  }
+function unlockField(id) {
+  const inp = document.getElementById(`inp-${id}`);
+  const editLink = document.getElementById(`edit-link-${id}`);
+  
+  inp.disabled = false;
+  inp.focus();
+  if (editLink) editLink.style.display = 'none';
 
+  if (id === 'email') {
+    // Show Gray Button
+    const checkBtn = document.getElementById('vcheck-email');
+    if (checkBtn) checkBtn.style.display = 'block';
+    
+    // FORCE Yellow Button to stay hidden, even if it was visible from a previous attempt
+    const vBtn = document.getElementById('vbtn-email');
+    if (vBtn) vBtn.style.display = 'none';
+
+    // Reset any previous success messages
+    const msg = document.getElementById('vmsg-email');
+    if (msg) msg.style.display = 'none';
+  }
+}
+
+    
   function sendCode(type) {
     verificationAttempts[type] = 0;
     const msg = document.getElementById(`vmsg-${type}`);
