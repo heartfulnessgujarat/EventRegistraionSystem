@@ -9,71 +9,34 @@
 
 <style>
     body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; margin: 0; }
-    
-    .card { 
-        width: 100%; 
-        max-width: 480px; 
-        background: white; 
-        padding: 0 0 30px 0; 
-        border-radius: 15px; 
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
-        overflow: hidden; 
-    }
-
-    /* THE CLIPPER: Keeps image in the box */
-    .header-image-container {
-        width: 100%;
-        height: 180px; 
-        overflow: hidden; 
-        display: none; 
-        border-bottom: 3px solid #1a237e;
-        border-radius: 15px 15px 0 0;
-        background: #e1e2e1;
-    }
-
-    #event-header-img { 
-        width: 100%; 
-        height: 100%; 
-        object-fit: cover; /* THE TAILOR: Perfect fit */
-        object-position: center; 
-        display: block; 
-    }
-
+    .card { width: 100%; max-width: 480px; background: white; padding: 0 0 30px 0; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; }
+    .header-image-container { width: 100%; height: 180px; overflow: hidden; display: none; border-bottom: 3px solid #1a237e; border-radius: 15px 15px 0 0; background: #e1e2e1; }
+    #event-header-img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
     #form-content { padding: 20px 30px; }
     h2 { color: #1a237e; margin: 10px 0 5px 0; text-align: center; font-size: 22px; }
     .subtitle { color: #666; font-size: 13px; text-align: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
     .field-container { margin-bottom: 12px; position: relative; } 
     label { font-weight: 700; font-size: 12px; color: #1a237e; }
     input { width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 8px; box-sizing: border-box; font-size: 15px; }
-    .primary-btn { width: 100%; padding: 14px; background: #1a237e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 15px; }
-    
     .dropdown { border: 1px solid #ddd; max-height: 180px; overflow-y: auto; background: white; position: absolute; width: 100%; z-index: 9999; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 8px; }
     .item { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f1f1f1; font-size: 14px; }
     .item:hover { background: #e8eaf6; }
-
-    #success-screen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f0f2f5; z-index: 9999; overflow-y: auto; padding: 20px; }
-    .thank-you-card { max-width: 550px; margin: 20px auto; background: #ffffff; padding: 30px; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); }
-    #processing-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 10000; text-align: center; padding-top: 25vh; }
-    .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #1a237e; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .primary-btn { width: 100%; padding: 14px; background: #1a237e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 15px; }
 </style>  
 </head>
 <body>
 
 <div class="card" id="app">
-  <div id="loading-init"><h2>Loading...</h2></div>
-
+  <div id="loading-init"><h2>Loading Form...</h2></div>
   <div id="header-img-cont" class="header-image-container">
       <img id="event-header-img" src="" alt="Event Banner">
   </div>
-
   <div id="form-content" style="display:none;">
     <h2 id="title"></h2>
     <p class="subtitle" id="subtitle"></p>
     <div id="dynamic-fields"></div>
     <div id="btns-start" style="display:none; flex-direction:column; gap:10px;">
-      <button id="btn-register" class="primary-btn" disabled onclick="submitData()">Confirm Registration</button>
-      <button class="primary-btn" style="background:#455a64;" onclick="enableEditMode()">I want to edit my details</button>
+      <button id="btn-register" class="primary-btn" onclick="submitData()">Confirm Registration</button>
     </div>
   </div>
 </div>
@@ -83,45 +46,36 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
   const eventId = (new URLSearchParams(window.location.search).get('id') || 'EVT001').toUpperCase();
-  let fieldRules = [], masterData = [], eventConfig = {};
+  
+  let fieldRules = [], masterData = [], eventConfig = {}, originalData = {};
 
   async function init() {
     try {
-      // 1. STAGE ONE: Show text immediately
+      // 1. Instant Text Load
       const configSnap = await db.ref('config/eventConfig/' + eventId).once('value');
       eventConfig = configSnap.val() || { title: "Registration" };
-
       document.getElementById('title').innerHTML = eventConfig.title;
       document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
       document.getElementById('loading-init').style.display = 'none';
       document.getElementById('form-content').style.display = 'block';
 
-      // 2. STAGE TWO: Lazy Banner Load
+      // 2. Lazy Image
       if (eventConfig.event_title_image_url) {
         const imgId = eventConfig.event_title_image_url.trim();
-        const directLink = `https://lh3.googleusercontent.com/d/${imgId}`; 
         const imgEl = document.getElementById('event-header-img');
-        const contEl = document.getElementById('header-img-cont');
-        imgEl.onload = () => { contEl.style.display = 'block'; };
-        imgEl.src = directLink;
+        imgEl.onload = () => { document.getElementById('header-img-cont').style.display = 'block'; };
+        imgEl.src = `https://lh3.googleusercontent.com/d/${imgId}`;
       }
 
-      // 3. STAGE THREE: Rule-Based Fields
+      // 3. Rules & Rendering
       const rulesSnap = await db.ref('config/fieldRules').once('value');
-      const rulesData = rulesSnap.val() || {};
-      fieldRules = Object.values(rulesData).filter(r => String(r.event_id).toUpperCase() === eventId);
-      
+      fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
       renderForm();
 
-      // THE FIX: Unlock the name field so you can type
-      const nameInput = document.getElementById('inp-full_name');
-      if (nameInput) {
-        nameInput.disabled = false;
-        nameInput.placeholder = "Type name to search...";
-        nameInput.focus();
-      }
-      
-    } catch (e) { console.error("Init Error:", e); }
+      // UNLOCK NAME FIELD
+      const nameInp = document.getElementById('inp-full_name');
+      if (nameInp) { nameInp.disabled = false; nameInp.focus(); }
+    } catch (e) { console.error(e); }
   }
 
   function renderForm() {
@@ -132,44 +86,59 @@
       div.className = 'field-container';
       div.id = `cont-${r.field_id}`;
       div.style.display = (r.initial_state === 'Hidden') ? 'none' : 'block';
-      
       div.innerHTML = `
         <label>${r.display_label || r.field_id}</label>
-        <input type="text" id="inp-${r.field_id}" oninput="onInputChange('${r.field_id}', this.value)" disabled autocomplete="off">
+        <input type="text" id="inp-${r.field_id}" oninput="handleSearch('${r.field_id}', this.value)" disabled autocomplete="off">
         <div class="dropdown" id="res-${r.field_id}"></div>
       `;
       container.appendChild(div);
     });
   }
 
-  async function onInputChange(fId, val) {
-    if (fId === 'full_name') handleSearch(fId, val);
-  }
-
   async function handleSearch(fId, val) {
     const resDiv = document.getElementById(`res-${fId}`);
-    if (val.length < 3) { resDiv.style.display = 'none'; return; }
-    
-    if (masterData.length === 0) { 
-      const snap = await db.ref('master_data').once('value'); 
+    if (val.length < 3 || (fId !== 'full_name' && fId !== 'centre')) { resDiv.style.display = 'none'; return; }
+
+    if (masterData.length === 0) {
+      const rule = fieldRules.find(r => r.field_id === fId);
+      const snap = await db.ref(rule.lookup_tab || 'master_data').once('value');
       masterData = Object.values(snap.val() || {});
     }
 
-    const matches = masterData.filter(x => String(x.full_name).toLowerCase().includes(val.toLowerCase()));
+    const searchVal = val.toLowerCase();
+    const matches = masterData.filter(x => {
+      const fieldVal = String(x[fId] || x['Full Name'] || "").toLowerCase();
+      return fieldVal.includes(searchVal);
+    });
+
     resDiv.innerHTML = '';
     if (matches.length > 0) {
       resDiv.style.display = 'block';
-      matches.slice(0, 5).forEach(m => {
+      [...new Set(matches.map(m => m[fId] || m['Full Name']))].slice(0, 8).forEach(matchName => {
         const d = document.createElement('div');
         d.className = 'item';
-        d.textContent = m.full_name;
-        d.onclick = () => {
-          document.getElementById(`inp-${fId}`).value = m.full_name;
-          resDiv.style.display = 'none';
-        };
+        d.textContent = matchName;
+        d.onclick = () => selectRecord(matchName, fId);
         resDiv.appendChild(d);
       });
     }
+  }
+
+  function selectRecord(selectedVal, fId) {
+    const person = masterData.find(x => (x[fId] || x['Full Name']) === selectedVal);
+    if (!person) return;
+
+    fieldRules.forEach(r => {
+      const input = document.getElementById(`inp-${r.field_id}`);
+      if (input) {
+        input.value = person[r.field_id] || person[r.field_id.replace('_',' ')] || "";
+        document.getElementById(`cont-${r.field_id}`).style.display = 'block';
+      }
+    });
+
+    document.getElementById(`res-${fId}`).style.display = 'none';
+    document.getElementById('btns-start').style.display = 'flex';
+    document.getElementById('inp-full_name').disabled = true;
   }
 
   init();
