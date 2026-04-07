@@ -80,39 +80,55 @@
   const db = firebase.database();
   const eventId = (new URLSearchParams(window.location.search).get('id') || 'EVT001').toUpperCase();
 
-  async function init() {
+
+
+async function init() {
     try {
-      // 1. FAST LOAD: Get basic config and show form immediately
+      // 1. STAGE ONE: INSTANT RENDER (The "Quick Win")
+      // Fetch core config first to show text immediately
       const configSnap = await db.ref('config/eventConfig/' + eventId).once('value');
       const eventConfig = configSnap.val() || { title: "Registration" };
 
+      // Set Title and Subtitle immediately - user sees this almost instantly
       document.getElementById('title').innerHTML = eventConfig.title;
       document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
       
-      // Show form content right away so user isn't waiting
+      // Reveal the form content right away so the user can start reading
       document.getElementById('loading-init').style.display = 'none';
       document.getElementById('form-content').style.display = 'block';
 
-      // 2. PARALLEL LOAD: Fetch the banner image logic while user starts typing
+      // 2. STAGE TWO: THE LAZY BANNER (Background Task)
+      // This happens while the user is already looking at the form
       if (eventConfig.event_title_image_url) {
         const imgId = eventConfig.event_title_image_url.trim();
-        // DIRECT PIXEL STREAM URL
-        const directLink = `https://lh3.googleusercontent.com/d/${imgId}`;
+        // The "Best Way" URL prefix we discussed
+        const directLink = `https://lh3.googleusercontent.com/d/${imgId}`; 
         
         const imgEl = document.getElementById('event-header-img');
         const contEl = document.getElementById('header-img-cont');
         
-        imgEl.onload = () => { contEl.style.display = 'block'; }; // Only show box when image is ready
+        // The "Lazy" Trigger: Only show the box once the pixels are actually downloaded
+        imgEl.onload = function() {
+          contEl.style.display = 'block'; 
+          console.log("Banner loaded in background.");
+        };
         imgEl.src = directLink;
       }
 
-      // Fetch rules and render remaining fields
+      // 3. STAGE THREE: DATA & RULES
+      // Fetch rules and render fields while the image loads in the background
       const rulesSnap = await db.ref('config/fieldRules').once('value');
-      const fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
-      renderForm(fieldRules);
+      const rulesData = rulesSnap.val() || {};
+      fieldRules = Object.values(rulesData).filter(r => String(r.event_id).toUpperCase() === eventId);
       
-    } catch (e) { console.error("Init Error:", e); }
-  }
+      renderForm();
+      
+    } catch (e) { 
+      console.error("Initialization Error:", e);
+      document.getElementById('loading-init').innerHTML = "<h2>Error loading form. Please refresh.</h2>";
+    }
+}
+
 
   // ... (Keep your existing renderForm, handleSearch, and submitData functions here) ...
 
