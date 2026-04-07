@@ -150,14 +150,14 @@ function renderForm() {
     checkAllValidations();
   }
 
-  async function handleSearch(fId, val) {
+
+async function handleSearch(fId, val) {
   const resDiv = document.getElementById(`res-${fId}`);
   if (val.length < 3) { resDiv.style.display = 'none'; return; }
   
   const rule = fieldRules.find(r => r.field_id === fId);
   const lookupTab = rule ? rule.lookup_tab : null;
 
-  // 1. Ensure Master Data is loaded (The Database Fetch)
   if (masterData.length === 0 && lookupTab) { 
     const snap = await db.ref(lookupTab).once('value'); 
     const raw = snap.val() || {};
@@ -166,25 +166,19 @@ function renderForm() {
 
   const searchVal = val.toLowerCase();
 
-  // --- LOGIC FOR FULL NAME ---
   if (fId === 'full_name') {
-    const searchKey = rule.lookup_column || 'full_name';
-    
-    // Step A: Filter rows that match the search
-    // Step B: Map to get ONLY the names (as strings)
-    // Step C: Use new Set() to remove duplicates
+    // We get the unique names
     const allMatches = masterData
-      .filter(x => String(x[searchKey] || "").toLowerCase().includes(searchVal))
-      .map(x => String(x[searchKey] || "").trim());
+      .filter(x => {
+        const n = x.full_name || x['Full Name'] || "";
+        return String(n).toLowerCase().includes(searchVal);
+      })
+      .map(x => String(x.full_name || x['Full Name'] || "").trim());
 
     const uniqueNames = [...new Set(allMatches)];
     renderDropdown(resDiv, uniqueNames.slice(0, 8), 'name');
 
-  // --- LOGIC FOR CENTRE ---
   } else if (fId === 'centre') {
-    // Step A: Filter rows where centre matches
-    // Step B: Map to get ONLY the centre names
-    // Step C: Use new Set() to remove duplicates
     const allCentres = masterData
       .filter(x => x.centre && x.centre.toLowerCase().includes(searchVal))
       .map(x => x.centre.trim());
@@ -193,7 +187,7 @@ function renderForm() {
     renderDropdown(resDiv, uniqueCentres.slice(0, 8), 'loc');
   }
 }
- 
+
   function renderDropdown(div, list, type) {
   div.innerHTML = '';
   
