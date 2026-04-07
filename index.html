@@ -251,6 +251,9 @@ function unlockField(id) {
   }
 }
 
+  
+
+  
     
   function sendCode(type) {
     verificationAttempts[type] = 0;
@@ -463,6 +466,39 @@ async function submitData() {
     }
 }
 
+
+function manualFormatCheck() {
+    const emailInput = document.getElementById('inp-email');
+    const emailVal = emailInput.value.trim();
+    const vBtn = document.getElementById('vbtn-email');
+    const checkBtn = document.getElementById('vcheck-email');
+    const msg = document.getElementById('vmsg-email');
+
+    const strictRegex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,6}$/;
+
+    if (strictRegex.test(emailVal)) {
+      checkBtn.style.display = 'none';
+      vBtn.style.display = 'block';
+      vBtn.innerText = `Format Accepted! Click to Verify ${emailVal}`;
+      emailInput.style.border = '1px solid #ced4da';
+      if (msg) {
+        msg.innerText = "Email Format Accepted ✅";
+        msg.style.color = "#2e7d32";
+        msg.style.display = "block";
+      }
+    } else {
+      let errorNote = "Please check for typos or extra characters.";
+      if (!emailVal.includes("@")) errorNote = "Missing '@' symbol.";
+      else if (!emailVal.includes(".")) errorNote = "Missing a dot (e.g., .com).";
+      else if (/\s/.test(emailVal)) errorNote = "Spaces are not allowed.";
+
+      alert("❌ FORMAT ISSUE\n\n" + errorNote);
+      vBtn.style.display = 'none';
+      emailInput.style.border = '2px solid red';
+      emailInput.focus();
+    }
+  }
+ 
 
   
   init();
