@@ -17,11 +17,14 @@
     .subtitle { color: #666; font-size: 13px; text-align: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
     .field-container { margin-bottom: 12px; position: relative; } 
     label { font-weight: 700; font-size: 12px; color: #1a237e; }
+    .edit-link { font-size: 11px; color: #1a237e; cursor: pointer; font-weight: bold; text-decoration: underline; display: none; margin-left: 10px; }
     input { width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 8px; box-sizing: border-box; font-size: 15px; }
+    input:disabled { background: #f8f9fa; color: #6c757d; }
     .dropdown { border: 1px solid #ddd; max-height: 180px; overflow-y: auto; background: white; position: absolute; width: 100%; z-index: 9999; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 8px; }
     .item { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f1f1f1; font-size: 14px; }
     .item:hover { background: #e8eaf6; }
     .primary-btn { width: 100%; padding: 14px; background: #1a237e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 15px; }
+    .primary-btn:disabled { opacity: 0.5; cursor: not-allowed; background: #999; }
 </style>  
 </head>
 <body>
@@ -37,6 +40,7 @@
     <div id="dynamic-fields"></div>
     <div id="btns-start" style="display:none; flex-direction:column; gap:10px;">
       <button id="btn-register" class="primary-btn" onclick="submitData()">Confirm Registration</button>
+      <button class="primary-btn" style="background:#455a64;" onclick="enableEditMode()">I want to edit my details</button>
     </div>
   </div>
 </div>
@@ -51,7 +55,6 @@
 
   async function init() {
     try {
-      // 1. Instant Text Load
       const configSnap = await db.ref('config/eventConfig/' + eventId).once('value');
       eventConfig = configSnap.val() || { title: "Registration" };
       document.getElementById('title').innerHTML = eventConfig.title;
@@ -59,7 +62,6 @@
       document.getElementById('loading-init').style.display = 'none';
       document.getElementById('form-content').style.display = 'block';
 
-      // 2. Lazy Image
       if (eventConfig.event_title_image_url) {
         const imgId = eventConfig.event_title_image_url.trim();
         const imgEl = document.getElementById('event-header-img');
@@ -67,12 +69,10 @@
         imgEl.src = `https://lh3.googleusercontent.com/d/${imgId}`;
       }
 
-      // 3. Rules & Rendering
       const rulesSnap = await db.ref('config/fieldRules').once('value');
       fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
       renderForm();
 
-      // UNLOCK NAME FIELD
       const nameInp = document.getElementById('inp-full_name');
       if (nameInp) { nameInp.disabled = false; nameInp.focus(); }
     } catch (e) { console.error(e); }
@@ -86,38 +86,40 @@
       div.className = 'field-container';
       div.id = `cont-${r.field_id}`;
       div.style.display = (r.initial_state === 'Hidden') ? 'none' : 'block';
+      const needsEditLink = ['Editable', 'Editable_Verify'].includes(r.edit_behavior);
       div.innerHTML = `
-        <label>${r.display_label || r.field_id}</label>
-        <input type="text" id="inp-${r.field_id}" oninput="handleSearch('${r.field_id}', this.value)" disabled autocomplete="off">
+        <div style="display:flex; justify-content:space-between;">
+          <label>${r.display_label || r.field_id}</label>
+          ${needsEditLink ? `<span class="edit-link" id="edit-link-${r.field_id}" onclick="unlockField('${r.field_id}')">Edit</span>` : ''}
+        </div>
+        <input type="text" id="inp-${r.field_id}" oninput="onInputChange('${r.field_id}', this.value)" disabled autocomplete="off">
         <div class="dropdown" id="res-${r.field_id}"></div>
       `;
       container.appendChild(div);
     });
   }
 
+  function onInputChange(fId, val) {
+    if (fId === 'full_name') handleSearch(fId, val);
+    checkValidations();
+  }
+
   async function handleSearch(fId, val) {
     const resDiv = document.getElementById(`res-${fId}`);
-    if (val.length < 3 || (fId !== 'full_name' && fId !== 'centre')) { resDiv.style.display = 'none'; return; }
-
+    if (val.length < 3) { resDiv.style.display = 'none'; return; }
     if (masterData.length === 0) {
       const rule = fieldRules.find(r => r.field_id === fId);
       const snap = await db.ref(rule.lookup_tab || 'master_data').once('value');
       masterData = Object.values(snap.val() || {});
     }
-
     const searchVal = val.toLowerCase();
-    const matches = masterData.filter(x => {
-      const fieldVal = String(x[fId] || x['Full Name'] || "").toLowerCase();
-      return fieldVal.includes(searchVal);
-    });
-
+    const matches = masterData.filter(x => String(x.full_name || x['Full Name'] || "").toLowerCase().includes(searchVal));
     resDiv.innerHTML = '';
     if (matches.length > 0) {
       resDiv.style.display = 'block';
-      [...new Set(matches.map(m => m[fId] || m['Full Name']))].slice(0, 8).forEach(matchName => {
+      [...new Set(matches.map(m => m.full_name || m['Full Name']))].slice(0, 8).forEach(matchName => {
         const d = document.createElement('div');
-        d.className = 'item';
-        d.textContent = matchName;
+        d.className = 'item'; d.textContent = matchName;
         d.onclick = () => selectRecord(matchName, fId);
         resDiv.appendChild(d);
       });
@@ -125,20 +127,46 @@
   }
 
   function selectRecord(selectedVal, fId) {
-    const person = masterData.find(x => (x[fId] || x['Full Name']) === selectedVal);
+    const person = masterData.find(x => (x.full_name || x['Full Name']) === selectedVal);
     if (!person) return;
-
     fieldRules.forEach(r => {
       const input = document.getElementById(`inp-${r.field_id}`);
       if (input) {
-        input.value = person[r.field_id] || person[r.field_id.replace('_',' ')] || "";
+        const val = person[r.field_id] || person[r.field_id.replace('_',' ')] || "";
+        input.value = val;
+        originalData[r.field_id] = val;
         document.getElementById(`cont-${r.field_id}`).style.display = 'block';
       }
     });
-
     document.getElementById(`res-${fId}`).style.display = 'none';
     document.getElementById('btns-start').style.display = 'flex';
     document.getElementById('inp-full_name').disabled = true;
+    checkValidations();
+  }
+
+  function enableEditMode() {
+    fieldRules.forEach(r => {
+      const link = document.getElementById(`edit-link-${r.field_id}`);
+      if (link) link.style.display = 'inline';
+    });
+  }
+
+  function unlockField(id) {
+    document.getElementById(`inp-${id}`).disabled = false;
+    document.getElementById(`edit-link-${id}`).style.display = 'none';
+  }
+
+  function checkValidations() {
+    let allValid = true;
+    fieldRules.forEach(r => {
+      const input = document.getElementById(`inp-${r.field_id}`);
+      if (input && r.initial_state === 'Visible' && input.value.trim() === "") allValid = false;
+    });
+    document.getElementById('btn-register').disabled = !allValid;
+  }
+
+  async function submitData() {
+    alert("Data Submitted Successfully!");
   }
 
   init();
