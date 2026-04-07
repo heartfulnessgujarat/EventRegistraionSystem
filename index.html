@@ -6,7 +6,8 @@
   <title>Event Registration 2026</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-  <style>
+
+<style>
     body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; margin: 0; }
     .card { width: 100%; max-width: 450px; background: white; padding: 35px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
     h2 { color: #1a237e; margin-bottom: 5px; text-align: center; }
@@ -27,14 +28,49 @@
     .item { padding: 12px; cursor: pointer; border-bottom: 1px solid #f1f1f1; font-size: 14px; }
     .item:hover { background: #e8eaf6; }
     
-    #success-screen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; z-index: 9999; overflow-y: auto; }
-    .thank-you-wrapper { max-width: 800px; margin: 0 auto; padding: 40px 20px; }
-    .thank-you-wrapper img { max-width: 100% !important; height: auto !important; display: block; margin: 20px auto; border-radius: 10px; }
+    /* UPDATED SUCCESS SCREEN: Changed background to light gray and enabled scrolling */
+    #success-screen { 
+        display: none; 
+        position: fixed; 
+        top: 0; 
+        left: 0; 
+        width: 100%; 
+        height: 100%; 
+        background: #f0f2f5; 
+        z-index: 9999; 
+        overflow-y: auto; 
+        padding: 20px;
+        box-sizing: border-box;
+    }
+
+    /* NEW COMPACT CARD: This creates the white centered box for the thank you message */
+    .thank-you-card { 
+        max-width: 600px; 
+        margin: 40px auto; 
+        background: #ffffff;
+        padding: 40px;
+        border-radius: 15px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        border: 1px solid #e0e0e0;
+    }
+
+    /* Ensures the Google Doc Image doesn't exceed the white box width */
+    .thank-you-card img { 
+        max-width: 100% !important; 
+        height: auto !important; 
+        display: block; 
+        margin: 20px auto; 
+        border-radius: 10px; 
+    }
 
     #processing-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 10000; text-align: center; padding-top: 25vh; }
     .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #1a237e; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-  </style>
+</style>
+  
+  
+
+  
 </head>
 <body>
 
