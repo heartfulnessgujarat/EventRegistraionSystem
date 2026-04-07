@@ -193,20 +193,43 @@ function renderForm() {
     renderDropdown(resDiv, uniqueCentres.slice(0, 8), 'loc');
   }
 }
+ 
   function renderDropdown(div, list, type) {
-    div.innerHTML = '';
-    if (list.length > 0) {
-      div.style.display = 'block';
-      list.forEach(item => {
-        const d = document.createElement('div');
-        d.className = 'item';
-        d.textContent = type === 'loc' ? item.centre : (item.full_name || item['Full Name'] || "Unknown");
-        d.onclick = () => type === 'loc' ? selectLocation(item) : selectParticipant(item);
-        div.appendChild(d);
-      });
-    } else { div.style.display = 'none'; }
+  div.innerHTML = '';
+  
+  if (list.length > 0) {
+    div.style.display = 'block';
+    
+    list.forEach(val => {
+      const d = document.createElement('div');
+      d.className = 'item'; // Matches your current CSS
+      d.textContent = val;  // 'val' is now just the clean string (e.g., "Vadodara")
+      
+      d.onclick = () => {
+        if (type === 'loc') {
+          // If it's a location, we just update the input and hide dropdown
+          const input = document.getElementById('inp-centre');
+          input.value = val;
+          div.style.display = 'none';
+          // Trigger validation
+          onInputChange('centre', val);
+        } else {
+          // If it's a name, we find that person in masterData to auto-fill the rest
+          const person = masterData.find(x => 
+            String(x.full_name || x['Full Name'] || "").trim() === val
+          );
+          if (person) {
+            selectParticipant(person);
+            div.style.display = 'none';
+          }
+        }
+      };
+      div.appendChild(d);
+    });
+  } else { 
+    div.style.display = 'none'; 
   }
-
+}
   function selectParticipant(p) {
     fieldRules.forEach(r => {
       const el = document.getElementById(`inp-${r.field_id}`);
