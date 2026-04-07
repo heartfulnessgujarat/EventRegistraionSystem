@@ -188,6 +188,7 @@ async function handleSearch(fId, val) {
   }
 }
 
+
 function renderDropdown(div, list, type) {
   div.innerHTML = '';
   
@@ -199,17 +200,17 @@ function renderDropdown(div, list, type) {
       d.className = 'item'; 
       d.textContent = val; 
       
-      d.onclick = () => {
+      d.onclick = (e) => {
+        // Prevent any background clicks from re-triggering the search
+        e.stopPropagation();
+
         if (type === 'loc') {
-          // --- FIX: Update input AND hide the box immediately ---
           const input = document.getElementById('inp-centre');
           input.value = val;
-          div.style.display = 'none'; // <--- THIS HIDES THE LIST
-          
-          // Trigger the validation/logic
+          // FORCE HIDE BOTH POSSIBLE DROPDOWNS
+          document.getElementById('res-centre').style.display = 'none';
           onInputChange('centre', val);
         } else {
-          // Find the actual participant object to auto-fill the form
           const person = masterData.find(x => {
             const name = x.full_name || x['Full Name'] || "";
             return String(name).trim() === val;
@@ -220,7 +221,8 @@ function renderDropdown(div, list, type) {
           } else {
             document.getElementById('inp-full_name').value = val;
           }
-          div.style.display = 'none'; // <--- THIS HIDES THE LIST
+          // FORCE HIDE BOTH POSSIBLE DROPDOWNS
+          document.getElementById('res-full_name').style.display = 'none';
         }
       };
       div.appendChild(d);
@@ -229,7 +231,6 @@ function renderDropdown(div, list, type) {
     div.style.display = 'none'; 
   }
 }
-
 
 
 
