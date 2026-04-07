@@ -135,7 +135,27 @@ async function init() {
       const htmlSnap = await db.ref('htmlStorage/' + eventId + '/thank').once('value');
       eventConfig.final_html = htmlSnap.val() || "<h2>Registration Successful!</h2>";
 
+
+      
       document.getElementById('title').innerHTML = eventConfig.title;
+
+// --- START: HEADER IMAGE LOGIC ---
+      if (eventConfig.event_title_image_url) {
+        const imgId = eventConfig.event_title_image_url.trim();
+        // This converts your Google Drive ID into a real image link
+        const directLink = `https://lh3.googleusercontent.com/d/${imgId}`;
+        
+        const imgEl = document.getElementById('event-header-img');
+        const contEl = document.getElementById('header-img-cont');
+        
+        if (imgEl && contEl) {
+          imgEl.src = directLink;
+          contEl.style.display = 'block'; // This reveals the image
+        }
+      }
+      // --- END: HEADER IMAGE LOGIC ---
+
+           
       document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
       const rulesSnap = await db.ref('config/fieldRules').once('value');
       fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
