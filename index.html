@@ -1,122 +1,533 @@
-<!DOCTYPE html>
+i AM SHARING THE ENTIRE INDEX,HTML FILE, PLEASE UPDATE AND SHARE THE UPDATED CODES BACK :  "<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Event Registration 2026</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Event Registration 2026</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 
 <style>
-    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; margin: 0; }
-    
-    .card { 
-        width: 100%; 
-        max-width: 480px; 
-        background: white; 
-        padding: 0 0 30px 0; 
-        border-radius: 15px; 
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
-        overflow: hidden; 
-    }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; margin: 0; }
+    
+    /* COMPACT MAIN CARD */
+    .card { 
+        width: 100%; 
+        max-width: 480px; 
+        background: white; 
+        padding: 0 0 30px 0; /* Flush top for the header image */
+        border-radius: 15px; 
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+        overflow: hidden; 
+    }
 
-    /* UPGRADED: FIXED OVERFLOW AND ADDED LOADING BACKGROUND */
-    .header-image-container {
-        width: 100%;
-        height: 180px; 
-        overflow: hidden; /* THE CLIPPER: Keeps image in the box */
-        display: none; 
-        border-bottom: 3px solid #1a237e;
-        border-radius: 15px 15px 0 0;
-        background: #e1e2e1; /* Placeholder color while loading */
-    }
+    /* FIXED: HEADER IMAGE CONTAINER WITH ROUNDED TOP */
+    .header-image-container {
+        width: 100%;
+        height: 180px; 
+        overflow: hidden;
+        display: none; 
+        border-bottom: 3px solid #1a237e;
+        border-radius: 15px 15px 0 0; /* Ensures image matches card curves */
+    }
 
-    #event-header-img { 
-        width: 100%; 
-        height: 100%; 
-        object-fit: cover; /* THE TAILOR: Crops image to fit perfectly */
-        object-position: center; 
-        display: block; 
-    }
+    /* FIXED: OBJECT-FIT COVER FOR PERFECT ALIGNMENT */
+    #event-header-img { 
+        width: 100%; 
+        height: 100%; 
+        object-fit: cover; 
+        object-position: center; 
+        display: block; 
+    }
 
-    #form-content { padding: 20px 30px; }
-    h2 { color: #1a237e; margin: 10px 0 5px 0; text-align: center; font-size: 22px; }
-    .subtitle { color: #666; font-size: 13px; text-align: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-    .field-container { margin-bottom: 12px; position: relative; } 
-    label { font-weight: 700; font-size: 12px; color: #1a237e; }
-    input { width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 8px; box-sizing: border-box; font-size: 15px; }
-    .primary-btn { width: 100%; padding: 14px; background: #1a237e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 15px; }
-    
-    #success-screen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f0f2f5; z-index: 9999; overflow-y: auto; padding: 20px; }
-    .thank-you-card { max-width: 550px; margin: 20px auto; background: #ffffff; padding: 30px; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); }
-    #processing-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 10000; text-align: center; padding-top: 25vh; }
-    .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #1a237e; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-</style>  
+    /* FORM CONTENT PADDING */
+    #form-content { padding: 20px 30px; }
+
+    h2 { color: #1a237e; margin: 10px 0 5px 0; text-align: center; font-size: 22px; }
+    .subtitle { color: #666; font-size: 13px; text-align: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+    
+    /* COMPACT FIELDS */
+    .field-container { margin-bottom: 12px; position: relative; } 
+    .label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    label { font-weight: 700; font-size: 12px; color: #1a237e; }
+    .edit-link { font-size: 11px; color: #1a237e; cursor: pointer; font-weight: bold; text-decoration: underline; display: none; }
+    
+    input { width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 8px; box-sizing: border-box; font-size: 15px; }
+    input:disabled { background: #f8f9fa; color: #6c757d; }
+
+    .help-text { font-size: 10.5px; color: #5c6bc0; margin-top: 2px; font-style: italic; display: none; font-weight: 500; }
+    .error-msg-text { color: #d32f2f; font-size: 11px; margin-top: 3px; font-weight: bold; display: none; }
+
+    /* BUTTONS */
+    .primary-btn { width: 100%; padding: 14px; background: #1a237e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 15px; }
+    .primary-btn:disabled { opacity: 0.5; background: #999; }
+
+    /* DROPDOWN & VERIFY PANELS */
+    .dropdown { border: 1px solid #ddd; max-height: 180px; overflow-y: auto; background: white; position: absolute; width: 100%; z-index: 9999; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 8px; }
+    .item { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f1f1f1; font-size: 14px; }
+    .item:hover { background: #e8eaf6; }
+
+    .verify-panel { background: #fffde7; border: 1px solid #fbc02d; padding: 10px; border-radius: 8px; margin-top: 10px; display: none; }
+    .verify-btn { background: #fbc02d; color: #333; border: none; padding: 10px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 12px; width: 100%; margin-bottom: 10px; }
+
+    /* COMPACT SUCCESS SCREEN CARD */
+    #success-screen { 
+        display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+        background: #f0f2f5; z-index: 9999; overflow-y: auto; padding: 20px; box-sizing: border-box; 
+    }
+    .thank-you-card { 
+        max-width: 550px; margin: 20px auto; background: #ffffff; padding: 30px; 
+        border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); border: 1px solid #e0e0e0; 
+    }
+    .thank-you-card img { max-width: 100% !important; height: auto !important; display: block; margin: 20px auto; border-radius: 10px; }
+
+    #processing-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 10000; text-align: center; padding-top: 25vh; }
+    .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #1a237e; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+</style>  
 </head>
 <body>
 
 <div class="card" id="app">
-  <div id="loading-init"><h2>Loading...</h2></div>
+  <div id="loading-init"><h2>Loading registration form...</h2></div>
 
-  <div id="header-img-cont" class="header-image-container">
-      <img id="event-header-img" src="" alt="Event Banner">
-  </div>
+  <div id="header-img-cont" class="header-image-container">
+      <img id="event-header-img" src="" alt="Event Banner">
+  </div>
 
-  <div id="form-content" style="display:none;">
-    <h2 id="title"></h2>
-    <p class="subtitle" id="subtitle"></p>
-    <div id="dynamic-fields"></div>
-    <div id="btns-start" style="display:none; flex-direction:column; gap:10px;">
-      <button id="btn-register" class="primary-btn" disabled onclick="submitData()">Confirm Registration</button>
-      <button class="primary-btn" style="background:#455a64;" onclick="enableEditMode()">I want to edit my details</button>
-    </div>
-  </div>
+  <div id="form-content" style="display:none;">
+    <h2 id="title"></h2>
+    <p class="subtitle" id="subtitle"></p>
+    <div id="dynamic-fields"></div>
+    <div id="btns-start" style="display:none; flex-direction:column; gap:10px;">
+      <button id="btn-register" class="primary-btn" disabled onclick="submitData()">Confirm Registration</button>
+      <button class="primary-btn" style="background:#455a64;" onclick="enableEditMode()">I want to edit my details</button>
+    </div>
+    <button id="btn-master-update" class="primary-btn" style="display:none;" disabled onclick="submitData()">DETAILS UPDATED, REGISTER ME</button>
+  </div>
+</div>
+
+<div id="success-screen">
+    <div id="success-content" class="thank-you-card"></div>
+</div>
+    
+<div id="processing-overlay">
+    <div class="spinner"></div>
+    <h2 style="font-family: sans-serif; color: #1a237e;">Processing your registration...</h2>
+    <p style="color: #666;">Kindly do not close this window.</p>
 </div>
 
 <script>
-  const firebaseConfig = { databaseURL: "https://ferrari-reg-2026-default-rtdb.asia-southeast1.firebasedatabase.app" };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
-  const eventId = (new URLSearchParams(window.location.search).get('id') || 'EVT001').toUpperCase();
+  let verificationAttempts = { email: 0, mobile: 0 };
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyPbae3F_Vm2q25LWZF1G59O0V2XRrokeqxNkLvZetTKl19HM4QubILy17nPe65Q-L-zw/exec";
+  const firebaseConfig = { databaseURL: "https://ferrari-reg-2026-default-rtdb.asia-southeast1.firebasedatabase.app" };
+  
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const eventId = (new URLSearchParams(window.location.search).get('id') || 'EVT001').toUpperCase();
 
-  async function init() {
-    try {
-      // 1. FAST LOAD: Get basic config and show form immediately
-      const configSnap = await db.ref('config/eventConfig/' + eventId).once('value');
-      const eventConfig = configSnap.val() || { title: "Registration" };
+  let fieldRules = [], masterData = [], eventConfig = {};
+  let originalData = {}; 
+  let verificationStates = { email: false, mobile: false };
 
-      document.getElementById('title').innerHTML = eventConfig.title;
-      document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
-      
-      // Show form content right away so user isn't waiting
-      document.getElementById('loading-init').style.display = 'none';
-      document.getElementById('form-content').style.display = 'block';
+async function init() {
+    try {
+      const configSnap = await db.ref('config/eventConfig').once('value');
+      eventConfig = (configSnap.val() || {})[eventId] || { title: "Registration" };
+      
+      const htmlSnap = await db.ref('htmlStorage/' + eventId + '/thank').once('value');
+      eventConfig.final_html = htmlSnap.val() || "<h2>Registration Successful!</h2>";
 
-      // 2. PARALLEL LOAD: Fetch the banner image logic while user starts typing
-      if (eventConfig.event_title_image_url) {
-        const imgId = eventConfig.event_title_image_url.trim();
-        // DIRECT PIXEL STREAM URL
-        const directLink = `https://lh3.googleusercontent.com/d/${imgId}`;
-        
-        const imgEl = document.getElementById('event-header-img');
-        const contEl = document.getElementById('header-img-cont');
-        
-        imgEl.onload = () => { contEl.style.display = 'block'; }; // Only show box when image is ready
-        imgEl.src = directLink;
-      }
+      document.getElementById('title').innerHTML = eventConfig.title;
 
-      // Fetch rules and render remaining fields
-      const rulesSnap = await db.ref('config/fieldRules').once('value');
-      const fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
-      renderForm(fieldRules);
-      
-    } catch (e) { console.error("Init Error:", e); }
-  }
+      // --- FIXED: DYNAMIC HEADER IMAGE LOGIC ---
+      if (eventConfig.event_title_image_url) {
+        const imgId = eventConfig.event_title_image_url.trim();
+        // Use the proper Google Drive direct link format
+        const directLink = `https://lh3.googleusercontent.com/u/0/d/${imgId}`;
+        
+        const imgEl = document.getElementById('event-header-img');
+        const contEl = document.getElementById('header-img-cont');
+        
+        if (imgEl && contEl) {
+          imgEl.src = directLink;
+          contEl.style.display = 'block';
+        }
+      }
+      
+      document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
+      const rulesSnap = await db.ref('config/fieldRules').once('value');
+      fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
+      
+      renderForm();
+      document.getElementById('loading-init').style.display = 'none';
+      document.getElementById('form-content').style.display = 'block';
+      
+    } catch (e) { console.error("Initialization Error:", e); }
+  }
 
-  // ... (Keep your existing renderForm, handleSearch, and submitData functions here) ...
+function renderForm() {
+  const container = document.getElementById('dynamic-fields');
+  container.innerHTML = '';
+  fieldRules.forEach(r => {
+    const div = document.createElement('div');
+    div.className = 'field-container';
+    div.id = `cont-${r.field_id}`;
+    div.style.display = (r.initial_state === 'Hidden') ? 'none' : 'block';
+    const needsEditLink = ['Editable', 'Editable_Verify', 'Editable_Lookup'].includes(r.edit_behavior);
+    
+    div.innerHTML = `
+      <div class="label-row">
+        <label>${r.display_label || r.field_id}</label>
+        ${needsEditLink ? `<span class="edit-link" id="edit-link-${r.field_id}" style="display:none;" onclick="unlockField('${r.field_id}')">Edit</span>` : ''}
+      </div>
+      <input type="text" id="inp-${r.field_id}" oninput="onInputChange('${r.field_id}', this.value)" disabled autocomplete="off">
+      <div class="help-text" id="help-${r.field_id}">${r.field_help_text || ''}</div>
+      <div class="error-msg-text" id="err-${r.field_id}"></div>
+      <div class="dropdown" id="res-${r.field_id}"></div>
+      <div id="vmsg-${r.field_id}" style="font-size:13px; margin-top:5px; font-weight:bold; display:none;"></div>
+      ${(r.field_id === 'email' || r.field_id === 'mobile') ? `
+        <div class="verify-panel" id="panel-${r.field_id}">
+          ${r.field_id === 'email' ? `
+            <button type="button" class="verify-btn" id="vcheck-email" 
+              style="background:#455a64; color:white; margin-bottom:10px;" 
+              onclick="manualFormatCheck()">Check Email Format</button>
+          ` : ''}
+          <button class="verify-btn" id="vbtn-${r.field_id}" 
+            style="display: ${r.field_id === 'email' ? 'none' : 'block'};" 
+            onclick="sendCode('${r.field_id}')"></button>
+          <div id="box-${r.field_id}" style="display:none;">
+            <input type="text" placeholder="Enter 6-digit code" id="code-${r.field_id}" oninput="verifyCodeInput('${r.field_id}', this.value)">
+            <div id="resend-container-${r.field_id}" style="margin-top:8px;"></div>
+          </div>
+        </div>
+      ` : ''}
+    `;
+    container.appendChild(div);
+    if (r.field_id === 'full_name') {
+      div.style.display = 'block';
+      document.getElementById('inp-full_name').disabled = false;
+    }
+  });
+}
 
-  init();
+async function onInputChange(fId, val) {
+  if (fId === 'full_name' || fId === 'centre') handleSearch(fId, val);
+  checkAllValidations();
+}
+
+async function handleSearch(fId, val) {
+  const resDiv = document.getElementById(`res-${fId}`);
+  if (val.length < 3) { resDiv.style.display = 'none'; return; }
+  
+  const rule = fieldRules.find(r => r.field_id === fId);
+  const lookupTab = rule ? rule.lookup_tab : null;
+
+  if (masterData.length === 0 && lookupTab) { 
+    const snap = await db.ref(lookupTab).once('value'); 
+    const raw = snap.val() || {};
+    masterData = Array.isArray(raw) ? raw : Object.values(raw);
+  }
+
+  const searchVal = val.toLowerCase();
+
+  if (fId === 'full_name') {
+    const allMatches = masterData
+      .filter(x => {
+        const n = x.full_name || x['Full Name'] || "";
+        return String(n).toLowerCase().includes(searchVal);
+      })
+      .map(x => String(x.full_name || x['Full Name'] || "").trim());
+
+    const uniqueNames = [...new Set(allMatches)];
+    renderDropdown(resDiv, uniqueNames.slice(0, 8), 'name');
+
+  } else if (fId === 'centre') {
+    const allCentres = masterData
+      .filter(x => x.centre && x.centre.toLowerCase().includes(searchVal))
+      .map(x => x.centre.trim());
+
+    const uniqueCentres = [...new Set(allCentres)];
+    renderDropdown(resDiv, uniqueCentres.slice(0, 8), 'loc');
+  }
+}
+
+function renderDropdown(div, list, type) {
+  div.innerHTML = '';
+  if (list.length > 0) {
+    div.style.display = 'block';
+    list.forEach(val => {
+      const d = document.createElement('div');
+      d.className = 'item'; 
+      d.textContent = val; 
+      d.onclick = () => {
+        if (type === 'loc') {
+          const locObject = masterData.find(x => x.centre === val);
+          if (locObject) selectLocation(locObject); 
+          else document.getElementById('inp-centre').value = val;
+        } else {
+          const person = masterData.find(x => {
+            const name = x.full_name || x['Full Name'] || "";
+            return String(name).trim() === val;
+          });
+          if (person) selectParticipant(person); 
+        }
+        div.style.display = 'none';
+      };
+      div.appendChild(d);
+    });
+  } else { div.style.display = 'none'; }
+}
+
+function selectParticipant(p) {
+  fieldRules.forEach(r => {
+    const el = document.getElementById(`inp-${r.field_id}`);
+    const cont = document.getElementById(`cont-${r.field_id}`);
+    const editLink = document.getElementById(`edit-link-${r.field_id}`);
+    if (el) {
+      const masterValue = p[r.field_id] || p[r.field_id.replace('_',' ')] || "";
+      el.value = masterValue;
+      originalData[r.field_id] = masterValue;
+      cont.style.display = (r.initial_state === 'Hidden') ? 'none' : 'block';
+      el.disabled = true;
+      if (editLink) editLink.style.display = 'none';
+    }
+  });
+  document.getElementById('res-full_name').style.display = 'none';
+  document.getElementById('btns-start').style.display = 'flex';
+  document.getElementById('inp-full_name').disabled = true;
+  checkAllValidations();
+}
+
+function selectLocation(l) {
+  document.getElementById('inp-centre').value = l.centre;
+  ['district', 'zone'].forEach(f => { if(document.getElementById(`inp-${f}`)) document.getElementById(`inp-${f}`).value = l[f] || ''; });
+  document.getElementById('res-centre').style.display = 'none';
+  checkAllValidations();
+}
+
+function enableEditMode() {
+  document.getElementById('btns-start').style.display = 'none';
+  document.getElementById('btn-master-update').style.display = 'block';
+  fieldRules.forEach(r => {
+    const editLink = document.getElementById(`edit-link-${r.field_id}`);
+    const helpEl = document.getElementById(`help-${r.field_id}`);
+    const canBeEdited = ['Editable', 'Editable_Verify', 'Editable_Lookup'].includes(r.edit_behavior);
+    if (editLink && canBeEdited) editLink.style.display = 'inline';
+    if (helpEl && helpEl.innerText.trim() !== "") helpEl.style.display = 'block';
+  });
+}
+
+function unlockField(id) {
+  const inp = document.getElementById(`inp-${id}`);
+  const editLink = document.getElementById(`edit-link-${id}`);
+  inp.disabled = false;
+  inp.focus();
+  if (editLink) editLink.style.display = 'none';
+  if (id === 'email') {
+    const checkBtn = document.getElementById('vcheck-email');
+    if (checkBtn) checkBtn.style.display = 'block';
+    const vBtn = document.getElementById('vbtn-email');
+    if (vBtn) vBtn.style.display = 'none';
+    const msg = document.getElementById('vmsg-email');
+    if (msg) msg.style.display = 'none';
+  }
+}
+
+function sendCode(type) {
+  verificationAttempts[type] = 0;
+  const msg = document.getElementById(`vmsg-${type}`);
+  if (msg) msg.style.display = "none";
+  const targetEmail = (type === 'email') ? document.getElementById('inp-email').value : originalData['email'];
+  const btn = document.getElementById(`vbtn-${type}`);
+  btn.disabled = true;
+  btn.innerText = "Sending Code...";
+  fetch(`${SCRIPT_URL}?action=sendVerificationCode&email=${encodeURIComponent(targetEmail)}&eventId=${eventId}`, { mode: 'no-cors' });
+  setTimeout(() => {
+    document.getElementById(`panel-${type}`).style.backgroundColor = "#e3f2fd";
+    btn.style.display = "none";
+    document.getElementById(`box-${type}`).style.display = "block";
+    const codeInp = document.getElementById(`code-${type}`);
+    if (codeInp) { codeInp.value = ""; codeInp.disabled = false; }
+    startResendTimer(type);
+  }, 1500);
+}
+
+function startResendTimer(type) {
+  const container = document.getElementById(`resend-container-${type}`);
+  let seconds = 30;
+  const interval = setInterval(() => {
+    seconds--;
+    if (seconds > 0) { container.innerHTML = `<span class="timer-text">Resend in ${seconds}s</span>`; } 
+    else { clearInterval(interval); container.innerHTML = `<span class="resend-link" onclick="resendCode('${type}')">Resend Code</span>`; }
+  }, 1000);
+}
+
+function resendCode(type) {
+  document.getElementById(`box-${type}`).style.display = "none";
+  document.getElementById(`vbtn-${type}`).style.display = "block";
+  sendCode(type);
+}
+
+async function verifyCodeInput(type, code) {
+  if (code.length === 6) {
+    const emailKey = ((type === 'email') ? document.getElementById('inp-email').value : originalData['email']).replace(/[.#$[\]]/g, "_");
+    const snap = await db.ref("verificationCodes/" + emailKey).once('value');
+    const data = snap.val();
+    const msg = document.getElementById(`vmsg-${type}`);
+    const panel = document.getElementById(`panel-${type}`);
+    const codeInp = document.getElementById(`code-${type}`);
+    if (data && data.code === code && (new Date().getTime() - data.timestamp < 300000)) {
+      msg.innerText = "Verified ✅"; msg.style.color = "#2e7d32"; msg.style.display = "block";
+      if (panel) panel.style.display = "none";
+      document.getElementById(`inp-${type}`).disabled = true;
+      verificationStates[type] = true;
+      verificationAttempts[type] = 0;
+      checkAllValidations();
+    } else {
+      verificationAttempts[type]++;
+      if (verificationAttempts[type] >= 3) {
+        msg.innerText = "Too many failed attempts."; msg.style.color = "#d32f2f"; msg.style.display = "block";
+        codeInp.disabled = true; codeInp.value = "LOCKED";
+      } else {
+        msg.innerText = `Invalid Code. Attempt ${verificationAttempts[type]} of 3.`;
+        msg.style.color = "#d32f2f"; msg.style.display = "block";
+        setTimeout(() => { codeInp.value = ""; codeInp.focus(); }, 1000);
+      }
+      verificationStates[type] = false;
+    }
+  }
+}
+
+function validateField(id, value, rule) {
+    if (!rule || rule === 'NULL' || value.trim() === "") return value.trim() !== "";
+    const val = value.trim();
+    if (rule === 'MOB') return /^[6-9]\d{9}$/.test(val);
+    if (rule === 'PIN') return /^\d{6}$/.test(val);
+    if (rule === 'EMAIL') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val); 
+    return true;
+}
+
+function checkAllValidations() {
+    let allValid = true;
+    fieldRules.forEach(r => {
+      const input = document.getElementById(`inp-${r.field_id}`);
+      const errDiv = document.getElementById(`err-${r.field_id}`);
+      if (input) {
+        let isValid = validateField(r.field_id, input.value, r.field_validation);
+        let isChanged = input.value !== (originalData[r.field_id] || "");
+        
+        if (!isValid && input.value.trim() !== "") {
+          input.style.border = '2px solid red';
+          if (errDiv) { errDiv.innerText = r.error_msg || "Invalid input"; errDiv.style.display = 'block'; }
+          allValid = false;
+        } else {
+          input.style.border = '1px solid #ced4da';
+          if (errDiv) errDiv.style.display = 'none';
+        }
+
+        if (r.field_id === 'email' || r.field_id === 'mobile') {
+          const panel = document.getElementById(`panel-${r.field_id}`);
+          const vBtn = document.getElementById(`vbtn-${r.field_id}`);
+          const msg = document.getElementById(`vmsg-${r.field_id}`);
+
+          if (verificationStates[r.field_id]) {
+            if (msg) msg.style.display = 'block'; 
+            if (panel) panel.style.display = 'none';
+          } else if (isValid && isChanged) {
+            vBtn.innerText = `Click here to send Verification Code to ${input.value}`;
+            panel.style.display = 'block';
+            if (msg) msg.style.display = 'none';
+            allValid = false;
+          } else {
+            if (panel) panel.style.display = 'none';
+            if (!isChanged && msg) msg.style.display = 'none';
+          }
+        }
+        if (input.value.trim() === "" && r.initial_state === 'Visible') allValid = false;
+      }
+    });
+
+    const masterBtn = document.getElementById('btn-master-update');
+    const regBtn = document.getElementById('btn-register');
+    if (masterBtn) masterBtn.disabled = !allValid;
+    if (regBtn) regBtn.disabled = !allValid;
+  }
+
+async function submitData() {
+    try {
+        document.getElementById('app').style.display = 'none';
+        document.getElementById('processing-overlay').style.display = 'block';
+
+        const counterRef = db.ref('counters/' + eventId);
+        const transactionResult = await counterRef.transaction((currentValue) => {
+            return (currentValue || 0) + 1;
+        });
+
+        const currentCount = transactionResult.snapshot.val();
+        const paddedCount = String(currentCount).padStart(3, '0');
+
+        const now = new Date();
+        const istNow = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+        const dd = String(istNow.getUTCDate()).padStart(2, '0');
+        const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+        const mmm = months[istNow.getUTCMonth()];
+        const yyyy = istNow.getUTCFullYear();
+        const hhmmssms = istNow.getUTCHours().toString().padStart(2, '0') + 
+                         istNow.getUTCMinutes().toString().padStart(2, '0') + 
+                         istNow.getUTCSeconds().toString().padStart(2, '0') + 
+                         istNow.getUTCMilliseconds().toString().padStart(3, '0');
+
+        const istTimestamp = `${dd}-${String(istNow.getUTCMonth() + 1).padStart(2, '0')}-${yyyy} ${String(istNow.getUTCHours()).padStart(2, '0')}:${String(istNow.getUTCMinutes()).padStart(2, '0')}:${String(istNow.getUTCSeconds()).padStart(2, '0')}`;
+        const regId = `${eventId}-REG-${dd}-${mmm}-${yyyy}-${hhmmssms}-${paddedCount}`;
+
+        const formData = { registration_id: regId, timestamp: istTimestamp, email_sent: "No", ...eventConfig };
+        fieldRules.forEach(r => {
+            const input = document.getElementById(`inp-${r.field_id}`);
+            if (input) formData[r.field_id] = input.value.trim();
+        });
+
+        await db.ref('registrations/' + regId).set(formData);
+        fetch(`${SCRIPT_URL}?action=sendEmail&regId=${regId}&eventId=${eventId}`)
+            .then(() => console.log("Email trigger sent."))
+            .catch(err => console.error("Email trigger failed:", err));
+
+        const thankYouHTML = eventConfig.final_html || "<h2>Registration Successful!</h2>";
+        document.getElementById('success-content').innerHTML = thankYouHTML;
+        document.getElementById('processing-overlay').style.display = 'none';
+        document.getElementById('success-screen').style.display = 'block';
+
+    } catch (error) {
+        console.error("Submission Error:", error);
+        document.getElementById('processing-overlay').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        alert("Submission failed. Please try again.");
+    }
+}
+
+function manualFormatCheck() {
+  const emailInput = document.getElementById('inp-email');
+  const emailVal = emailInput.value.trim();
+  const vBtn = document.getElementById('vbtn-email');
+  const checkBtn = document.getElementById('vcheck-email');
+  const msg = document.getElementById('vmsg-email');
+  const strictRegex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,6}$/;
+
+  if (strictRegex.test(emailVal)) {
+    checkBtn.style.display = 'none';
+    vBtn.style.display = 'block';
+    vBtn.innerText = `Format accepted, click here to send verification code to ${emailVal}`;
+    emailInput.style.border = '1px solid #ced4da';
+    if (msg) { msg.innerText = "Format Accepted ✅"; msg.style.color = "#2e7d32"; msg.style.display = "block"; }
+  } else {
+    alert("❌ FORMAT ISSUE\n\nPlease check for typos, spaces, or missing dots.");
+    vBtn.style.display = 'none';
+    emailInput.style.border = '2px solid red';
+    emailInput.focus();
+  }
+}
+
+  init();
 </script>
 </body>
-</html>
+</html>"
