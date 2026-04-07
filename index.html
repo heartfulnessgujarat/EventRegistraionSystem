@@ -197,29 +197,30 @@ function renderDropdown(div, list, type) {
     list.forEach(val => {
       const d = document.createElement('div');
       d.className = 'item'; 
-      d.textContent = val; // This is the string (e.g., "Vinay Chavda")
+      d.textContent = val; 
       
       d.onclick = () => {
         if (type === 'loc') {
+          // --- FIX: Update input AND hide the box immediately ---
           const input = document.getElementById('inp-centre');
           input.value = val;
-          div.style.display = 'none';
+          div.style.display = 'none'; // <--- THIS HIDES THE LIST
+          
+          // Trigger the validation/logic
           onInputChange('centre', val);
         } else {
-          // Find the actual participant object in masterData to fill the rest of the form
+          // Find the actual participant object to auto-fill the form
           const person = masterData.find(x => {
             const name = x.full_name || x['Full Name'] || "";
             return String(name).trim() === val;
           });
           
           if (person) {
-            selectParticipant(person); // This fills the phone, email, etc.
-            div.style.display = 'none';
+            selectParticipant(person); 
           } else {
-            // Fallback: If for some reason we can't find the object, just fill the name
             document.getElementById('inp-full_name').value = val;
-            div.style.display = 'none';
           }
+          div.style.display = 'none'; // <--- THIS HIDES THE LIST
         }
       };
       div.appendChild(d);
@@ -228,6 +229,8 @@ function renderDropdown(div, list, type) {
     div.style.display = 'none'; 
   }
 }
+
+
 
 
   function selectParticipant(p) {
