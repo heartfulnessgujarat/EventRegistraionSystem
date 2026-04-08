@@ -127,22 +127,78 @@
   let originalData = {}; 
   let verificationStates = { email: false, mobile: false };
 
+/** --- START: GATEKEEPER HELPER FUNCTIONS --- **/
+function getISTDate() {
+  const now = new Date();
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const istTime = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + istOffset);
+  istTime.setHours(0, 0, 0, 0); 
+  return istTime;
+}
+
+function parseCustomDate(dateStr) {
+  if (!dateStr || typeof dateStr !== 'string' || dateStr.trim() === "") return null;
+  const months = {
+    "Jan": 0, "Feb": 1, "Mar": 2, "Apr": 3, "May": 4, "Jun": 5,
+    "Jul": 6, "Aug": 7, "Sep": 8, "Oct": 9, "Nov": 10, "Dec": 11
+  };
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return null;
+  const day = parseInt(parts[0], 10);
+  const month = months[parts[1]];
+  const year = parseInt(parts[2], 10);
+  if (isNaN(day) || month === undefined || isNaN(year)) return null;
+  return new Date(year, month, day);
+}
+
+function blockUIWithNotice(message) {
+  document.body.innerHTML = `
+    <div style="display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f8f9fa; font-family: sans-serif;">
+      <div style="text-align: center; padding: 40px; border-radius: 12px; background: white; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 90%;">
+        <div style="font-size: 50px; margin-bottom: 20px;">🗓️</div>
+        <h2 style="color: #333; margin-bottom: 15px;">Registration Notice</h2>
+        <p style="font-size: 18px; color: #555; line-height: 1.5;">${message}</p>
+      </div>
+    </div>`;
+  throw new Error("Registration Locked: " + message);
+}
+/** --- END: GATEKEEPER HELPER FUNCTIONS --- **/
+
 async function init() {
     try {
       const configSnap = await db.ref('config/eventConfig').once('value');
-      eventConfig = (configSnap.val() || {})[eventId] || { title: "Registration" };
+      eventConfig = (configSnap.val() || {})[eventId];
+      
+      if (!eventConfig) {
+          document.getElementById('loading-init').innerHTML = "<h2>Event Not Found</h2>";
+          return;
+      }
+
+      /** --- GATEKEEPER IMPLEMENTATION --- **/
+      const today = getISTDate();
+      const startDate = parseCustomDate(eventConfig.Reg_Start_Date);
+      const endDate = parseCustomDate(eventConfig.Reg_End_Date);
+
+      if (!startDate || !endDate) {
+          blockUIWithNotice("Admin has not set the Start and End Date of this Event");
+          return;
+      }
+
+      if (today < startDate || today > endDate) {
+          const closeMsg = eventConfig.Reg_close_msg || "Registration for this event is currently closed.";
+          blockUIWithNotice(closeMsg);
+          return;
+      }
+      /** --- END GATEKEEPER --- **/
       
       const htmlSnap = await db.ref('htmlStorage/' + eventId + '/thank').once('value');
       eventConfig.final_html = htmlSnap.val() || "<h2>Registration Successful!</h2>";
 
-
-      
-      document.getElementById('title').innerHTML = eventConfig.title;
+      document.getElementById('title').innerHTML = eventConfig.title || "Registration";
 
 // --- START: HEADER IMAGE LOGIC ---
       if (eventConfig.event_title_image_url) {
         const imgId = eventConfig.event_title_image_url.trim();
-        // This converts your Google Drive ID into a real image link
         const directLink = `https://lh3.googleusercontent.com/d/${imgId}`;
         
         const imgEl = document.getElementById('event-header-img');
@@ -150,10 +206,10 @@ async function init() {
         
         if (imgEl && contEl) {
           imgEl.src = directLink;
-          contEl.style.display = 'block'; // This reveals the image
+          contEl.style.display = 'block'; 
         }
       }
-      // --- END: HEADER IMAGE LOGIC ---
+// --- END: HEADER IMAGE LOGIC ---
 
            
       document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
@@ -273,30 +329,21 @@ function renderDropdown(div, list, type) {
       
       d.onclick = () => {
         if (type === 'loc') {
-          // 1. Find the object that matches this unique centre name
           const locObject = masterData.find(x => x.centre === val);
-          
           if (locObject) {
-            // 2. Call your ORIGINAL function (this keeps all your old features!)
             selectLocation(locObject); 
           } else {
-            // Fallback if no object found
             document.getElementById('inp-centre').value = val;
           }
         } else {
-          // 1. Find the participant object that matches this unique name
           const person = masterData.find(x => {
             const name = x.full_name || x['Full Name'] || "";
             return String(name).trim() === val;
           });
-          
           if (person) {
-            // 2. Call your ORIGINAL function
             selectParticipant(person); 
           }
         }
-        
-        // 3. ALWAYS hide the dropdown after any selection
         div.style.display = 'none';
       };
       div.appendChild(d);
@@ -355,15 +402,10 @@ function unlockField(id) {
   if (editLink) editLink.style.display = 'none';
 
   if (id === 'email') {
-    // Show Gray Button
     const checkBtn = document.getElementById('vcheck-email');
     if (checkBtn) checkBtn.style.display = 'block';
-    
-    // FORCE Yellow Button to stay hidden, even if it was visible from a previous attempt
     const vBtn = document.getElementById('vbtn-email');
     if (vBtn) vBtn.style.display = 'none';
-
-    // Reset any previous success messages
     const msg = document.getElementById('vmsg-email');
     if (msg) msg.style.display = 'none';
   }
@@ -445,10 +487,7 @@ function validateField(id, value, rule) {
     const val = value.trim();
     if (rule === 'MOB') return /^[6-9]\d{9}$/.test(val);
     if (rule === 'PIN') return /^\d{6}$/.test(val);
-    
-    // UPDATED: Added '$' at the end to ensure no extra characters follow the email
     if (rule === 'EMAIL') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val); 
-    
     return true;
 }
 
@@ -465,7 +504,6 @@ function checkAllValidations() {
         let isValid = validateField(r.field_id, input.value, r.field_validation);
         let isChanged = input.value !== (originalData[r.field_id] || "");
         
-        // 1. Handle Basic Visual Borders/Errors
         if (!isValid && input.value.trim() !== "") {
           input.style.border = '2px solid red';
           if (errDiv) { errDiv.innerText = r.error_msg || "Invalid input"; errDiv.style.display = 'block'; }
@@ -475,37 +513,31 @@ function checkAllValidations() {
           if (errDiv) errDiv.style.display = 'none';
         }
 
-        // 2. Handle Verification Logic (Email/Mobile)
         if (r.field_id === 'email' || r.field_id === 'mobile') {
           const panel = document.getElementById(`panel-${r.field_id}`);
           const vBtn = document.getElementById(`vbtn-${r.field_id}`);
           const msg = document.getElementById(`vmsg-${r.field_id}`);
 
-          // IF ALREADY VERIFIED: Keep the tick, hide the yellow panel
           if (verificationStates[r.field_id]) {
             if (msg) msg.style.display = 'block'; 
             if (panel) panel.style.display = 'none';
           } 
-          // IF VALID & CHANGED BUT NOT YET VERIFIED: Show yellow panel
           else if (isValid && isChanged) {
             vBtn.innerText = `Click here to send Verification Code to ${input.value}`;
             panel.style.display = 'block';
             if (msg) msg.style.display = 'none';
             allValid = false;
           } 
-          // IF INVALID OR NOT CHANGED: Hide everything
           else {
             if (panel) panel.style.display = 'none';
             if (!isChanged && msg) msg.style.display = 'none';
           }
         }
         
-        // 3. Final Check for Required Fields
         if (input.value.trim() === "" && r.initial_state === 'Visible') allValid = false;
       }
     });
 
-    // Enable/Disable the Submit buttons
     const masterBtn = document.getElementById('btn-master-update');
     const regBtn = document.getElementById('btn-register');
     if (masterBtn) masterBtn.disabled = !allValid;
@@ -517,7 +549,6 @@ async function submitData() {
         document.getElementById('app').style.display = 'none';
         document.getElementById('processing-overlay').style.display = 'block';
 
-        // 1. THE TICKET DISPENSER (Get the next sequence number)
         const counterRef = db.ref('counters/' + eventId);
         const transactionResult = await counterRef.transaction((currentValue) => {
             return (currentValue || 0) + 1;
@@ -526,29 +557,23 @@ async function submitData() {
         const currentCount = transactionResult.snapshot.val();
         const paddedCount = String(currentCount).padStart(3, '0');
 
-        // 2. GENERATE IST COMPONENTS
         const now = new Date();
         const istNow = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
         
-        // Format for Registration_ID (e.g., 07-APR-2026)
         const dd = String(istNow.getUTCDate()).padStart(2, '0');
         const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
         const mmm = months[istNow.getUTCMonth()];
         const yyyy = istNow.getUTCFullYear();
         
-        // Time with Milliseconds for ID (hhmmssms)
         const hhmmssms = istNow.getUTCHours().toString().padStart(2, '0') + 
                          istNow.getUTCMinutes().toString().padStart(2, '0') + 
                          istNow.getUTCSeconds().toString().padStart(2, '0') + 
                          istNow.getUTCMilliseconds().toString().padStart(3, '0');
 
-        // Readable Timestamp for the record (DD-MM-YYYY HH:MM:SS)
         const istTimestamp = `${dd}-${String(istNow.getUTCMonth() + 1).padStart(2, '0')}-${yyyy} ${String(istNow.getUTCHours()).padStart(2, '0')}:${String(istNow.getUTCMinutes()).padStart(2, '0')}:${String(istNow.getUTCSeconds()).padStart(2, '0')}`;
 
-        // 3. THE NEW HUMAN-READABLE ID
         const regId = `${eventId}-REG-${dd}-${mmm}-${yyyy}-${hhmmssms}-${paddedCount}`;
 
-        // 4. PREPARE DATA
         const formData = {
             registration_id: regId,
             timestamp: istTimestamp,
@@ -561,16 +586,13 @@ async function submitData() {
             if (input) formData[r.field_id] = input.value.trim();
         });
 
-        // 5. SAVE TO FIREBASE
         await db.ref('registrations/' + regId).set(formData);
 
-        // 6. TRIGGER EMAIL
         const scriptUrl = "https://script.google.com/macros/s/AKfycbyPbae3F_Vm2q25LWZF1G59O0V2XRrokeqxNkLvZetTKl19HM4QubILy17nPe65Q-L-zw/exec"; 
         fetch(`${scriptUrl}?action=sendEmail&regId=${regId}&eventId=${eventId}`)
             .then(() => console.log("Email trigger sent to server."))
             .catch(err => console.error("Email trigger failed:", err));
 
-        // 7. SUCCESS SCREEN
         const thankYouHTML = eventConfig.final_html || "<h2>Registration Successful!</h2>";
         document.getElementById('success-content').innerHTML = thankYouHTML;
         document.getElementById('processing-overlay').style.display = 'none';
@@ -587,23 +609,17 @@ async function submitData() {
 
 function manualFormatCheck() {
   const emailInput = document.getElementById('inp-email');
-  const emailVal = emailInput.value.trim(); // This handles the space-trimming
+  const emailVal = emailInput.value.trim(); 
   const vBtn = document.getElementById('vbtn-email');
   const checkBtn = document.getElementById('vcheck-email');
   const msg = document.getElementById('vmsg-email');
 
-  // Strict Regex Shield
   const strictRegex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,6}$/;
 
   if (strictRegex.test(emailVal)) {
-    // 1. Hide the Gray Button
     checkBtn.style.display = 'none';
-    
-    // 2. Reveal the Yellow Button with your EXACT requested wording
     vBtn.style.display = 'block';
     vBtn.innerText = `Format accepted, click here to send verification code to ${emailVal}`;
-    
-    // 3. Clear any red borders and show success message
     emailInput.style.border = '1px solid #ced4da';
     if (msg) {
       msg.innerText = "Format Accepted ✅";
@@ -611,7 +627,6 @@ function manualFormatCheck() {
       msg.style.display = "block";
     }
   } else {
-    // GUIDANCE: If it fails
     let errorNote = "Please check for typos or extra characters.";
     if (!emailVal.includes("@")) errorNote = "Missing '@' symbol.";
     else if (!emailVal.includes(".")) errorNote = "Missing a dot (e.g., .com).";
@@ -624,9 +639,6 @@ function manualFormatCheck() {
   }
 }
 
-
-
-  
   init();
 </script>
 </body>
