@@ -543,17 +543,38 @@ function checkAllValidations() {
     if (masterBtn) masterBtn.disabled = !allValid;
     if (regBtn) regBtn.disabled = !allValid;
   }
-
 async function submitData() {
     try {
+        const capacityLimit = parseInt(eventConfig.hall_capacity || "0");
+        const fullMessage = eventConfig.hall_capacity_full_msg || "Registration is full.";
+
+        // 1. Initial UI Lock (Immediate feedback)
         document.getElementById('app').style.display = 'none';
         document.getElementById('processing-overlay').style.display = 'block';
 
         const counterRef = db.ref('counters/' + eventId);
+
+        // 2. THE INTERLOCK TRANSACTION
         const transactionResult = await counterRef.transaction((currentValue) => {
-            return (currentValue || 0) + 1;
+            const current = currentValue || 0;
+            
+            // If capacity is defined (greater than 0) and we have reached it, abort transaction
+            if (capacityLimit > 0 && current >= capacityLimit) {
+                return; // Abort: tells Firebase NOT to increment
+            }
+            return current + 1;
         });
 
+        // 3. Check if the transaction was aborted (Capacity Reached)
+        if (!transactionResult.committed) {
+            document.getElementById('processing-overlay').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+            alert(fullMessage);
+            location.reload(); // Refresh to show the blocked UI state
+            return;
+        }
+
+        // 4. Proceed with registration since we successfully "grabbed" a seat
         const currentCount = transactionResult.snapshot.val();
         const paddedCount = String(currentCount).padStart(3, '0');
 
@@ -586,13 +607,16 @@ async function submitData() {
             if (input) formData[r.field_id] = input.value.trim();
         });
 
+        // Save the actual record
         await db.ref('registrations/' + regId).set(formData);
 
+        // Trigger Google Script for Email
         const scriptUrl = "https://script.google.com/macros/s/AKfycbyPbae3F_Vm2q25LWZF1G59O0V2XRrokeqxNkLvZetTKl19HM4QubILy17nPe65Q-L-zw/exec"; 
         fetch(`${scriptUrl}?action=sendEmail&regId=${regId}&eventId=${eventId}`)
             .then(() => console.log("Email trigger sent to server."))
             .catch(err => console.error("Email trigger failed:", err));
 
+        // Show Success Screen
         const thankYouHTML = eventConfig.final_html || "<h2>Registration Successful!</h2>";
         document.getElementById('success-content').innerHTML = thankYouHTML;
         document.getElementById('processing-overlay').style.display = 'none';
@@ -605,8 +629,6 @@ async function submitData() {
         alert("Submission failed. Please check your connection and try again.");
     }
 }
-
-
 function manualFormatCheck() {
   const emailInput = document.getElementById('inp-email');
   const emailVal = emailInput.value.trim(); 
