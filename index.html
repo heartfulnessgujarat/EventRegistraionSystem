@@ -764,8 +764,8 @@ async function loadExistingData(regId, mode) {
                 }
             });
 
-            // --- 1. THE SEARCH "WAKE-UP" LOGIC ---
-            // This fixes Issue #2: Forces the lookup to trigger for Centre/District/Zone
+            // --- THE SEARCH "WAKE-UP" LOGIC ---
+            // Triggers lookup for Centre/District/Zone automatically on load
             if (data.centre) {
                 onInputChange('centre', data.centre);
             }
@@ -779,15 +779,14 @@ async function loadExistingData(regId, mode) {
             const formContent = document.getElementById('form-content');
             formContent.style.display = 'block';
             
-            // Hide the standard form fields to make room for the deletion card
+            // Hide the standard form fields to prioritize the deletion card
             const dynamicArea = document.getElementById('dynamic-fields');
             if (dynamicArea) dynamicArea.style.display = 'none';
             document.getElementById('subtitle').style.display = 'none';
             
             const regDate = data.timestamp ? data.timestamp.split(' ')[0] : 'N/A';
             
-            // --- 2. THE DELETION CARD (Inside the Card Walls) ---
-            // Note: Use a standard DIV instead of innerHTML += to prevent layout breaking
+            // --- CLEAN DELETION CARD (Prevents Screen Spread) ---
             const deleteCard = document.createElement('div');
             deleteCard.id = "delete-confirmation-card";
             deleteCard.style.cssText = "background: #fff3f3; border: 2px solid #d32f2f; padding: 20px; border-radius: 12px; text-align: center; margin-top: 10px;";
@@ -812,9 +811,6 @@ async function loadExistingData(regId, mode) {
         console.error("Load Error:", e);
     }
 }
-
-
-  
 
 
 function cancelDeletionAction() {
