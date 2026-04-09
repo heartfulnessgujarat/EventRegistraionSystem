@@ -736,10 +736,8 @@ function manualFormatCheck() {
 }
 
 /** --- NEW: EDIT & DELETE LOGIC ENGINE --- **/
-
 async function loadExistingData(regId, mode) {
     try {
-        // 1. Fetch the specific registration from Firebase
         const snap = await db.ref('registrations/' + regId).once('value');
         const data = snap.val();
 
@@ -749,14 +747,20 @@ async function loadExistingData(regId, mode) {
             return;
         }
 
-        // Store globally so the system knows the baseline
         originalData = data;
 
         if (mode === 'edit') {
             renderForm(); 
             fieldRules.forEach(r => {
                 const el = document.getElementById(`inp-${r.field_id}`);
-                if (el && data[r.field_id]) el.value = data[r.field_id];
+                if (el && data[r.field_id]) {
+                    el.value = data[r.field_id];
+                    
+                    // --- NEW: FORCE DISABLE FULL NAME REGARDLESS OF RULES ---
+                    if (r.field_id === 'full_name') {
+                        el.disabled = true; 
+                    }
+                }
             });
             document.getElementById('loading-init').style.display = 'none';
             document.getElementById('form-content').style.display = 'block';
@@ -791,51 +795,6 @@ async function loadExistingData(regId, mode) {
         console.error("Load Error:", e);
     }
 }
-
-function cancelDeletionAction() {
-    document.getElementById('delete-confirmation-card').style.display = 'none';
-    document.getElementById('success-content').innerHTML = `
-        <div style="text-align:center;">
-            <h2>Excellent Choice!</h2>
-            <p>Your registration remains active. Thank you for staying with us.</p>
-        </div>`;
-    document.getElementById('success-screen').style.display = 'block';
-}
-
-async function processFinalDeletion(regId) {
-    try {
-        document.getElementById('processing-overlay').style.display = 'block';
-
-        // 1. THE COUNTER TRANSACTION (-1)
-        const counterRef = db.ref('counters/' + eventId);
-        await counterRef.transaction((current) => {
-            return (current || 1) - 1; 
-        });
-
-        // 2. THE SOFT DELETE (Update Status)
-        await db.ref('registrations/' + regId).update({
-            registration_status: "CANCELLED",
-            cancelled_at: new Date().toLocaleString()
-        });
-
-        // 3. SUCCESS MESSAGE
-        document.getElementById('processing-overlay').style.display = 'none';
-        document.getElementById('success-content').innerHTML = `
-            <div style="text-align:center;">
-                <h2 style="color: #d32f2f;">Registration Deleted</h2>
-                <p>Your registration (ID: ${regId}) has been successfully removed.</p>
-                <p>The seat has been released for others.</p>
-            </div>`;
-        document.getElementById('success-screen').style.display = 'block';
-
-    } catch (error) {
-        alert("Deletion failed. Please try again.");
-        document.getElementById('processing-overlay').style.display = 'none';
-    }
-}
-
-
-
 
   
   init();
