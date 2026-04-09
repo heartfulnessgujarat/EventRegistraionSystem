@@ -215,7 +215,10 @@ async function init() {
 
         if (eventConfig.event_title_image_url) {
             const imgId = eventConfig.event_title_image_url.trim();
-            const directLink = `https://lh3.googleusercontent.com/d/${imgId}`; 
+
+const directLink = `https://lh3.googleusercontent.com/d/${imgId}`;
+        
+          //  const directLink = `https://lh3.googleusercontent.com/d/${imgId}`; 
             const imgEl = document.getElementById('event-header-img');
             const contEl = document.getElementById('header-img-cont');
             if (imgEl && contEl) { 
