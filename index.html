@@ -742,7 +742,7 @@ async function loadExistingData(regId, mode) {
         const data = snap.val();
 
         if (!data) {
-            alert("Registration not found. It may have been deleted already.");
+            alert("Registration not found.");
             location.href = window.location.pathname + "?id=" + eventId;
             return;
         }
@@ -755,11 +755,7 @@ async function loadExistingData(regId, mode) {
                 const el = document.getElementById(`inp-${r.field_id}`);
                 if (el && data[r.field_id]) {
                     el.value = data[r.field_id];
-                    
-                    // --- NEW: FORCE DISABLE FULL NAME REGARDLESS OF RULES ---
-                    if (r.field_id === 'full_name') {
-                        el.disabled = true; 
-                    }
+                    if (r.field_id === 'full_name') el.disabled = true; 
                 }
             });
             document.getElementById('loading-init').style.display = 'none';
@@ -768,36 +764,32 @@ async function loadExistingData(regId, mode) {
 
         } else if (mode === 'delete') {
             document.getElementById('loading-init').style.display = 'none';
-            const formContent = document.getElementById('form-content');
-            formContent.style.display = 'block';
+            document.getElementById('form-content').style.display = 'block';
             document.getElementById('dynamic-fields').style.display = 'none';
             document.getElementById('subtitle').style.display = 'none';
             
+            // CLEAN FIX: Use a dedicated container for the delete card
             const regDate = data.timestamp ? data.timestamp.split(' ')[0] : 'N/A';
+            const deleteArea = document.getElementById('dynamic-fields-cont') || document.getElementById('form-content');
             
-            formContent.innerHTML += `
-                <div id="delete-confirmation-card" style="background: #fff3f3; border: 2px solid #d32f2f; padding: 20px; border-radius: 12px; text-align: center; margin-top: 20px;">
+            // We use a Template Literal but ensure it's placed correctly to keep listeners active
+            const cardHTML = `
+                <div id="delete-confirmation-card" style="background: #fff3f3; border: 2px solid #d32f2f; padding: 20px; border-radius: 12px; text-align: center; margin-top: 20px; display: block !important;">
                     <h3 style="color: #d32f2f; margin-top: 0;">Confirm Deletion</h3>
-                    <p style="font-size: 14px; color: #333; line-height: 1.6;">
+                    <p style="font-size: 14px; color: #333;">
                         <strong>Name:</strong> ${data.full_name}<br>
-                        <strong>Reg ID:</strong> ${regId}<br>
-                        <strong>Date:</strong> ${regDate}
+                        <strong>Reg ID:</strong> ${regId}
                     </p>
-                    <p style="font-weight: bold; color: #1a237e;">Do you want to delete your registration?</p>
+                    <p style="font-weight: bold; color: #1a237e;">Delete this registration?</p>
                     <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
-                        <button class="primary-btn" style="background: #d32f2f;" onclick="processFinalDeletion('${regId}')">Yes, please delete</button>
-                        <button class="primary-btn" style="background: #455a64;" onclick="cancelDeletionAction()">No, I do not want to delete</button>
+                        <button type="button" class="primary-btn" style="background: #d32f2f; cursor: pointer;" onclick="processFinalDeletion('${regId}')">Yes, please delete</button>
+                        <button type="button" class="primary-btn" style="background: #455a64; cursor: pointer;" onclick="cancelDeletionAction()">No, I do not want to delete</button>
                     </div>
                 </div>
             `;
+            deleteArea.insertAdjacentHTML('beforeend', cardHTML);
         }
     } catch (e) {
         console.error("Load Error:", e);
     }
 }
-
-  
-  init();
-</script>
-</body>
-</html>
