@@ -689,6 +689,109 @@ function manualFormatCheck() {
   }
 }
 
+/** --- NEW: EDIT & DELETE LOGIC ENGINE --- **/
+
+async function loadExistingData(regId, mode) {
+    try {
+        // 1. Fetch the specific registration from Firebase
+        const snap = await db.ref('registrations/' + regId).once('value');
+        const data = snap.val();
+
+        if (!data) {
+            alert("Registration not found. It may have been deleted already.");
+            location.href = window.location.pathname + "?id=" + eventId;
+            return;
+        }
+
+        // Store globally so the system knows the baseline
+        originalData = data;
+
+        if (mode === 'edit') {
+            renderForm(); 
+            fieldRules.forEach(r => {
+                const el = document.getElementById(`inp-${r.field_id}`);
+                if (el && data[r.field_id]) el.value = data[r.field_id];
+            });
+            document.getElementById('loading-init').style.display = 'none';
+            document.getElementById('form-content').style.display = 'block';
+            enableEditMode(); 
+
+        } else if (mode === 'delete') {
+            document.getElementById('loading-init').style.display = 'none';
+            const formContent = document.getElementById('form-content');
+            formContent.style.display = 'block';
+            document.getElementById('dynamic-fields').style.display = 'none';
+            document.getElementById('subtitle').style.display = 'none';
+            
+            const regDate = data.timestamp ? data.timestamp.split(' ')[0] : 'N/A';
+            
+            formContent.innerHTML += `
+                <div id="delete-confirmation-card" style="background: #fff3f3; border: 2px solid #d32f2f; padding: 20px; border-radius: 12px; text-align: center; margin-top: 20px;">
+                    <h3 style="color: #d32f2f; margin-top: 0;">Confirm Deletion</h3>
+                    <p style="font-size: 14px; color: #333; line-height: 1.6;">
+                        <strong>Name:</strong> ${data.full_name}<br>
+                        <strong>Reg ID:</strong> ${regId}<br>
+                        <strong>Date:</strong> ${regDate}
+                    </p>
+                    <p style="font-weight: bold; color: #1a237e;">Do you want to delete your registration?</p>
+                    <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
+                        <button class="primary-btn" style="background: #d32f2f;" onclick="processFinalDeletion('${regId}')">Yes, please delete</button>
+                        <button class="primary-btn" style="background: #455a64;" onclick="cancelDeletionAction()">No, I do not want to delete</button>
+                    </div>
+                </div>
+            `;
+        }
+    } catch (e) {
+        console.error("Load Error:", e);
+    }
+}
+
+function cancelDeletionAction() {
+    document.getElementById('delete-confirmation-card').style.display = 'none';
+    document.getElementById('success-content').innerHTML = `
+        <div style="text-align:center;">
+            <h2>Excellent Choice!</h2>
+            <p>Your registration remains active. Thank you for staying with us.</p>
+        </div>`;
+    document.getElementById('success-screen').style.display = 'block';
+}
+
+async function processFinalDeletion(regId) {
+    try {
+        document.getElementById('processing-overlay').style.display = 'block';
+
+        // 1. THE COUNTER TRANSACTION (-1)
+        const counterRef = db.ref('counters/' + eventId);
+        await counterRef.transaction((current) => {
+            return (current || 1) - 1; 
+        });
+
+        // 2. THE SOFT DELETE (Update Status)
+        await db.ref('registrations/' + regId).update({
+            registration_status: "CANCELLED",
+            cancelled_at: new Date().toLocaleString()
+        });
+
+        // 3. SUCCESS MESSAGE
+        document.getElementById('processing-overlay').style.display = 'none';
+        document.getElementById('success-content').innerHTML = `
+            <div style="text-align:center;">
+                <h2 style="color: #d32f2f;">Registration Deleted</h2>
+                <p>Your registration (ID: ${regId}) has been successfully removed.</p>
+                <p>The seat has been released for others.</p>
+            </div>`;
+        document.getElementById('success-screen').style.display = 'block';
+
+    } catch (error) {
+        alert("Deletion failed. Please try again.");
+        document.getElementById('processing-overlay').style.display = 'none';
+    }
+}
+
+
+
+
+  
   init();
 </script>
 </body>
