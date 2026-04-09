@@ -435,16 +435,27 @@ function enableEditMode() {
 
 
 
-  
+  function unlockField(id) {
+  // 1. HARD GUARD: Never unlock the full_name
+  if (id === 'full_name') {
+    alert("Full Name is locked and cannot be changed.");
+    return; 
+  }
 
-function unlockField(id) {
   const inp = document.getElementById(`inp-${id}`);
   const editLink = document.getElementById(`edit-link-${id}`);
   
+  // 2. Standard Unlock Logic
   inp.disabled = false;
   inp.focus();
   if (editLink) editLink.style.display = 'none';
 
+  // 3. CENTRE SEARCH FIX: Re-bind search logic when unlocked
+  if (id === 'centre') {
+    inp.setAttribute("oninput", "handleSearch('centre', this.value)");
+  }
+
+  // 4. Existing Email Verification Logic (Preserved)
   if (id === 'email') {
     const checkBtn = document.getElementById('vcheck-email');
     if (checkBtn) checkBtn.style.display = 'block';
@@ -454,6 +465,8 @@ function unlockField(id) {
     if (msg) msg.style.display = 'none';
   }
 }
+
+
 
   
 
