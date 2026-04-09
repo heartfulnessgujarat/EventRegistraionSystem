@@ -734,9 +734,9 @@ function manualFormatCheck() {
 
 /** --- NEW: EDIT & DELETE LOGIC ENGINE --- **/
 
+
 async function loadExistingData(regId, mode) {
     try {
-        // 1. Fetch the specific registration from Firebase
         const snap = await db.ref('registrations/' + regId).once('value');
         const data = snap.val();
 
@@ -746,14 +746,20 @@ async function loadExistingData(regId, mode) {
             return;
         }
 
-        // Store globally so the system knows the baseline
         originalData = data;
 
         if (mode === 'edit') {
             renderForm(); 
             fieldRules.forEach(r => {
                 const el = document.getElementById(`inp-${r.field_id}`);
-                if (el && data[r.field_id]) el.value = data[r.field_id];
+                if (el && data[r.field_id]) {
+                    el.value = data[r.field_id];
+                    
+                    // --- NEW: FORCE DISABLE FULL NAME REGARDLESS OF RULES ---
+                    if (r.field_id === 'full_name') {
+                        el.disabled = true; 
+                    }
+                }
             });
             document.getElementById('loading-init').style.display = 'none';
             document.getElementById('form-content').style.display = 'block';
@@ -788,6 +794,9 @@ async function loadExistingData(regId, mode) {
         console.error("Load Error:", e);
     }
 }
+
+
+
 
 function cancelDeletionAction() {
     document.getElementById('delete-confirmation-card').style.display = 'none';
