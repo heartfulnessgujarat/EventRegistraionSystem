@@ -431,36 +431,30 @@ function enableEditMode() {
     });
 }
 
-function unlockField(id) {
+  function unlockField(id) {
+  // Hard Lock for Name
   if (id === 'full_name') {
-    alert("Full Name is locked.");
+    alert("Full Name cannot be edited.");
     return; 
   }
 
   const inp = document.getElementById(`inp-${id}`);
   const editLink = document.getElementById(`edit-link-${id}`);
   
-  inp.disabled = false;
-  inp.value = ""; // Clear it so the user starts fresh for searching
-  inp.focus();
+  if (inp) {
+    inp.disabled = false;
+    inp.focus();
+  }
+  
   if (editLink) editLink.style.display = 'none';
 
-  // RE-WIRING THE SEARCH ENGINE
-  if (id === 'centre') {
-    // We add a tiny delay to ensure the browser is ready
-    setTimeout(() => {
-        inp.setAttribute("oninput", "handleSearch('centre', this.value)");
-        // Trigger an empty search to show all options immediately
-        handleSearch('centre', ''); 
-    }, 100);
-  }
-
+  // Email logic (Preserved)
   if (id === 'email') {
-    // Keep your existing email logic here...
     const checkBtn = document.getElementById('vcheck-email');
     if (checkBtn) checkBtn.style.display = 'block';
   }
 }
+
 
 
   
