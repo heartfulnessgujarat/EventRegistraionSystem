@@ -350,8 +350,6 @@ function renderDropdown(div, list, type) {
   }
 }
 
-
-
 async function handleSearch(fId, val) {
   const resDiv = document.getElementById(`res-${fId}`);
   if (val.length < 3) { resDiv.style.display = 'none'; return; }
@@ -359,7 +357,10 @@ async function handleSearch(fId, val) {
   const rule = fieldRules.find(r => r.field_id === fId);
   const lookupTab = rule ? rule.lookup_tab : null;
 
-  if (masterData.length === 0 && lookupTab) { 
+  // --- CRITICAL FIX: ENSURE WE ARE LOOKING AT THE MASTER DATABASE ---
+  // If masterData is empty, or if we are searching for a 'centre', 
+  // we go back to Firebase to get the full "Master_Internal_DB"
+  if (masterData.length <= 1 && lookupTab) { 
     const snap = await db.ref(lookupTab).once('value'); 
     const raw = snap.val() || {};
     masterData = Array.isArray(raw) ? raw : Object.values(raw);
@@ -379,14 +380,14 @@ async function handleSearch(fId, val) {
     renderDropdown(resDiv, uniqueNames.slice(0, 8), 'name');
 
   } else if (fId === 'centre') {
-    // 1. WIDE FILTER: Look for the 3 letters in any city in the Master DB
+    // 1. LOOKUP: Filter the Master_Internal_DB for the 'centre' column
     const matchedObjects = masterData.filter(x => {
+      // We look for 'centre' or 'Centre' keys in the Firebase object
       const c = x.centre || x['Centre'] || ""; 
       return String(c).toLowerCase().includes(searchVal);
     });
 
-    // 2. UNIQUE MAP: This eliminates duplicates (like 4 Vadodaras) 
-    // but KEEPS the object so Zone and District are not deleted.
+    // 2. UNIQUE: Make sure Navsari/Surat show up only once
     const uniqueMap = new Map();
     matchedObjects.forEach(item => {
       const cityName = String(item.centre || item['Centre'] || "").trim();
@@ -397,10 +398,11 @@ async function handleSearch(fId, val) {
 
     const finalUniqueList = Array.from(uniqueMap.values());
 
-    // 3. RENDER: Pass the list of unique OBJECTS to the dropdown
+    // 3. RENDER: Show the list from the Master database
     renderDropdown(resDiv, finalUniqueList.slice(0, 8), 'loc');
   }
 }
+
   function selectParticipant(p) {
     fieldRules.forEach(r => {
       const el = document.getElementById(`inp-${r.field_id}`);
