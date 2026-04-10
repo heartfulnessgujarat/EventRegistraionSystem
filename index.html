@@ -819,61 +819,62 @@ function manualFormatCheck() {
 
 /** --- NEW: EDIT & DELETE LOGIC ENGINE --- **/
 
+
 async function loadExistingData(regId, mode) {
     console.log("MERS: Starting load for ID:", regId);
     try {
-        // 1. Fetch from Firebase
-        // NOTE: Ensure your Firebase structure is 'registrations/ID'
         const snap = await db.ref('registrations/' + regId).once('value');
         const data = snap.val();
 
         if (!data) {
-            console.error("MERS: No data found for regId:", regId);
-            document.getElementById('loading-init').innerHTML = 
-                `<h2>Record Not Found</h2><p>ID: ${regId} does not exist in the database.</p>`;
+            document.getElementById('loading-init').innerHTML = "<h2>Record Not Found</h2>";
             return;
         }
 
-        console.log("MERS: Data retrieved successfully:", data);
-
-        // 2. Render the form skeleton first
+        // 1. Build the form skeleton
         renderForm();
 
-        // 3. Fill the fields (Using a delay to ensure HTML is ready)
-        setTimeout(() => {
+        // 2. NEW: RECURSIVE CHECK
+        // This loop checks every 50ms to see if the form has appeared yet
+        let checkCount = 0;
+        const waitForForm = setInterval(() => {
             const form = document.getElementById('regForm');
-            if (!form) {
-                console.error("MERS: regForm element not found!");
-                return;
-            }
+            checkCount++;
 
-            Object.keys(data).forEach(key => {
-                const field = form.elements[key];
-                if (field) {
-                    field.value = data[key];
+            if (form) {
+                console.log("MERS: Form found after " + (checkCount * 50) + "ms. Filling data...");
+                clearInterval(waitForForm); // Stop checking
+
+                // Fill the fields
+                Object.keys(data).forEach(key => {
+                    const field = form.elements[key];
+                    if (field) { field.value = data[key]; }
+                });
+
+                // Show the UI
+                hideLoadingShowForm();
+
+                // Update Button
+                const btn = document.getElementById('submitBtn');
+                if (btn) {
+                    btn.innerText = (mode === 'edit') ? "Update Registration" : "Confirm Deletion";
+                    btn.style.backgroundColor = (mode === 'edit') ? "#ff9800" : "#f44336";
                 }
-            });
-
-            // 4. Update the UI
-            hideLoadingShowForm();
+            } 
             
-            const btn = document.getElementById('submitBtn');
-            if (btn) {
-                if (mode === 'edit') {
-                    btn.innerText = "Update Registration";
-                    btn.style.backgroundColor = "#ff9800";
-                } else if (mode === 'delete') {
-                    btn.innerText = "Confirm Deletion";
-                    btn.style.backgroundColor = "#f44336";
-                }
+            // Safety timeout: stop trying after 5 seconds
+            if (checkCount > 100) {
+                clearInterval(waitForForm);
+                console.error("MERS: Timeout waiting for regForm!");
+                document.getElementById('loading-init').innerHTML = "<h2>Form Render Error</h2>";
             }
-        }, 200);
+        }, 50);
 
     } catch (error) {
-        console.error("MERS: Critical Load Error:", error);
-        document.getElementById('loading-init').innerHTML = "<h2>Error connecting to database.</h2>";
+        console.error("MERS: Load Error:", error);
     }
 }
+
 
 
 
