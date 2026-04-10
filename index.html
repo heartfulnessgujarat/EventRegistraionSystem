@@ -216,17 +216,25 @@ async function init() {
         
         document.getElementById('title').innerHTML = eventConfig.title || "Registration";
 
-        if (eventConfig.event_title_image_url) {
-            const imgId = eventConfig.event_title_image_url.trim();
-            const directLink = `https://lh3.googleusercontent.com/d/${imgId}`; 
-            const imgEl = document.getElementById('event-header-img');
-            const contEl = document.getElementById('header-img-cont');
-            if (imgEl && contEl) { 
-                imgEl.src = directLink; 
-                contEl.style.display = 'block'; 
-            }
-        }
-               
+
+      
+      // --- NEW MERS BANNER LOGIC ---
+// We check if the 'banner' HTML exists in the htmlData we got from Firebase
+if (htmlData && htmlData.banner) {
+    const container = document.getElementById('header-img-cont');
+    if (container) {
+        // We inject the ready-made HTML (which already includes the width:100% fix)
+        container.innerHTML = htmlData.banner;
+        container.style.display = 'block';
+    }
+} else {
+    // If no banner is provided in Step 1, keep the container hidden
+    const container = document.getElementById('header-img-cont');
+    if (container) container.style.display = 'none';
+}
+
+
+      
         document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
         
         // Load Field Rules
