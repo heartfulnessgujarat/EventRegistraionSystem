@@ -168,13 +168,18 @@ function blockUIWithNotice(message) {
 /** --- END: GATEKEEPER HELPER FUNCTIONS --- **/
 
 
+  
 
 async function init() {
     try {
-        // --- 1. URL PARAMETER CAPTURE (Must happen FIRST) ---
         const urlParams = new URLSearchParams(window.location.search);
-        // Fix: We define eventId here so the rest of the script knows what to look for
-        eventId = (urlParams.get('id') || "").toUpperCase(); 
+        
+        // Use the global let variable instead of creating a new const
+        const urlId = urlParams.get('id'); 
+        if (urlId) {
+            eventId = urlId.toUpperCase(); 
+        }
+
         const mode = (urlParams.get('mode') || 'new').toLowerCase();
         const regId = urlParams.get('regId');
 
@@ -182,7 +187,15 @@ async function init() {
             document.getElementById('loading-init').innerHTML = "<h2>Invalid Event Link</h2>";
             return;
         }
+        
+        // ... rest of the code remains the same ...
 
+
+
+
+
+
+      
         // --- 2. FETCH CONFIG FROM FIREBASE ---
         const configSnap = await db.ref('config/eventConfig').once('value');
         const allConfigs = configSnap.val() || {};
