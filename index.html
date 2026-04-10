@@ -368,7 +368,6 @@ async function handleSearch(fId, val) {
   const searchVal = val.toLowerCase();
 
   if (fId === 'full_name') {
-    // --- BLUEPRINT (WORKING) ---
     const allMatches = masterData
       .filter(x => {
         const n = x.full_name || x['Full Name'] || "";
@@ -380,23 +379,28 @@ async function handleSearch(fId, val) {
     renderDropdown(resDiv, uniqueNames.slice(0, 8), 'name');
 
   } else if (fId === 'centre') {
-    // --- THE MIRROR (SURGICAL FIX) ---
-    // 1. We use the same flexible filter as full_name
+    // 1. WIDE FILTER: Look for the 3 letters in any city in the Master DB
     const matchedObjects = masterData.filter(x => {
       const c = x.centre || x['Centre'] || ""; 
       return String(c).toLowerCase().includes(searchVal);
     });
 
-    // 2. We extract the unique names (exactly like full_name does)
-    const cityNames = matchedObjects.map(x => String(x.centre || x['Centre'] || "").trim());
-    const uniqueCityNames = [...new Set(cityNames)];
+    // 2. UNIQUE MAP: This eliminates duplicates (like 4 Vadodaras) 
+    // but KEEPS the object so Zone and District are not deleted.
+    const uniqueMap = new Map();
+    matchedObjects.forEach(item => {
+      const cityName = String(item.centre || item['Centre'] || "").trim();
+      if (cityName && !uniqueMap.has(cityName.toLowerCase())) {
+        uniqueMap.set(cityName.toLowerCase(), item);
+      }
+    });
 
-    // 3. We pass the UNIQUE city names to the dropdown
-    renderDropdown(resDiv, uniqueCityNames.slice(0, 8), 'loc');
+    const finalUniqueList = Array.from(uniqueMap.values());
+
+    // 3. RENDER: Pass the list of unique OBJECTS to the dropdown
+    renderDropdown(resDiv, finalUniqueList.slice(0, 8), 'loc');
   }
 }
-
-
   function selectParticipant(p) {
     fieldRules.forEach(r => {
       const el = document.getElementById(`inp-${r.field_id}`);
