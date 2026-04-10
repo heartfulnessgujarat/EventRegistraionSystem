@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -302,70 +301,48 @@ function renderForm() {
 
   
   
-async function onInputChange(fId, val) {
-    // 1. Keep your existing Search trigger
-    if (fId === 'full_name' || fId === 'centre') {
-        handleSearch(fId, val);
-    }
-
-    // 2. NEW: THE CHAIN REACTION (Phase-2 Locked Fields)
-    // If the user types or selects a Centre, we hunt for District/Zone
-    if (fId === 'centre') {
-        const rule = fieldRules.find(r => r.field_id === 'centre');
-        const lookupTab = rule ? rule.lookup_tab : 'Master_Internal_DB';
-        const list = masterData[lookupTab] || [];
-        const headers = list[0];
-        
-        // Find the specific row for this centre
-        const rowData = list.find(row => row.includes(val));
-        
-        if (rowData && headers) {
-            fieldRules.forEach(r => {
-                // Find fields marked as 'Locked' (like District/Zone)
-                if (r.edit_behavior === 'Locked') {
-                    const colIdx = headers.indexOf(r.field_id);
-                    if (colIdx > -1) {
-                        const lockEl = document.getElementById(`inp-${r.field_id}`);
-                        if (lockEl) {
-                            lockEl.value = rowData[colIdx]; // Auto-fill the box
-                        }
-                    }
-                }
-            });
-        }
-    }
-
-    // 3. Keep your existing validation check
+  async function onInputChange(fId, val) {
+    if (fId === 'full_name' || fId === 'centre') handleSearch(fId, val);
     checkAllValidations();
+  }
+
+
+async function handleSearch(fId, val) {
+  const resDiv = document.getElementById(`res-${fId}`);
+  if (val.length < 3) { resDiv.style.display = 'none'; return; }
+  
+  const rule = fieldRules.find(r => r.field_id === fId);
+  const lookupTab = rule ? rule.lookup_tab : null;
+
+  if (masterData.length === 0 && lookupTab) { 
+    const snap = await db.ref(lookupTab).once('value'); 
+    const raw = snap.val() || {};
+    masterData = Array.isArray(raw) ? raw : Object.values(raw);
+  }
+
+  const searchVal = val.toLowerCase();
+
+  if (fId === 'full_name') {
+    // We get the unique names
+    const allMatches = masterData
+      .filter(x => {
+        const n = x.full_name || x['Full Name'] || "";
+        return String(n).toLowerCase().includes(searchVal);
+      })
+      .map(x => String(x.full_name || x['Full Name'] || "").trim());
+
+    const uniqueNames = [...new Set(allMatches)];
+    renderDropdown(resDiv, uniqueNames.slice(0, 8), 'name');
+
+  } else if (fId === 'centre') {
+    const allCentres = masterData
+      .filter(x => x.centre && x.centre.toLowerCase().includes(searchVal))
+      .map(x => x.centre.trim());
+
+    const uniqueCentres = [...new Set(allCentres)];
+    renderDropdown(resDiv, uniqueCentres.slice(0, 8), 'loc');
+  }
 }
-
-function handleSearch(fieldId, value) {
-  const dropdown = document.getElementById(`results-${fieldId}`);
-  if (value.length < 3) { dropdown.style.display = 'none'; return; }
-
-  // 1. Find the correct Lookup Tab from your Field Rules
-  const rule = fieldRules.find(r => r.field_id === fieldId);
-  const tabName = rule ? rule.lookup_tab : 'Master_Internal_DB';
-  const lookupCol = rule ? rule.lookup_column : fieldId;
-
-  const list = masterData[tabName] || [];
-  if (list.length === 0) return;
-
-  // 2. DYNAMIC COLUMN SEARCH: Find where the column is (A to T)
-  const headers = list[0]; 
-  const colIndex = headers.indexOf(lookupCol);
-  if (colIndex === -1) { console.error("Column not found:", lookupCol); return; }
-
-  // 3. Filter data based on that dynamic index
-  const matches = list.slice(1).filter(row => 
-    row[colIndex] && row[colIndex].toString().toLowerCase().includes(value.toLowerCase())
-  );
-
-  renderDropdown(fieldId, matches, colIndex, dropdown);
-}
-
-
-
 
 function renderDropdown(div, list, type) {
   div.innerHTML = '';
@@ -434,44 +411,23 @@ function renderDropdown(div, list, type) {
 
 
 function enableEditMode() {
-    // 1. UI Transitions
     document.getElementById('btns-start').style.display = 'none';
     document.getElementById('btn-master-update').style.display = 'block';
-    document.getElementById('btn-master-update').disabled = true; // Disabled until a change is made
-
-    // 2. Process every field based on Field_Rules
+    
     fieldRules.forEach(r => {
-        const el = document.getElementById(`inp-${r.field_id}`);
-        if (el) {
-            // Check the Edit Behavior from your Google Sheet rules
-            if (r.edit_behavior === 'Editable' || r.edit_behavior === 'Editable_Lookup' || r.edit_behavior === 'Editable_Verify') {
-                
-                el.disabled = false; // Unlock the box
-                el.style.background = "#fff"; // Visual cue: it's now editable
-                el.style.border = "1px solid #1a237e";
-
-                // 3. THE RE-WAKE LOGIC: If it's a lookup (like Centre), re-attach the search listener
-                if (r.edit_behavior === 'Editable_Lookup') {
-                    el.placeholder = "Type to search...";
-                    el.oninput = (e) => {
-                        onInputChange(r.field_id, e.target.value);
-                    };
-                }
-                
-            } else {
-                // Keep 'Read-only' or 'Locked' fields disabled
-                el.disabled = true;
-                el.style.background = "#f9f9f9";
-            }
+        const editLink = document.getElementById(`edit-link-${r.field_id}`);
+        const helpEl = document.getElementById(`help-${r.field_id}`);
+        const canBeEdited = ['Editable', 'Editable_Verify', 'Editable_Lookup'].includes(r.edit_behavior);
+        
+        // Only show the edit link if it's editable AND NOT the full_name field
+        if (editLink && canBeEdited && r.field_id !== 'full_name') {
+            editLink.style.display = 'inline';
+        }
+        
+        if (helpEl && helpEl.innerText.trim() !== "") {
+            helpEl.style.display = 'block';
         }
     });
-
-    // 4. Focus on the first editable field (Optional but helpful)
-    const firstEditable = fieldRules.find(r => r.edit_behavior.includes('Editable'));
-    if (firstEditable) {
-        const firstEl = document.getElementById(`inp-${firstEditable.field_id}`);
-        if (firstEl) firstEl.focus();
-    }
 }
 
 function unlockField(id) {
