@@ -938,12 +938,12 @@ function renderDeleteConfirmation(data, regId) {
 }
 
 // --- HELPER: DELETE ACTIONS ---
+
 function cancelDelete() {
     document.getElementById('form-content').innerHTML = `
         <div style="text-align:center; padding:50px 20px;">
             <h2 style="color:#455a64;">Thank you for being with us...</h2>
             <p>Your registration was not changed.</p>
-            <button onclick="location.reload()" style="margin-top:20px; background:#455a64; color:white; border:none; padding:10px 20px; border-radius:4px; cursor:pointer;">Back to Form</button>
         </div>
     `;
 }
