@@ -439,7 +439,7 @@ function unlockField(id) {
     alert("Full Name is locked and cannot be changed.");
     return; 
   }
-
+  
   const inp = document.getElementById(`inp-${id}`);
   const editLink = document.getElementById(`edit-link-${id}`);
   
@@ -737,6 +737,7 @@ function manualFormatCheck() {
 
 /** --- NEW: EDIT & DELETE LOGIC ENGINE --- **/
 
+
 async function loadExistingData(regId, mode) {
     try {
         const snap = await db.ref('registrations/' + regId).once('value');
@@ -757,19 +758,12 @@ async function loadExistingData(regId, mode) {
                 if (el && data[r.field_id]) {
                     el.value = data[r.field_id];
                     
-                    // --- FORCE DISABLE FULL NAME ---
+                    // --- NEW: FORCE DISABLE FULL NAME REGARDLESS OF RULES ---
                     if (r.field_id === 'full_name') {
                         el.disabled = true; 
                     }
                 }
             });
-
-            // --- THE SEARCH "WAKE-UP" LOGIC ---
-            // Triggers lookup for Centre/District/Zone automatically on load
-            if (data.centre) {
-                onInputChange('centre', data.centre);
-            }
-
             document.getElementById('loading-init').style.display = 'none';
             document.getElementById('form-content').style.display = 'block';
             enableEditMode(); 
@@ -778,34 +772,26 @@ async function loadExistingData(regId, mode) {
             document.getElementById('loading-init').style.display = 'none';
             const formContent = document.getElementById('form-content');
             formContent.style.display = 'block';
-            
-            // Hide the standard form fields to prioritize the deletion card
-            const dynamicArea = document.getElementById('dynamic-fields');
-            if (dynamicArea) dynamicArea.style.display = 'none';
+            document.getElementById('dynamic-fields').style.display = 'none';
             document.getElementById('subtitle').style.display = 'none';
             
             const regDate = data.timestamp ? data.timestamp.split(' ')[0] : 'N/A';
             
-            // --- CLEAN DELETION CARD (Prevents Screen Spread) ---
-            const deleteCard = document.createElement('div');
-            deleteCard.id = "delete-confirmation-card";
-            deleteCard.style.cssText = "background: #fff3f3; border: 2px solid #d32f2f; padding: 20px; border-radius: 12px; text-align: center; margin-top: 10px;";
-            
-            deleteCard.innerHTML = `
-                <h3 style="color: #d32f2f; margin-top: 0;">Confirm Deletion</h3>
-                <p style="font-size: 14px; color: #333; line-height: 1.6;">
-                    <strong>Name:</strong> ${data.full_name}<br>
-                    <strong>Reg ID:</strong> ${regId}<br>
-                    <strong>Date:</strong> ${regDate}
-                </p>
-                <p style="font-weight: bold; color: #1a237e;">Do you want to delete your registration?</p>
-                <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
-                    <button class="primary-btn" style="background: #d32f2f;" onclick="processFinalDeletion('${regId}')">Yes, please delete</button>
-                    <button class="primary-btn" style="background: #455a64;" onclick="location.reload()">No, I do not want to delete</button>
+            formContent.innerHTML += `
+                <div id="delete-confirmation-card" style="background: #fff3f3; border: 2px solid #d32f2f; padding: 20px; border-radius: 12px; text-align: center; margin-top: 20px;">
+                    <h3 style="color: #d32f2f; margin-top: 0;">Confirm Deletion</h3>
+                    <p style="font-size: 14px; color: #333; line-height: 1.6;">
+                        <strong>Name:</strong> ${data.full_name}<br>
+                        <strong>Reg ID:</strong> ${regId}<br>
+                        <strong>Date:</strong> ${regDate}
+                    </p>
+                    <p style="font-weight: bold; color: #1a237e;">Do you want to delete your registration?</p>
+                    <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
+                        <button class="primary-btn" style="background: #d32f2f;" onclick="processFinalDeletion('${regId}')">Yes, please delete</button>
+                        <button class="primary-btn" style="background: #455a64;" onclick="cancelDeletionAction()">No, I do not want to delete</button>
+                    </div>
                 </div>
             `;
-            
-            formContent.appendChild(deleteCard);
         }
     } catch (e) {
         console.error("Load Error:", e);
@@ -813,6 +799,7 @@ async function loadExistingData(regId, mode) {
 }
 
 
+  
 function cancelDeletionAction() {
     document.getElementById('delete-confirmation-card').style.display = 'none';
     document.getElementById('success-content').innerHTML = `
