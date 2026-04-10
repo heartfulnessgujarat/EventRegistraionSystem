@@ -308,7 +308,47 @@ function renderForm() {
 
 
 
-
+function renderDropdown(div, list, type) {
+  div.innerHTML = '';
+  
+  if (list.length > 0) {
+    div.style.display = 'block';
+    
+    list.forEach(item => {
+      const d = document.createElement('div');
+      d.className = 'item'; 
+      
+      // 1. SURGICAL FIX: Display the correct text based on type
+      // If it's a 'loc' object, show the 'centre' property.
+      // If it's a name string, show the string.
+      const displayValue = (type === 'loc') ? (item.centre || item) : item;
+      d.textContent = displayValue; 
+      
+      d.onclick = () => {
+        if (type === 'loc') {
+          // 2. THE CHAIN REACTION: 
+          // We already have the full object (item) from handleSearch!
+          // No need to search masterData again. Just pass it directly.
+          selectLocation(item); 
+          
+        } else {
+          // This remains the same for the initial Name search
+          const person = masterData.find(x => {
+            const name = x.full_name || x['Full Name'] || "";
+            return String(name).trim() === item;
+          });
+          if (person) {
+            selectParticipant(person); 
+          }
+        }
+        div.style.display = 'none';
+      };
+      div.appendChild(d);
+    });
+  } else { 
+    div.style.display = 'none'; 
+  }
+}
 
 
 
@@ -363,42 +403,6 @@ async function handleSearch(fId, val) {
     // We pass the full objects to the dropdown. 
     // This allows the 'loc' type in renderDropdown to handle the VLOOKUP logic.
     renderDropdown(resDiv, allMatches.slice(0, 8), 'loc');
-  }
-}
-function renderDropdown(div, list, type) {
-  div.innerHTML = '';
-  
-  if (list.length > 0) {
-    div.style.display = 'block';
-    
-    list.forEach(val => {
-      const d = document.createElement('div');
-      d.className = 'item'; 
-      d.textContent = val; 
-      
-      d.onclick = () => {
-        if (type === 'loc') {
-          const locObject = masterData.find(x => x.centre === val);
-          if (locObject) {
-            selectLocation(locObject); 
-          } else {
-            document.getElementById('inp-centre').value = val;
-          }
-        } else {
-          const person = masterData.find(x => {
-            const name = x.full_name || x['Full Name'] || "";
-            return String(name).trim() === val;
-          });
-          if (person) {
-            selectParticipant(person); 
-          }
-        }
-        div.style.display = 'none';
-      };
-      div.appendChild(d);
-    });
-  } else { 
-    div.style.display = 'none'; 
   }
 }
 
