@@ -424,24 +424,28 @@ async function handleSearch(fId, val) {
   }
 
 
-
-  
 function selectLocation(l) {
   if (!l) return;
 
-  // 1. Update the Centre field
+  // 1. Update the Centre field itself
   const centreInp = document.getElementById('inp-centre');
   if (centreInp) {
-    centreInp.value = l.centre || "";
+    centreInp.value = l.centre || l.Centre || "";
   }
 
-  // 2. THE VLOOKUP: Update District and Zone automatically
-  // It looks for the keys in your object and pushes them to the 'Locked' boxes
-  ['district', 'zone'].forEach(f => {
-    const el = document.getElementById(`inp-${f}`);
+  // 2. DYNAMIC VLOOKUP: Look at Field_Rules instead of a hard-coded list
+  // We find all fields that are set to 'Locked' and have a lookup_tab
+  const dependentFields = fieldRules.filter(r => r.edit_behavior === 'Locked');
+
+  dependentFields.forEach(rule => {
+    const fId = rule.field_id;
+    const el = document.getElementById(`inp-${fId}`);
+    
     if (el) {
-      // Handles both lowercase 'district' and capitalized 'District' if needed
-      el.value = l[f] || l[f.charAt(0).toUpperCase() + f.slice(1)] || '';
+      // Get the value from the Master Database object (l) 
+      // using the field_id as the key (e.g., l['state'])
+      const newValue = l[fId] || l[fId.charAt(0).toUpperCase() + fId.slice(1)] || '';
+      el.value = newValue;
     }
   });
 
@@ -449,10 +453,12 @@ function selectLocation(l) {
   const resDiv = document.getElementById('res-centre');
   if (resDiv) resDiv.style.display = 'none';
 
-  // 4. Final Validation trigger
+  // 4. Final Validation
   checkAllValidations();
 }
 
+
+  
 function enableEditMode() {
     document.getElementById('btns-start').style.display = 'none';
     document.getElementById('btn-master-update').style.display = 'block';
