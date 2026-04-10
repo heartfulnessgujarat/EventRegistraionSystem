@@ -832,9 +832,6 @@ function manualFormatCheck() {
 
 /** --- NEW: EDIT & DELETE LOGIC ENGINE --- **/
 
-
-
-
 async function loadExistingData(regId, mode) {
     console.log("MERS: Starting load for ID:", regId);
     try {
@@ -856,21 +853,20 @@ async function loadExistingData(regId, mode) {
             if (form) {
                 clearInterval(waitForForm);
 
-                // --- 1. HANDLE DELETE MODE ---
                 if (mode === 'delete') {
-                    renderDeleteConfirmation(data, regId);
+                    // Safe Title: Use data.event_id or a fallback if config isn't ready
+                    const displayTitle = (typeof eventConfig !== 'undefined' && eventConfig.title) ? eventConfig.title : "Event Registration";
+                    renderDeleteConfirmation(data, regId, displayTitle);
                     hideLoadingShowForm();
-                    return; 
+                    return;
                 }
 
-                // --- 2. HANDLE EDIT MODE (TOTAL LOCKDOWN INITIALLY) ---
+                // --- EDIT MODE: TOTAL LOCKDOWN ---
                 Object.keys(data).forEach(key => {
                     const field = form.elements[key];
                     if (field) {
                         field.value = data[key];
-                        field.disabled = true; // Lock everything immediately
-                        
-                        // Hide tiny "Edit" links for now
+                        field.disabled = true; // Hard Lock
                         const tinyLink = document.getElementById(`edit-link-${key}`);
                         if (tinyLink) tinyLink.style.display = 'none';
                     }
@@ -878,7 +874,6 @@ async function loadExistingData(regId, mode) {
 
                 hideLoadingShowForm();
 
-                // Set up the Big "I WANT TO EDIT" Button
                 const btn = document.getElementById('submitBtn');
                 if (btn) {
                     btn.innerText = "I WANT TO EDIT";
@@ -889,18 +884,16 @@ async function loadExistingData(regId, mode) {
                     };
                 }
             }
-
-            if (checkCount > 100) {
+            if (checkCount > 100) { 
                 clearInterval(waitForForm);
                 document.getElementById('loading-init').innerHTML = "<h2>Form Render Error</h2>";
             }
         }, 50);
-
     } catch (error) {
         console.error("MERS: Load Error:", error);
+        document.getElementById('loading-init').innerHTML = "<h2>Load Error</h2>";
     }
 }
-
 // --- NEW: LOGIC TO UNLOCK FORM ---
 function unlockFormForEditing(data) {
     const form = document.getElementById('regForm');
