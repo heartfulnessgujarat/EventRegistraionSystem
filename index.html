@@ -124,7 +124,7 @@
   
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
-  const eventId = (new URLSearchParams(window.location.search).get('id') || 'EVT001').toUpperCase();
+  let eventId = (new URLSearchParams(window.location.search).get('id') || 'EVT001').toUpperCase();
 
   let fieldRules = [], masterData = [], eventConfig = {};
   let originalData = {}; 
