@@ -800,66 +800,57 @@ function manualFormatCheck() {
 
 async function loadExistingData(regId, mode) {
     try {
+        // 1. Fetch data from Firebase
         const snap = await db.ref('registrations/' + regId).once('value');
         const data = snap.val();
 
         if (!data) {
-            alert("Registration not found. It may have been deleted already.");
-            location.href = window.location.pathname + "?id=" + eventId;
+            document.getElementById('loading-init').innerHTML = `
+                <div style="text-align:center; padding:20px;">
+                    <h2 style="color:red;">Link Expired</h2>
+                    <p>This registration record could not be found.</p>
+                </div>`;
             return;
         }
 
-        originalData = data;
+        // 2. CRITICAL: Render the form fields first!
+        renderForm();
 
-        if (mode === 'edit') {
-            renderForm(); 
-            fieldRules.forEach(r => {
-                const el = document.getElementById(`inp-${r.field_id}`);
-                if (el && data[r.field_id]) {
-                    el.value = data[r.field_id];
-                    
-                    // --- NEW: FORCE DISABLE FULL NAME REGARDLESS OF RULES ---
-                    if (r.field_id === 'full_name') {
-                        el.disabled = true; 
-                    }
+        // 3. Fill the form with the data we just fetched
+        const form = document.getElementById('regForm');
+        // We use a small timeout to ensure the DOM is ready
+        setTimeout(() => {
+            Object.keys(data).forEach(key => {
+                const field = form.elements[key];
+                if (field) {
+                    field.value = data[key];
                 }
             });
+
+            // 4. HIDE THE CIRCLE AND SHOW THE FORM
             document.getElementById('loading-init').style.display = 'none';
             document.getElementById('form-content').style.display = 'block';
-            enableEditMode(); 
 
-        } else if (mode === 'delete') {
-            document.getElementById('loading-init').style.display = 'none';
-            const formContent = document.getElementById('form-content');
-            formContent.style.display = 'block';
-            document.getElementById('dynamic-fields').style.display = 'none';
-            document.getElementById('subtitle').style.display = 'none';
-            
-            const regDate = data.timestamp ? data.timestamp.split(' ')[0] : 'N/A';
-            
-            formContent.innerHTML += `
-                <div id="delete-confirmation-card" style="background: #fff3f3; border: 2px solid #d32f2f; padding: 20px; border-radius: 12px; text-align: center; margin-top: 20px;">
-                    <h3 style="color: #d32f2f; margin-top: 0;">Confirm Deletion</h3>
-                    <p style="font-size: 14px; color: #333; line-height: 1.6;">
-                        <strong>Name:</strong> ${data.full_name}<br>
-                        <strong>Reg ID:</strong> ${regId}<br>
-                        <strong>Date:</strong> ${regDate}
-                    </p>
-                    <p style="font-weight: bold; color: #1a237e;">Do you want to delete your registration?</p>
-                    <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
-                        <button class="primary-btn" style="background: #d32f2f;" onclick="processFinalDeletion('${regId}')">Yes, please delete</button>
-                        <button class="primary-btn" style="background: #455a64;" onclick="cancelDeletionAction()">No, I do not want to delete</button>
-                    </div>
-                </div>
-            `;
-        }
-    } catch (e) {
-        console.error("Load Error:", e);
+            // 5. Update Button Text for Edit/Delete
+            const submitBtn = document.getElementById('submitBtn');
+            if (mode === 'edit') {
+                submitBtn.innerText = "Update Registration";
+                submitBtn.style.background = "#ff9800"; // Orange
+            } else if (mode === 'delete') {
+                submitBtn.innerText = "Confirm Deletion";
+                submitBtn.style.background = "#f44336"; // Red
+            }
+        }, 100);
+
+    } catch (error) {
+        console.error("Load Error:", error);
+        document.getElementById('loading-init').innerHTML = "<h2>Error connecting to database. Please refresh.</h2>";
     }
 }
 
 
 
+  
 
 function cancelDeletionAction() {
     document.getElementById('delete-confirmation-card').style.display = 'none';
