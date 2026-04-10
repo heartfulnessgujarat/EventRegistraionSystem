@@ -836,60 +836,72 @@ function manualFormatCheck() {
 async function loadExistingData(regId, mode) {
     console.log("MERS: Starting load for ID:", regId);
     try {
+        // 1. Fetch the data from Firebase
         const snap = await db.ref('registrations/' + regId).once('value');
         const data = snap.val();
 
         if (!data) {
-            document.getElementById('loading-init').innerHTML = "<h2>Record Not Found</h2>";
+            console.error("MERS: Record not found in Firebase for ID:", regId);
+            document.getElementById('loading-init').innerHTML = "<h2>Record Not Found</h2><p>The link may be expired or the record was deleted.</p>";
             return;
         }
 
-        // 1. Build the form skeleton
+        // 2. Trigger the form skeleton build
         renderForm();
 
-        // 2. NEW: RECURSIVE CHECK
-        // This loop checks every 50ms to see if the form has appeared yet
+        // 3. RECURSIVE CHECK: Wait for the 'regForm' to be injected into the page
         let checkCount = 0;
         const waitForForm = setInterval(() => {
             const form = document.getElementById('regForm');
             checkCount++;
 
             if (form) {
-                console.log("MERS: Form found after " + (checkCount * 50) + "ms. Filling data...");
-                clearInterval(waitForForm); // Stop checking
+                console.log("MERS: Form found in DOM after " + (checkCount * 50) + "ms. Filling data...");
+                clearInterval(waitForForm);
 
-                // Fill the fields
+                // 4. Fill the fields and UNLOCK them for editing
                 Object.keys(data).forEach(key => {
-                    const field = form.elements[key];
-                    if (field) { field.value = data[key]; }
+                    // This looks for the input by the 'name' attribute we added to renderForm
+                    const field = form.elements[key]; 
+                    if (field) { 
+                        field.value = data[key];
+                        // Enable the field so it's not greyed out in Edit Mode
+                        field.disabled = false; 
+                    }
                 });
 
-                // Show the UI
+                // 5. Switch UI from Loading Spinner to Form Content
                 hideLoadingShowForm();
 
-                // Update Button
+                // 6. Customize the Submit Button based on Mode
                 const btn = document.getElementById('submitBtn');
                 if (btn) {
-                    btn.innerText = (mode === 'edit') ? "Update Registration" : "Confirm Deletion";
-                    btn.style.backgroundColor = (mode === 'edit') ? "#ff9800" : "#f44336";
+                    if (mode === 'edit') {
+                        btn.innerText = "Update Registration";
+                        btn.style.backgroundColor = "#ff9800"; // Orange
+                    } else if (mode === 'delete') {
+                        btn.innerText = "Confirm Deletion";
+                        btn.style.backgroundColor = "#f44336"; // Red
+                        // In Delete mode, we might want to keep fields disabled
+                        // so they can't be changed before deleting.
+                        Object.values(form.elements).forEach(el => el.disabled = true);
+                    }
                 }
             } 
             
-            // Safety timeout: stop trying after 5 seconds
+            // Safety timeout: stop trying after 5 seconds to prevent infinite loop
             if (checkCount > 100) {
                 clearInterval(waitForForm);
-                console.error("MERS: Timeout waiting for regForm!");
-                document.getElementById('loading-init').innerHTML = "<h2>Form Render Error</h2>";
+                console.error("MERS: Timeout reached. 'regForm' never appeared.");
+                document.getElementById('loading-init').innerHTML = "<h2>Form Render Error</h2><p>Please try refreshing the page.</p>";
             }
         }, 50);
 
     } catch (error) {
-        console.error("MERS: Load Error:", error);
+        console.error("MERS: Critical Load Error:", error);
+        document.getElementById('loading-init').innerHTML = "<h2>Connection Error</h2>";
     }
 }
-
-
-
 
 
 function cancelDeletionAction() {
