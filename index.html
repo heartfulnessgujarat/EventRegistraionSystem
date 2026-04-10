@@ -403,23 +403,44 @@ function renderDropdown(div, list, type) {
 
 
 function enableEditMode() {
+    // 1. UI Transitions
     document.getElementById('btns-start').style.display = 'none';
     document.getElementById('btn-master-update').style.display = 'block';
-    
+    document.getElementById('btn-master-update').disabled = true; // Disabled until a change is made
+
+    // 2. Process every field based on Field_Rules
     fieldRules.forEach(r => {
-        const editLink = document.getElementById(`edit-link-${r.field_id}`);
-        const helpEl = document.getElementById(`help-${r.field_id}`);
-        const canBeEdited = ['Editable', 'Editable_Verify', 'Editable_Lookup'].includes(r.edit_behavior);
-        
-        // Only show the edit link if it's editable AND NOT the full_name field
-        if (editLink && canBeEdited && r.field_id !== 'full_name') {
-            editLink.style.display = 'inline';
-        }
-        
-        if (helpEl && helpEl.innerText.trim() !== "") {
-            helpEl.style.display = 'block';
+        const el = document.getElementById(`inp-${r.field_id}`);
+        if (el) {
+            // Check the Edit Behavior from your Google Sheet rules
+            if (r.edit_behavior === 'Editable' || r.edit_behavior === 'Editable_Lookup' || r.edit_behavior === 'Editable_Verify') {
+                
+                el.disabled = false; // Unlock the box
+                el.style.background = "#fff"; // Visual cue: it's now editable
+                el.style.border = "1px solid #1a237e";
+
+                // 3. THE RE-WAKE LOGIC: If it's a lookup (like Centre), re-attach the search listener
+                if (r.edit_behavior === 'Editable_Lookup') {
+                    el.placeholder = "Type to search...";
+                    el.oninput = (e) => {
+                        onInputChange(r.field_id, e.target.value);
+                    };
+                }
+                
+            } else {
+                // Keep 'Read-only' or 'Locked' fields disabled
+                el.disabled = true;
+                el.style.background = "#f9f9f9";
+            }
         }
     });
+
+    // 4. Focus on the first editable field (Optional but helpful)
+    const firstEditable = fieldRules.find(r => r.edit_behavior.includes('Editable'));
+    if (firstEditable) {
+        const firstEl = document.getElementById(`inp-${firstEditable.field_id}`);
+        if (firstEl) firstEl.focus();
+    }
 }
 
 function unlockField(id) {
