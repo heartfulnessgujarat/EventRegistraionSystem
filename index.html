@@ -174,19 +174,21 @@ async function init() {
     try {
         const urlParams = new URLSearchParams(window.location.search);
         
-        // Use the global let variable instead of creating a new const
-        const urlId = urlParams.get('id'); 
-        if (urlId) {
-            eventId = urlId.toUpperCase(); 
-        }
-
+        // 1. Capture the ID from the URL into a temporary local variable
+        const capturedId = (urlParams.get('id') || "").toUpperCase();
         const mode = (urlParams.get('mode') || 'new').toLowerCase();
         const regId = urlParams.get('regId');
+
+        // 2. Assign it to our global eventId (Make sure your global declaration is 'let')
+        // If the error persists, it's because eventId is declared as 'const' elsewhere.
+        eventId = capturedId; 
 
         if (!eventId) {
             document.getElementById('loading-init').innerHTML = "<h2>Invalid Event Link</h2>";
             return;
         }
+
+        // ... the rest of the code ...
         
         // ... rest of the code remains the same ...
 
