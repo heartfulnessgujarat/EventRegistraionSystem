@@ -166,81 +166,92 @@ function blockUIWithNotice(message) {
 /** --- END: GATEKEEPER HELPER FUNCTIONS --- **/
 
 
-
 async function init() {
     try {
-      // 1. Fetch Config from Firebase
-      const configSnap = await db.ref('config/eventConfig').once('value');
-      const allConfigs = configSnap.val() || {};
-      eventConfig = allConfigs[eventId];
-      
-      if (!eventConfig) {
-          document.getElementById('loading-init').innerHTML = "<h2>Event Not Found</h2>";
-          return;
-      }
+        // --- NEW: URL PARAMETER CAPTURE ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const mode = (urlParams.get('mode') || 'new').toLowerCase();
+        const regId = urlParams.get('regId');
 
-      // 2. DATE CHECK (Gatekeeper Tier 1)
-      const today = getISTDate();
-      const startDate = parseCustomDate(eventConfig.reg_start_date);
-      const endDate = parseCustomDate(eventConfig.reg_end_date);
-
-      if (startDate && endDate) {
-          if (today < startDate || today > endDate) {
-              blockUIWithNotice(eventConfig.reg_close_msg || "Registration is currently closed.");
-              return; 
-          }
-      }
-
-      // 3. CAPACITY CHECK (Gatekeeper Tier 2 - THE INTERLOCK)
-      // Fetching the real-time counter
-      const counterSnap = await db.ref('counters/' + eventId).once('value');
-      
-      // Using Number() to ensure "5" (text) and 5 (digit) are treated the same
-      const currentCount = Number(counterSnap.val() || 0); 
-      const maxCapacity = Number(eventConfig.hall_capacity || 0);
-
-      // LOGIC: If capacity is set (>0) and we are at or over that limit
-      if (maxCapacity > 0 && currentCount >= maxCapacity) {
-          blockUIWithNotice(eventConfig.hall_capacity_full_msg || "Hall Capacity is full.");
-          return; // STOP! The rest of the form loading code will never run.
-      }
-      
-      // 4. LOAD UI (Only reached if Dates and Capacity are okay)
-      const htmlSnap = await db.ref('htmlStorage/' + eventId + '/thank').once('value');
-      eventConfig.final_html = htmlSnap.val() || "<h2>Registration Successful!</h2>";
-      
-      // Mapping to your 'title' key in Firebase
-      document.getElementById('title').innerHTML = eventConfig.title || "Registration";
-
-      if (eventConfig.event_title_image_url) {
-        const imgId = eventConfig.event_title_image_url.trim();
-        const directLink = `https://lh3.googleusercontent.com/d/${imgId}`; 
-        const imgEl = document.getElementById('event-header-img');
-        const contEl = document.getElementById('header-img-cont');
-        if (imgEl && contEl) { 
-            imgEl.src = directLink; 
-            contEl.style.display = 'block'; 
+        // 1. Fetch Config from Firebase
+        const configSnap = await db.ref('config/eventConfig').once('value');
+        const allConfigs = configSnap.val() || {};
+        eventConfig = allConfigs[eventId];
+        
+        if (!eventConfig) {
+            document.getElementById('loading-init').innerHTML = "<h2>Event Not Found</h2>";
+            return;
         }
-      }
-           
-      document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
-      
-      // Load Field Rules
-      const rulesSnap = await db.ref('config/fieldRules').once('value');
-      fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
-      
-      renderForm();
-      document.getElementById('loading-init').style.display = 'none';
-      document.getElementById('form-content').style.display = 'block';
-      
+
+        // 2. DATE CHECK (Gatekeeper Tier 1)
+        const today = getISTDate();
+        const startDate = parseCustomDate(eventConfig.reg_start_date);
+        const endDate = parseCustomDate(eventConfig.reg_end_date);
+
+        if (startDate && endDate) {
+            if (today < startDate || today > endDate) {
+                blockUIWithNotice(eventConfig.reg_close_msg || "Registration is currently closed.");
+                return; 
+            }
+        }
+
+        // 3. CAPACITY CHECK (Gatekeeper Tier 2 - THE INTERLOCK)
+        // MODIFIED: Only run this check if mode is 'new'
+        if (mode === 'new') {
+            const counterSnap = await db.ref('counters/' + eventId).once('value');
+            const currentCount = Number(counterSnap.val() || 0); 
+            const maxCapacity = Number(eventConfig.hall_capacity || 0);
+
+            if (maxCapacity > 0 && currentCount >= maxCapacity) {
+                blockUIWithNotice(eventConfig.hall_capacity_full_msg || "Hall Capacity is full.");
+                return; 
+            }
+        }
+        
+        // 4. LOAD UI
+        const htmlSnap = await db.ref('htmlStorage/' + eventId + '/thank').once('value');
+        eventConfig.final_html = htmlSnap.val() || "<h2>Registration Successful!</h2>";
+        
+        document.getElementById('title').innerHTML = eventConfig.title || "Registration";
+
+        if (eventConfig.event_title_image_url) {
+            const imgId = eventConfig.event_title_image_url.trim();
+            const directLink = `https://lh3.googleusercontent.com/d/${imgId}`; 
+            const imgEl = document.getElementById('event-header-img');
+            const contEl = document.getElementById('header-img-cont');
+            if (imgEl && contEl) { 
+                imgEl.src = directLink; 
+                contEl.style.display = 'block'; 
+            }
+        }
+               
+        document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
+        
+        // Load Field Rules
+        const rulesSnap = await db.ref('config/fieldRules').once('value');
+        fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
+        
+        // --- NEW: ROUTING LOGIC ---
+        if (mode === 'edit' || mode === 'delete') {
+            // If we have a regId, load that specific person
+            if (regId) {
+                loadExistingData(regId, mode); 
+            } else {
+                alert("Invalid Link: Registration ID missing.");
+                location.href = window.location.pathname + "?id=" + eventId; // Redirect to blank form
+            }
+        } else {
+            // Normal New Registration
+            renderForm();
+            document.getElementById('loading-init').style.display = 'none';
+            document.getElementById('form-content').style.display = 'block';
+        }
+        
     } catch (e) { 
         console.error("Initialization Error:", e);
         document.getElementById('loading-init').innerHTML = "<h2>Error loading form. Please refresh.</h2>";
     }
 }
-
-
-
 function renderForm() {
   const container = document.getElementById('dynamic-fields');
   container.innerHTML = '';
@@ -399,26 +410,48 @@ function renderDropdown(div, list, type) {
     checkAllValidations();
   }
 
-  function enableEditMode() {
+
+function enableEditMode() {
     document.getElementById('btns-start').style.display = 'none';
     document.getElementById('btn-master-update').style.display = 'block';
+    
     fieldRules.forEach(r => {
-      const editLink = document.getElementById(`edit-link-${r.field_id}`);
-      const helpEl = document.getElementById(`help-${r.field_id}`);
-      const canBeEdited = ['Editable', 'Editable_Verify', 'Editable_Lookup'].includes(r.edit_behavior);
-      if (editLink && canBeEdited) editLink.style.display = 'inline';
-      if (helpEl && helpEl.innerText.trim() !== "") helpEl.style.display = 'block';
+        const editLink = document.getElementById(`edit-link-${r.field_id}`);
+        const helpEl = document.getElementById(`help-${r.field_id}`);
+        const canBeEdited = ['Editable', 'Editable_Verify', 'Editable_Lookup'].includes(r.edit_behavior);
+        
+        // Only show the edit link if it's editable AND NOT the full_name field
+        if (editLink && canBeEdited && r.field_id !== 'full_name') {
+            editLink.style.display = 'inline';
+        }
+        
+        if (helpEl && helpEl.innerText.trim() !== "") {
+            helpEl.style.display = 'block';
+        }
     });
-  }
+}
 
 function unlockField(id) {
+  // 1. HARD GUARD: Never unlock the full_name
+  if (id === 'full_name') {
+    alert("Full Name is locked and cannot be changed.");
+    return; 
+  }
+
   const inp = document.getElementById(`inp-${id}`);
   const editLink = document.getElementById(`edit-link-${id}`);
   
+  // 2. Standard Unlock Logic
   inp.disabled = false;
   inp.focus();
   if (editLink) editLink.style.display = 'none';
 
+  // 3. CENTRE SEARCH FIX: Re-bind search logic when unlocked
+  if (id === 'centre') {
+    inp.setAttribute("oninput", "handleSearch('centre', this.value)");
+  }
+
+  // 4. Existing Email Verification Logic (Preserved)
   if (id === 'email') {
     const checkBtn = document.getElementById('vcheck-email');
     if (checkBtn) checkBtn.style.display = 'block';
@@ -429,9 +462,8 @@ function unlockField(id) {
   }
 }
 
-  
 
-  
+ 
     
   function sendCode(type) {
     verificationAttempts[type] = 0;
@@ -561,62 +593,75 @@ function checkAllValidations() {
     if (masterBtn) masterBtn.disabled = !allValid;
     if (regBtn) regBtn.disabled = !allValid;
   }
+
+
+
 async function submitData() {
     try {
-        const capacityLimit = parseInt(eventConfig.hall_capacity || "0");
-        const fullMessage = eventConfig.hall_capacity_full_msg || "Registration is full.";
+        const urlParams = new URLSearchParams(window.location.search);
+        const mode = (urlParams.get('mode') || 'new').toLowerCase();
+        const existingRegId = urlParams.get('regId');
 
-        // 1. Initial UI Lock (Immediate feedback)
+        // 1. Initial UI Lock
         document.getElementById('app').style.display = 'none';
         document.getElementById('processing-overlay').style.display = 'block';
 
-        const counterRef = db.ref('counters/' + eventId);
+        let finalRegId = existingRegId;
+        let finalTimestamp = originalData.timestamp || "";
+        let statusMsg = "CONFIRMED";
 
-        // 2. THE INTERLOCK TRANSACTION
-        const transactionResult = await counterRef.transaction((currentValue) => {
-            const current = currentValue || 0;
-            
-            // If capacity is defined (greater than 0) and we have reached it, abort transaction
-            if (capacityLimit > 0 && current >= capacityLimit) {
-                return; // Abort: tells Firebase NOT to increment
+        // --- 2. CAPACITY & ID LOGIC ---
+        if (mode === 'new') {
+            const capacityLimit = parseInt(eventConfig.hall_capacity || "0");
+            const fullMessage = eventConfig.hall_capacity_full_msg || "Registration is full.";
+            const counterRef = db.ref('counters/' + eventId);
+
+            // THE INTERLOCK TRANSACTION (Only for New)
+            const transactionResult = await counterRef.transaction((currentValue) => {
+                const current = currentValue || 0;
+                if (capacityLimit > 0 && current >= capacityLimit) return; 
+                return current + 1;
+            });
+
+            if (!transactionResult.committed) {
+                document.getElementById('processing-overlay').style.display = 'none';
+                document.getElementById('app').style.display = 'block';
+                alert(fullMessage);
+                location.reload();
+                return;
             }
-            return current + 1;
-        });
 
-        // 3. Check if the transaction was aborted (Capacity Reached)
-        if (!transactionResult.committed) {
-            document.getElementById('processing-overlay').style.display = 'none';
-            document.getElementById('app').style.display = 'block';
-            alert(fullMessage);
-            location.reload(); // Refresh to show the blocked UI state
-            return;
+            // Generate New ID for New User
+            const currentCount = transactionResult.snapshot.val();
+            const paddedCount = String(currentCount).padStart(3, '0');
+            const now = new Date();
+            const istNow = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+            
+            const dd = String(istNow.getUTCDate()).padStart(2, '0');
+            const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+            const mmm = months[istNow.getUTCMonth()];
+            const yyyy = istNow.getUTCFullYear();
+            
+            const hhmmssms = istNow.getUTCHours().toString().padStart(2, '0') + 
+                             istNow.getUTCMinutes().toString().padStart(2, '0') + 
+                             istNow.getUTCSeconds().toString().padStart(2, '0') + 
+                             istNow.getUTCMilliseconds().toString().padStart(3, '0');
+
+            finalTimestamp = `${dd}-${String(istNow.getUTCMonth() + 1).padStart(2, '0')}-${yyyy} ${String(istNow.getUTCHours()).padStart(2, '0')}:${String(istNow.getUTCMinutes()).padStart(2, '0')}:${String(istNow.getUTCSeconds()).padStart(2, '0')}`;
+            finalRegId = `${eventId}-REG-${dd}-${mmm}-${yyyy}-${hhmmssms}-${paddedCount}`;
+        } else {
+            // It is an EDIT
+            const now = new Date();
+            const istNow = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+            statusMsg = "EDITED ON " + istNow.toLocaleString();
         }
 
-        // 4. Proceed with registration since we successfully "grabbed" a seat
-        const currentCount = transactionResult.snapshot.val();
-        const paddedCount = String(currentCount).padStart(3, '0');
-
-        const now = new Date();
-        const istNow = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
-        
-        const dd = String(istNow.getUTCDate()).padStart(2, '0');
-        const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-        const mmm = months[istNow.getUTCMonth()];
-        const yyyy = istNow.getUTCFullYear();
-        
-        const hhmmssms = istNow.getUTCHours().toString().padStart(2, '0') + 
-                         istNow.getUTCMinutes().toString().padStart(2, '0') + 
-                         istNow.getUTCSeconds().toString().padStart(2, '0') + 
-                         istNow.getUTCMilliseconds().toString().padStart(3, '0');
-
-        const istTimestamp = `${dd}-${String(istNow.getUTCMonth() + 1).padStart(2, '0')}-${yyyy} ${String(istNow.getUTCHours()).padStart(2, '0')}:${String(istNow.getUTCMinutes()).padStart(2, '0')}:${String(istNow.getUTCSeconds()).padStart(2, '0')}`;
-
-        const regId = `${eventId}-REG-${dd}-${mmm}-${yyyy}-${hhmmssms}-${paddedCount}`;
-
+        // --- 3. DATA PREPARATION ---
         const formData = {
-            registration_id: regId,
-            timestamp: istTimestamp,
-            email_sent: "No",
+            registration_id: finalRegId,
+            timestamp: finalTimestamp,
+            registration_status: statusMsg,
+            email_sent: (mode === 'new') ? "No" : (originalData.email_sent || "No"),
             ...eventConfig
         };
 
@@ -625,18 +670,22 @@ async function submitData() {
             if (input) formData[r.field_id] = input.value.trim();
         });
 
-        // Save the actual record
-        await db.ref('registrations/' + regId).set(formData);
+        // 4. SAVE TO FIREBASE
+        await db.ref('registrations/' + finalRegId).set(formData);
 
-        // Trigger Google Script for Email
+        // 5. TRIGGER EMAIL (Only for New or if email changed)
         const scriptUrl = "https://script.google.com/macros/s/AKfycbyPbae3F_Vm2q25LWZF1G59O0V2XRrokeqxNkLvZetTKl19HM4QubILy17nPe65Q-L-zw/exec"; 
-        fetch(`${scriptUrl}?action=sendEmail&regId=${regId}&eventId=${eventId}`)
-            .then(() => console.log("Email trigger sent to server."))
+        fetch(`${scriptUrl}?action=sendEmail&regId=${finalRegId}&eventId=${eventId}`)
+            .then(() => console.log("Email trigger sent."))
             .catch(err => console.error("Email trigger failed:", err));
 
-        // Show Success Screen
-        const thankYouHTML = eventConfig.final_html || "<h2>Registration Successful!</h2>";
-        document.getElementById('success-content').innerHTML = thankYouHTML;
+        // 6. SUCCESS SCREEN
+        let successHTML = eventConfig.final_html || "<h2>Registration Successful!</h2>";
+        if (mode !== 'new') {
+            successHTML = `<h2>Details Updated!</h2><p>Your registration ${finalRegId} has been updated successfully.</p>`;
+        }
+        
+        document.getElementById('success-content').innerHTML = successHTML;
         document.getElementById('processing-overlay').style.display = 'none';
         document.getElementById('success-screen').style.display = 'block';
 
@@ -644,9 +693,14 @@ async function submitData() {
         console.error("Submission Error:", error);
         document.getElementById('processing-overlay').style.display = 'none';
         document.getElementById('app').style.display = 'block';
-        alert("Submission failed. Please check your connection and try again.");
+        alert("Submission failed. Please try again.");
     }
 }
+
+
+
+
+ 
 function manualFormatCheck() {
   const emailInput = document.getElementById('inp-email');
   const emailVal = emailInput.value.trim(); 
@@ -679,6 +733,118 @@ function manualFormatCheck() {
   }
 }
 
+/** --- NEW: EDIT & DELETE LOGIC ENGINE --- **/
+
+
+async function loadExistingData(regId, mode) {
+    try {
+        const snap = await db.ref('registrations/' + regId).once('value');
+        const data = snap.val();
+
+        if (!data) {
+            alert("Registration not found. It may have been deleted already.");
+            location.href = window.location.pathname + "?id=" + eventId;
+            return;
+        }
+
+        originalData = data;
+
+        if (mode === 'edit') {
+            renderForm(); 
+            fieldRules.forEach(r => {
+                const el = document.getElementById(`inp-${r.field_id}`);
+                if (el && data[r.field_id]) {
+                    el.value = data[r.field_id];
+                    
+                    // --- NEW: FORCE DISABLE FULL NAME REGARDLESS OF RULES ---
+                    if (r.field_id === 'full_name') {
+                        el.disabled = true; 
+                    }
+                }
+            });
+            document.getElementById('loading-init').style.display = 'none';
+            document.getElementById('form-content').style.display = 'block';
+            enableEditMode(); 
+
+        } else if (mode === 'delete') {
+            document.getElementById('loading-init').style.display = 'none';
+            const formContent = document.getElementById('form-content');
+            formContent.style.display = 'block';
+            document.getElementById('dynamic-fields').style.display = 'none';
+            document.getElementById('subtitle').style.display = 'none';
+            
+            const regDate = data.timestamp ? data.timestamp.split(' ')[0] : 'N/A';
+            
+            formContent.innerHTML += `
+                <div id="delete-confirmation-card" style="background: #fff3f3; border: 2px solid #d32f2f; padding: 20px; border-radius: 12px; text-align: center; margin-top: 20px;">
+                    <h3 style="color: #d32f2f; margin-top: 0;">Confirm Deletion</h3>
+                    <p style="font-size: 14px; color: #333; line-height: 1.6;">
+                        <strong>Name:</strong> ${data.full_name}<br>
+                        <strong>Reg ID:</strong> ${regId}<br>
+                        <strong>Date:</strong> ${regDate}
+                    </p>
+                    <p style="font-weight: bold; color: #1a237e;">Do you want to delete your registration?</p>
+                    <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
+                        <button class="primary-btn" style="background: #d32f2f;" onclick="processFinalDeletion('${regId}')">Yes, please delete</button>
+                        <button class="primary-btn" style="background: #455a64;" onclick="cancelDeletionAction()">No, I do not want to delete</button>
+                    </div>
+                </div>
+            `;
+        }
+    } catch (e) {
+        console.error("Load Error:", e);
+    }
+}
+
+
+
+
+function cancelDeletionAction() {
+    document.getElementById('delete-confirmation-card').style.display = 'none';
+    document.getElementById('success-content').innerHTML = `
+        <div style="text-align:center;">
+            <h2>Excellent Choice!</h2>
+            <p>Your registration remains active. Thank you for staying with us.</p>
+        </div>`;
+    document.getElementById('success-screen').style.display = 'block';
+}
+
+async function processFinalDeletion(regId) {
+    try {
+        document.getElementById('processing-overlay').style.display = 'block';
+
+        // 1. THE COUNTER TRANSACTION (-1)
+        const counterRef = db.ref('counters/' + eventId);
+        await counterRef.transaction((current) => {
+            return (current || 1) - 1; 
+        });
+
+        // 2. THE SOFT DELETE (Update Status)
+        await db.ref('registrations/' + regId).update({
+            registration_status: "CANCELLED",
+            cancelled_at: new Date().toLocaleString()
+        });
+
+        // 3. SUCCESS MESSAGE
+        document.getElementById('processing-overlay').style.display = 'none';
+        document.getElementById('success-content').innerHTML = `
+            <div style="text-align:center;">
+                <h2 style="color: #d32f2f;">Registration Deleted</h2>
+                <p>Your registration (ID: ${regId}) has been successfully removed.</p>
+                <p>The seat has been released for others.</p>
+            </div>`;
+        document.getElementById('success-screen').style.display = 'block';
+
+    } catch (error) {
+        alert("Deletion failed. Please try again.");
+        document.getElementById('processing-overlay').style.display = 'none';
+    }
+}
+
+
+
+
+    
   init();
 </script>
 </body>
