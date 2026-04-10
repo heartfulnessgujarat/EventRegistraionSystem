@@ -307,6 +307,24 @@ function renderForm() {
   }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
 async function handleSearch(fId, val) {
   const resDiv = document.getElementById(`res-${fId}`);
   if (val.length < 3) { resDiv.style.display = 'none'; return; }
@@ -323,7 +341,7 @@ async function handleSearch(fId, val) {
   const searchVal = val.toLowerCase();
 
   if (fId === 'full_name') {
-    // We get the unique names
+    // Standard full_name logic remains untouched
     const allMatches = masterData
       .filter(x => {
         const n = x.full_name || x['Full Name'] || "";
@@ -335,15 +353,18 @@ async function handleSearch(fId, val) {
     renderDropdown(resDiv, uniqueNames.slice(0, 8), 'name');
 
   } else if (fId === 'centre') {
-    const allCentres = masterData
-      .filter(x => x.centre && x.centre.toLowerCase().includes(searchVal))
-      .map(x => x.centre.trim());
+    // SURGICAL FIX: We filter for matches but we do NOT .map() to just strings.
+    // This keeps the whole object (x) including district and zone available.
+    const allMatches = masterData.filter(x => {
+      const c = x.centre || "";
+      return String(c).toLowerCase().includes(searchVal);
+    });
 
-    const uniqueCentres = [...new Set(allCentres)];
-    renderDropdown(resDiv, uniqueCentres.slice(0, 8), 'loc');
+    // We pass the full objects to the dropdown. 
+    // This allows the 'loc' type in renderDropdown to handle the VLOOKUP logic.
+    renderDropdown(resDiv, allMatches.slice(0, 8), 'loc');
   }
 }
-
 function renderDropdown(div, list, type) {
   div.innerHTML = '';
   
