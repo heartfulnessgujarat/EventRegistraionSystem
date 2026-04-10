@@ -302,11 +302,42 @@ function renderForm() {
 
   
   
-  async function onInputChange(fId, val) {
-    if (fId === 'full_name' || fId === 'centre') handleSearch(fId, val);
-    checkAllValidations();
-  }
+async function onInputChange(fId, val) {
+    // 1. Keep your existing Search trigger
+    if (fId === 'full_name' || fId === 'centre') {
+        handleSearch(fId, val);
+    }
 
+    // 2. NEW: THE CHAIN REACTION (Phase-2 Locked Fields)
+    // If the user types or selects a Centre, we hunt for District/Zone
+    if (fId === 'centre') {
+        const rule = fieldRules.find(r => r.field_id === 'centre');
+        const lookupTab = rule ? rule.lookup_tab : 'Master_Internal_DB';
+        const list = masterData[lookupTab] || [];
+        const headers = list[0];
+        
+        // Find the specific row for this centre
+        const rowData = list.find(row => row.includes(val));
+        
+        if (rowData && headers) {
+            fieldRules.forEach(r => {
+                // Find fields marked as 'Locked' (like District/Zone)
+                if (r.edit_behavior === 'Locked') {
+                    const colIdx = headers.indexOf(r.field_id);
+                    if (colIdx > -1) {
+                        const lockEl = document.getElementById(`inp-${r.field_id}`);
+                        if (lockEl) {
+                            lockEl.value = rowData[colIdx]; // Auto-fill the box
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // 3. Keep your existing validation check
+    checkAllValidations();
+}
 
 function handleSearch(fieldId, value) {
   const dropdown = document.getElementById(`results-${fieldId}`);
