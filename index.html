@@ -819,29 +819,34 @@ function manualFormatCheck() {
 
 /** --- NEW: EDIT & DELETE LOGIC ENGINE --- **/
 
-
 async function loadExistingData(regId, mode) {
+    console.log("MERS: Starting load for ID:", regId);
     try {
-        // 1. Fetch data from Firebase
+        // 1. Fetch from Firebase
+        // NOTE: Ensure your Firebase structure is 'registrations/ID'
         const snap = await db.ref('registrations/' + regId).once('value');
         const data = snap.val();
 
         if (!data) {
-            document.getElementById('loading-init').innerHTML = `
-                <div style="text-align:center; padding:20px;">
-                    <h2 style="color:red;">Link Expired</h2>
-                    <p>This registration record could not be found.</p>
-                </div>`;
+            console.error("MERS: No data found for regId:", regId);
+            document.getElementById('loading-init').innerHTML = 
+                `<h2>Record Not Found</h2><p>ID: ${regId} does not exist in the database.</p>`;
             return;
         }
 
-        // 2. CRITICAL: Render the form fields first!
+        console.log("MERS: Data retrieved successfully:", data);
+
+        // 2. Render the form skeleton first
         renderForm();
 
-        // 3. Fill the form with the data we just fetched
-        const form = document.getElementById('regForm');
-        // We use a small timeout to ensure the DOM is ready
+        // 3. Fill the fields (Using a delay to ensure HTML is ready)
         setTimeout(() => {
+            const form = document.getElementById('regForm');
+            if (!form) {
+                console.error("MERS: regForm element not found!");
+                return;
+            }
+
             Object.keys(data).forEach(key => {
                 const field = form.elements[key];
                 if (field) {
@@ -849,26 +854,28 @@ async function loadExistingData(regId, mode) {
                 }
             });
 
-            // 4. HIDE THE CIRCLE AND SHOW THE FORM
-            document.getElementById('loading-init').style.display = 'none';
-            document.getElementById('form-content').style.display = 'block';
-
-            // 5. Update Button Text for Edit/Delete
-            const submitBtn = document.getElementById('submitBtn');
-            if (mode === 'edit') {
-                submitBtn.innerText = "Update Registration";
-                submitBtn.style.background = "#ff9800"; // Orange
-            } else if (mode === 'delete') {
-                submitBtn.innerText = "Confirm Deletion";
-                submitBtn.style.background = "#f44336"; // Red
+            // 4. Update the UI
+            hideLoadingShowForm();
+            
+            const btn = document.getElementById('submitBtn');
+            if (btn) {
+                if (mode === 'edit') {
+                    btn.innerText = "Update Registration";
+                    btn.style.backgroundColor = "#ff9800";
+                } else if (mode === 'delete') {
+                    btn.innerText = "Confirm Deletion";
+                    btn.style.backgroundColor = "#f44336";
+                }
             }
-        }, 100);
+        }, 200);
 
     } catch (error) {
-        console.error("Load Error:", error);
-        document.getElementById('loading-init').innerHTML = "<h2>Error connecting to database. Please refresh.</h2>";
+        console.error("MERS: Critical Load Error:", error);
+        document.getElementById('loading-init').innerHTML = "<h2>Error connecting to database.</h2>";
     }
 }
+
+
 
 
 function cancelDeletionAction() {
