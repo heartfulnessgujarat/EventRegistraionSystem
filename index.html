@@ -832,74 +832,137 @@ function manualFormatCheck() {
 
 /** --- NEW: EDIT & DELETE LOGIC ENGINE --- **/
 
-
 async function loadExistingData(regId, mode) {
     console.log("MERS: Starting load for ID:", regId);
     try {
-        // 1. Fetch the data from Firebase
         const snap = await db.ref('registrations/' + regId).once('value');
         const data = snap.val();
 
         if (!data) {
-            console.error("MERS: Record not found in Firebase for ID:", regId);
-            document.getElementById('loading-init').innerHTML = "<h2>Record Not Found</h2><p>The link may be expired or the record was deleted.</p>";
+            document.getElementById('loading-init').innerHTML = "<h2>Record Not Found</h2>";
             return;
         }
 
-        // 2. Trigger the form skeleton build
         renderForm();
 
-        // 3. RECURSIVE CHECK: Wait for the 'regForm' to be injected into the page
         let checkCount = 0;
         const waitForForm = setInterval(() => {
             const form = document.getElementById('regForm');
             checkCount++;
 
             if (form) {
-                console.log("MERS: Form found in DOM after " + (checkCount * 50) + "ms. Filling data...");
                 clearInterval(waitForForm);
+                console.log("MERS: Form ready. Applying Mode:", mode);
 
-                // 4. Fill the fields and UNLOCK them for editing
+                // --- 1. HANDLE DELETE MODE ---
+                if (mode === 'delete') {
+                    renderDeleteConfirmation(data, regId);
+                    hideLoadingShowForm();
+                    return; // Stop here for delete
+                }
+
+                // --- 2. HANDLE EDIT MODE ---
                 Object.keys(data).forEach(key => {
-                    // This looks for the input by the 'name' attribute we added to renderForm
-                    const field = form.elements[key]; 
-                    if (field) { 
+                    const field = form.elements[key];
+                    if (field) {
                         field.value = data[key];
-                        // Enable the field so it's not greyed out in Edit Mode
-                        field.disabled = false; 
+                        
+                        // Rule: full_name is always locked
+                        if (key === 'full_name') {
+                            field.disabled = true;
+                        } else {
+                            // Rule: Show "Edit" link for others and keep locked
+                            const editLink = document.getElementById(`edit-link-${key}`);
+                            if (editLink) {
+                                editLink.style.display = 'inline';
+                                field.disabled = true;
+                            } else {
+                                // If no edit link (like zone/district), keep locked
+                                field.disabled = true; 
+                            }
+                        }
+
+                        // Trigger rules (cascading dropdowns for Zone/District)
+                        if (typeof onInputChange === "function") {
+                            onInputChange(key, data[key]);
+                        }
                     }
                 });
 
-                // 5. Switch UI from Loading Spinner to Form Content
                 hideLoadingShowForm();
 
-                // 6. Customize the Submit Button based on Mode
                 const btn = document.getElementById('submitBtn');
                 if (btn) {
-                    if (mode === 'edit') {
-                        btn.innerText = "Update Registration";
-                        btn.style.backgroundColor = "#ff9800"; // Orange
-                    } else if (mode === 'delete') {
-                        btn.innerText = "Confirm Deletion";
-                        btn.style.backgroundColor = "#f44336"; // Red
-                        // In Delete mode, we might want to keep fields disabled
-                        // so they can't be changed before deleting.
-                        Object.values(form.elements).forEach(el => el.disabled = true);
-                    }
+                    btn.innerText = "Update Registration";
+                    btn.style.backgroundColor = "#ff9800";
                 }
-            } 
-            
-            // Safety timeout: stop trying after 5 seconds to prevent infinite loop
+            }
+
             if (checkCount > 100) {
                 clearInterval(waitForForm);
-                console.error("MERS: Timeout reached. 'regForm' never appeared.");
-                document.getElementById('loading-init').innerHTML = "<h2>Form Render Error</h2><p>Please try refreshing the page.</p>";
+                document.getElementById('loading-init').innerHTML = "<h2>Form Render Error</h2>";
             }
         }, 50);
 
     } catch (error) {
-        console.error("MERS: Critical Load Error:", error);
-        document.getElementById('loading-init').innerHTML = "<h2>Connection Error</h2>";
+        console.error("MERS: Load Error:", error);
+    }
+}
+
+// --- HELPER: DELETE UI ---
+function renderDeleteConfirmation(data, regId) {
+    // Hide the dynamic form area
+    document.getElementById('dynamic-fields').style.display = 'none';
+    
+    const confirmBox = document.createElement('div');
+    confirmBox.id = "delete-confirm-box";
+    confirmBox.innerHTML = `
+        <div style="background: #fff5f5; border: 2px solid #f44336; padding: 20px; border-radius: 8px; text-align: center; margin-bottom:20px;">
+            <h3 style="color: #d32f2f; margin-top:0;">Confirm Deletion</h3>
+            <p style="margin:5px 0;"><strong>Reg ID:</strong> ${data.registration_id}</p>
+            <p style="margin:5px 0;"><strong>Name:</strong> ${data.full_name}</p>
+            <p style="margin:5px 0;"><strong>Event:</strong> ${eventConfig.title}</p>
+            <hr style="border:0; border-top:1px solid #ffcdd2; margin:15px 0;">
+            <p style="font-weight: bold; font-size:1.1em;">DO YOU WANT TO DELETE THIS REGISTRATION?</p>
+            <div style="margin-top: 20px;">
+                <button onclick="executeDelete('${regId}')" style="background:#f44336; color:white; padding:12px 24px; border:none; border-radius:4px; cursor:pointer; font-weight:bold; margin-right:15px;">YES, DELETE</button>
+                <button onclick="cancelDelete()" style="background:#607d8b; color:white; padding:12px 24px; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">NO</button>
+            </div>
+        </div>
+    `;
+    document.getElementById('form-content').prepend(confirmBox);
+    
+    // Hide standard submit button
+    const mainBtn = document.getElementById('submitBtn');
+    if (mainBtn) mainBtn.style.display = 'none';
+}
+
+// --- HELPER: DELETE ACTIONS ---
+function cancelDelete() {
+    document.getElementById('form-content').innerHTML = `
+        <div style="text-align:center; padding:50px 20px;">
+            <h2 style="color:#455a64;">Thank you for being with us...</h2>
+            <p>Your registration was not changed.</p>
+            <button onclick="location.reload()" style="margin-top:20px; background:#455a64; color:white; border:none; padding:10px 20px; border-radius:4px; cursor:pointer;">Back to Form</button>
+        </div>
+    `;
+}
+
+async function executeDelete(regId) {
+    try {
+        await db.ref('registrations/' + regId).remove();
+        // Adjust the hall capacity counter
+        const countRef = db.ref('counters/' + eventId);
+        await countRef.transaction(c => (c || 1) - 1);
+
+        document.getElementById('form-content').innerHTML = `
+            <div style="text-align:center; padding:50px 20px;">
+                <h2 style="color:#f44336;">Registration Deleted</h2>
+                <p>The record has been successfully removed from the system.</p>
+            </div>
+        `;
+    } catch (e) {
+        alert("System error during deletion. Please contact admin.");
     }
 }
 
