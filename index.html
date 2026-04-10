@@ -209,31 +209,30 @@ async function init() {
                 return; 
             }
         }
-        
-        // 4. LOAD UI
-        const htmlSnap = await db.ref('htmlStorage/' + eventId + '/thank').once('value');
-        eventConfig.final_html = htmlSnap.val() || "<h2>Registration Successful!</h2>";
-        
+
+
+// 4. LOAD UI
+        // Fetch BOTH the thank you HTML and the banner HTML together for speed
+        const [thankSnap, bannerSnap] = await Promise.all([
+            db.ref('htmlStorage/' + eventId + '/thank').once('value'),
+            db.ref('htmlStorage/' + eventId + '/banner').once('value')
+        ]);
+
+        eventConfig.final_html = thankSnap.val() || "<h2>Registration Successful!</h2>";
+        const bannerHtml = bannerSnap.val(); 
+
         document.getElementById('title').innerHTML = eventConfig.title || "Registration";
 
-
+        // --- NEW MERS BANNER LOGIC ---
+        const container = document.getElementById('header-img-cont');
+        if (bannerHtml && container) {
+            // Inject the ready-made HTML from Step 1 (includes the 100% width fix)
+            container.innerHTML = bannerHtml;
+            container.style.display = 'block';
+        } else if (container) {
+            container.style.display = 'none';
+        }
       
-      // --- NEW MERS BANNER LOGIC ---
-// We check if the 'banner' HTML exists in the htmlData we got from Firebase
-if (htmlData && htmlData.banner) {
-    const container = document.getElementById('header-img-cont');
-    if (container) {
-        // We inject the ready-made HTML (which already includes the width:100% fix)
-        container.innerHTML = htmlData.banner;
-        container.style.display = 'block';
-    }
-} else {
-    // If no banner is provided in Step 1, keep the container hidden
-    const container = document.getElementById('header-img-cont');
-    if (container) container.style.display = 'none';
-}
-
-
       
         document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
         
