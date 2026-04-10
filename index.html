@@ -261,7 +261,7 @@ async function init() {
         if (mode === 'edit' || mode === 'delete') {
             if (regId) {
                 // This calls the helper function to fill the data and HIDE the loading circle
-                await loadExistingData(regId, mode); 
+                await (regId, mode); 
             } else {
                 alert("Invalid Link: Registration ID missing.");
                 location.href = window.location.pathname + "?id=" + eventId;
@@ -295,7 +295,7 @@ function renderForm() {
     }
 
     // 1. Clear container and create the FORM element
-    // This provides the 'regForm' ID that loadExistingData is looking for
+    // This provides the 'regForm' ID that  is looking for
     container.innerHTML = '<form id="regForm" onsubmit="return false;"></form>';
     const formElement = document.getElementById('regForm');
 
@@ -832,6 +832,9 @@ function manualFormatCheck() {
 
 /** --- NEW: EDIT & DELETE LOGIC ENGINE --- **/
 
+
+
+
 async function loadExistingData(regId, mode) {
     console.log("MERS: Starting load for ID:", regId);
     try {
@@ -852,49 +855,38 @@ async function loadExistingData(regId, mode) {
 
             if (form) {
                 clearInterval(waitForForm);
-                console.log("MERS: Form ready. Applying Mode:", mode);
 
                 // --- 1. HANDLE DELETE MODE ---
                 if (mode === 'delete') {
                     renderDeleteConfirmation(data, regId);
                     hideLoadingShowForm();
-                    return; // Stop here for delete
+                    return; 
                 }
 
-                // --- 2. HANDLE EDIT MODE ---
+                // --- 2. HANDLE EDIT MODE (TOTAL LOCKDOWN INITIALLY) ---
                 Object.keys(data).forEach(key => {
                     const field = form.elements[key];
                     if (field) {
                         field.value = data[key];
+                        field.disabled = true; // Lock everything immediately
                         
-                        // Rule: full_name is always locked
-                        if (key === 'full_name') {
-                            field.disabled = true;
-                        } else {
-                            // Rule: Show "Edit" link for others and keep locked
-                            const editLink = document.getElementById(`edit-link-${key}`);
-                            if (editLink) {
-                                editLink.style.display = 'inline';
-                                field.disabled = true;
-                            } else {
-                                // If no edit link (like zone/district), keep locked
-                                field.disabled = true; 
-                            }
-                        }
-
-                        // Trigger rules (cascading dropdowns for Zone/District)
-                        if (typeof onInputChange === "function") {
-                            onInputChange(key, data[key]);
-                        }
+                        // Hide tiny "Edit" links for now
+                        const tinyLink = document.getElementById(`edit-link-${key}`);
+                        if (tinyLink) tinyLink.style.display = 'none';
                     }
                 });
 
                 hideLoadingShowForm();
 
+                // Set up the Big "I WANT TO EDIT" Button
                 const btn = document.getElementById('submitBtn');
                 if (btn) {
-                    btn.innerText = "Update Registration";
+                    btn.innerText = "I WANT TO EDIT";
                     btn.style.backgroundColor = "#ff9800";
+                    btn.onclick = (e) => {
+                        e.preventDefault();
+                        unlockFormForEditing(data);
+                    };
                 }
             }
 
@@ -908,6 +900,84 @@ async function loadExistingData(regId, mode) {
         console.error("MERS: Load Error:", error);
     }
 }
+
+// --- NEW: LOGIC TO UNLOCK FORM ---
+function unlockFormForEditing(data) {
+    const form = document.getElementById('regForm');
+    const btn = document.getElementById('submitBtn');
+    
+    // Restricted fields that stay locked FOREVER
+    const restricted = ['full_name', 'zone', 'district', 'state', 'country', 'event_id', 'registration_id'];
+
+    Object.keys(data).forEach(key => {
+        const field = form.elements[key];
+        if (field && !restricted.includes(key)) {
+            field.disabled = false;
+            // Now show the tiny Edit link if you want it back for this field
+            const tinyLink = document.getElementById(`edit-link-${key}`);
+            if (tinyLink) tinyLink.style.display = 'inline';
+        }
+        
+        // NOW trigger the rules (dropdowns) once they click "I WANT TO EDIT"
+        if (typeof onInputChange === "function") {
+            onInputChange(key, data[key]);
+        }
+    });
+
+    // Transform the Big Button
+    btn.innerText = "CONFIRM & UPDATE";
+    btn.style.backgroundColor = "#4CAF50"; 
+    btn.onclick = (e) => handleFormSubmit(e); 
+}
+
+// --- CLEAN DELETE HELPERS ---
+function renderDeleteConfirmation(data, regId) {
+    document.getElementById('dynamic-fields').style.display = 'none';
+    const confirmBox = document.createElement('div');
+    confirmBox.id = "delete-confirm-box";
+    confirmBox.innerHTML = `
+        <div style="background: #fff5f5; border: 2px solid #f44336; padding: 20px; border-radius: 8px; text-align: center; margin-bottom:20px;">
+            <h3 style="color: #d32f2f; margin-top:0;">Confirm Deletion</h3>
+            <p><strong>Reg ID:</strong> ${data.registration_id}</p>
+            <p><strong>Name:</strong> ${data.full_name}</p>
+            <p><strong>Event:</strong> ${eventConfig.title}</p>
+            <hr style="border:0; border-top:1px solid #ffcdd2; margin:15px 0;">
+            <p style="font-weight: bold;">DO YOU WANT TO DELETE THIS REGISTRATION?</p>
+            <div style="margin-top: 20px;">
+                <button onclick="executeDelete('${regId}')" style="background:#f44336; color:white; padding:12px 24px; border:none; border-radius:4px; cursor:pointer; font-weight:bold; margin-right:15px;">YES, DELETE</button>
+                <button onclick="cancelDelete()" style="background:#607d8b; color:white; padding:12px 24px; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">NO</button>
+            </div>
+        </div>
+    `;
+    document.getElementById('form-content').prepend(confirmBox);
+    const mainBtn = document.getElementById('submitBtn');
+    if (mainBtn) mainBtn.style.display = 'none';
+}
+
+function cancelDelete() {
+    document.getElementById('form-content').innerHTML = `
+        <div style="text-align:center; padding:50px 20px;">
+            <h2 style="color:#455a64;">Thank you for being with us...</h2>
+            <p>Your registration was not changed.</p>
+        </div>
+    `;
+}
+
+async function executeDelete(regId) {
+    try {
+        await db.ref('registrations/' + regId).remove();
+        const countRef = db.ref('counters/' + eventId);
+        await countRef.transaction(c => (c || 1) - 1);
+        document.getElementById('form-content').innerHTML = `
+            <div style="text-align:center; padding:50px 20px;">
+                <h2 style="color:#f44336;">Registration Deleted</h2>
+                <p>The record has been successfully removed.</p>
+            </div>
+        `;
+    } catch (e) { alert("Error during deletion."); }
+}
+
+  
 
 // --- HELPER: DELETE UI ---
 function renderDeleteConfirmation(data, regId) {
