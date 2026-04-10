@@ -168,14 +168,22 @@ function blockUIWithNotice(message) {
 /** --- END: GATEKEEPER HELPER FUNCTIONS --- **/
 
 
+
 async function init() {
     try {
-        // --- NEW: URL PARAMETER CAPTURE ---
+        // --- 1. URL PARAMETER CAPTURE (Must happen FIRST) ---
         const urlParams = new URLSearchParams(window.location.search);
+        // Fix: We define eventId here so the rest of the script knows what to look for
+        eventId = (urlParams.get('id') || "").toUpperCase(); 
         const mode = (urlParams.get('mode') || 'new').toLowerCase();
         const regId = urlParams.get('regId');
 
-        // 1. Fetch Config from Firebase
+        if (!eventId) {
+            document.getElementById('loading-init').innerHTML = "<h2>Invalid Event Link</h2>";
+            return;
+        }
+
+        // --- 2. FETCH CONFIG FROM FIREBASE ---
         const configSnap = await db.ref('config/eventConfig').once('value');
         const allConfigs = configSnap.val() || {};
         eventConfig = allConfigs[eventId];
@@ -185,7 +193,7 @@ async function init() {
             return;
         }
 
-        // 2. DATE CHECK (Gatekeeper Tier 1)
+        // --- 3. DATE CHECK (Gatekeeper Tier 1) ---
         const today = getISTDate();
         const startDate = parseCustomDate(eventConfig.reg_start_date);
         const endDate = parseCustomDate(eventConfig.reg_end_date);
@@ -197,8 +205,7 @@ async function init() {
             }
         }
 
-        // 3. CAPACITY CHECK (Gatekeeper Tier 2 - THE INTERLOCK)
-        // MODIFIED: Only run this check if mode is 'new'
+        // --- 4. CAPACITY CHECK (Gatekeeper Tier 2 - Only for 'new') ---
         if (mode === 'new') {
             const counterSnap = await db.ref('counters/' + eventId).once('value');
             const currentCount = Number(counterSnap.val() || 0); 
@@ -210,9 +217,7 @@ async function init() {
             }
         }
 
-
-// 4. LOAD UI
-        // Fetch BOTH the thank you HTML and the banner HTML together for speed
+        // --- 5. LOAD UI ASSETS (Banner & Thank You) ---
         const [thankSnap, bannerSnap] = await Promise.all([
             db.ref('htmlStorage/' + eventId + '/thank').once('value'),
             db.ref('htmlStorage/' + eventId + '/banner').once('value')
@@ -222,29 +227,25 @@ async function init() {
         const bannerHtml = bannerSnap.val(); 
 
         document.getElementById('title').innerHTML = eventConfig.title || "Registration";
+        document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
 
-        // --- NEW MERS BANNER LOGIC ---
+        // Banner Injection Logic
         const container = document.getElementById('header-img-cont');
         if (bannerHtml && container) {
-            // Inject the ready-made HTML from Step 1 (includes the 100% width fix)
             container.innerHTML = bannerHtml;
             container.style.display = 'block';
         } else if (container) {
             container.style.display = 'none';
         }
-      
-      
-        document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
-        
-        // Load Field Rules
+
+        // --- 6. FIELD RULES ---
         const rulesSnap = await db.ref('config/fieldRules').once('value');
         fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
 
-
-// --- NEW: ROUTING LOGIC ---
+        // --- 7. ROUTING LOGIC (The Final Step) ---
         if (mode === 'edit' || mode === 'delete') {
             if (regId) {
-                // ADD 'await' here so the script waits for data before trying to show the form
+                // This calls the helper function to fill the data and HIDE the loading circle
                 await loadExistingData(regId, mode); 
             } else {
                 alert("Invalid Link: Registration ID missing.");
@@ -253,18 +254,24 @@ async function init() {
         } else {
             // Normal New Registration
             renderForm();
-            document.getElementById('loading-init').style.display = 'none';
-            document.getElementById('form-content').style.display = 'block';
+            // We use a dedicated helper to ensure the UI switches properly
+            hideLoadingShowForm();
         }
 
-    
-
-        
     } catch (e) { 
         console.error("Initialization Error:", e);
         document.getElementById('loading-init').innerHTML = "<h2>Error loading form. Please refresh.</h2>";
     }
 }
+
+// --- HELPER FUNCTION: Ensure this is also in your code ---
+function hideLoadingShowForm() {
+    document.getElementById('loading-init').style.display = 'none';
+    document.getElementById('form-content').style.display = 'block';
+}
+
+
+
 function renderForm() {
   const container = document.getElementById('dynamic-fields');
   container.innerHTML = '';
