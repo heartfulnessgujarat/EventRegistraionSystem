@@ -308,42 +308,33 @@ function renderForm() {
   }
 
 
-async function handleSearch(fId, val) {
-  const resDiv = document.getElementById(`res-${fId}`);
-  if (val.length < 3) { resDiv.style.display = 'none'; return; }
-  
-  const rule = fieldRules.find(r => r.field_id === fId);
-  const lookupTab = rule ? rule.lookup_tab : null;
+function handleSearch(fieldId, value) {
+  const dropdown = document.getElementById(`results-${fieldId}`);
+  if (value.length < 3) { dropdown.style.display = 'none'; return; }
 
-  if (masterData.length === 0 && lookupTab) { 
-    const snap = await db.ref(lookupTab).once('value'); 
-    const raw = snap.val() || {};
-    masterData = Array.isArray(raw) ? raw : Object.values(raw);
-  }
+  // 1. Find the correct Lookup Tab from your Field Rules
+  const rule = fieldRules.find(r => r.field_id === fieldId);
+  const tabName = rule ? rule.lookup_tab : 'Master_Internal_DB';
+  const lookupCol = rule ? rule.lookup_column : fieldId;
 
-  const searchVal = val.toLowerCase();
+  const list = masterData[tabName] || [];
+  if (list.length === 0) return;
 
-  if (fId === 'full_name') {
-    // We get the unique names
-    const allMatches = masterData
-      .filter(x => {
-        const n = x.full_name || x['Full Name'] || "";
-        return String(n).toLowerCase().includes(searchVal);
-      })
-      .map(x => String(x.full_name || x['Full Name'] || "").trim());
+  // 2. DYNAMIC COLUMN SEARCH: Find where the column is (A to T)
+  const headers = list[0]; 
+  const colIndex = headers.indexOf(lookupCol);
+  if (colIndex === -1) { console.error("Column not found:", lookupCol); return; }
 
-    const uniqueNames = [...new Set(allMatches)];
-    renderDropdown(resDiv, uniqueNames.slice(0, 8), 'name');
+  // 3. Filter data based on that dynamic index
+  const matches = list.slice(1).filter(row => 
+    row[colIndex] && row[colIndex].toString().toLowerCase().includes(value.toLowerCase())
+  );
 
-  } else if (fId === 'centre') {
-    const allCentres = masterData
-      .filter(x => x.centre && x.centre.toLowerCase().includes(searchVal))
-      .map(x => x.centre.trim());
-
-    const uniqueCentres = [...new Set(allCentres)];
-    renderDropdown(resDiv, uniqueCentres.slice(0, 8), 'loc');
-  }
+  renderDropdown(fieldId, matches, colIndex, dropdown);
 }
+
+
+
 
 function renderDropdown(div, list, type) {
   div.innerHTML = '';
