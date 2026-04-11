@@ -103,3 +103,140 @@ function renderForm() {
     fieldRules.forEach(r => {
         const div = document.createElement('div');
         div.className = 'field-container';
+        div.id = `cont-${r.field_id}`;
+        div.style.display = (r.initial_state === 'Hidden') ? 'none' : 'block';
+        const needsEditLink = ['Editable', 'Editable_Verify', 'Editable_Lookup'].includes(r.edit_behavior);
+        div.innerHTML = `
+            <div class="label-row">
+                <label>${r.display_label || r.field_id}</label>
+                ${needsEditLink ? `<span class="edit-link" id="edit-link-${r.field_id}" style="display:none;" onclick="unlockField('${r.field_id}')">Edit</span>` : ''}
+            </div>
+            <input type="text" id="inp-${r.field_id}" name="${r.field_id}" oninput="onInputChange('${r.field_id}', this.value)" disabled autocomplete="off">
+            <div class="error-msg-text" id="err-${r.field_id}"></div>
+            <div class="dropdown" id="res-${r.field_id}"></div>
+        `;
+        formElement.appendChild(div);
+        if (r.field_id === 'full_name') {
+            div.style.display = 'block';
+            document.getElementById('inp-full_name').disabled = false;
+        }
+    });
+}
+
+async function onInputChange(fId, val) {
+    if (fId === 'full_name' || fId === 'centre') handleSearch(fId, val);
+    checkAllValidations();
+}
+
+async function handleSearch(fId, val) {
+    const resDiv = document.getElementById(`res-${fId}`);
+    if (val.length < 3) { resDiv.style.display = 'none'; return; }
+    if (masterData.length === 0) {
+        const snap = await db.ref('Master_Internal_DB').once('value');
+        masterData = Object.values(snap.val() || {});
+    }
+    const searchVal = val.toLowerCase();
+    if (fId === 'full_name') {
+        const matches = [...new Set(masterData.filter(x => String(x.full_name || x['Full Name'] || "").toLowerCase().includes(searchVal)).map(x => x.full_name || x['Full Name']))];
+        renderDropdown(resDiv, matches.slice(0, 8), 'name');
+    } else if (fId === 'centre') {
+        const matches = masterData.filter(x => String(x.centre || x['Centre'] || "").toLowerCase().includes(searchVal));
+        const unique = Array.from(new Map(matches.map(m => [(m.centre || m['Centre']).toLowerCase(), m])).values());
+        renderDropdown(resDiv, unique.slice(0, 8), 'loc');
+    }
+}
+
+function renderDropdown(div, list, type) {
+    div.innerHTML = '';
+    if (list.length > 0) {
+        div.style.display = 'block';
+        list.forEach(item => {
+            const d = document.createElement('div');
+            d.className = 'item';
+            d.textContent = type === 'loc' ? (item.centre || item['Centre']) : item;
+            d.onclick = () => {
+                if (type === 'loc') selectLocation(item);
+                else selectParticipant(masterData.find(x => (x.full_name || x['Full Name']) === item));
+                div.style.display = 'none';
+            };
+            div.appendChild(d);
+        });
+    } else { div.style.display = 'none'; }
+}
+
+function selectParticipant(p) {
+    fieldRules.forEach(r => {
+        const el = document.getElementById(`inp-${r.field_id}`);
+        if (el) { el.value = p[r.field_id] || p[r.field_id.replace('_',' ')] || ""; el.disabled = true; }
+    });
+    document.getElementById('btns-start').style.display = 'flex';
+    checkAllValidations();
+}
+
+function selectLocation(l) {
+    document.getElementById('inp-centre').value = l.centre || l['Centre'];
+    fieldRules.filter(r => r.edit_behavior === 'Locked').forEach(rule => {
+        const el = document.getElementById(`inp-${rule.field_id}`);
+        if (el) el.value = l[rule.field_id] || l[rule.field_id.charAt(0).toUpperCase() + rule.field_id.slice(1)] || "";
+    });
+    checkAllValidations();
+}
+
+function enableEditMode() {
+    document.getElementById('btns-start').style.display = 'none';
+    document.getElementById('btn-master-update').style.display = 'block';
+    fieldRules.forEach(r => {
+        const link = document.getElementById(`edit-link-${r.field_id}`);
+        if (link && r.field_id !== 'full_name') link.style.display = 'inline';
+    });
+}
+
+function unlockField(id) {
+    const inp = document.getElementById(`inp-${id}`);
+    inp.disabled = false;
+    inp.focus();
+    document.getElementById(`edit-link-${id}`).style.display = 'none';
+}
+
+function checkAllValidations() {
+    let allValid = true;
+    fieldRules.forEach(r => {
+        const input = document.getElementById(`inp-${r.field_id}`);
+        if (input && input.value.trim() === "" && r.initial_state === 'Visible') allValid = false;
+    });
+    document.getElementById('btn-register').disabled = !allValid;
+    document.getElementById('btn-master-update').disabled = !allValid;
+}
+
+async function loadExistingData(regId, mode) {
+    const snap = await db.ref('registrations/' + regId).once('value');
+    const data = snap.val();
+    if (!data) return;
+    originalData = data;
+    renderForm();
+    Object.keys(data).forEach(k => {
+        const f = document.getElementById(`inp-${k}`);
+        if (f) { f.value = data[k]; f.disabled = true; }
+    });
+    document.getElementById('btns-start').style.display = (mode === 'edit') ? 'flex' : 'none';
+    hideLoadingShowForm();
+}
+
+async function submitData() {
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('processing-overlay').style.display = 'block';
+    const formData = { ...originalData, event_id: eventId, last_updated: new Date().toLocaleString() };
+    fieldRules.forEach(r => {
+        const el = document.getElementById(`inp-${r.field_id}`);
+        if (el) formData[r.field_id] = el.value.trim();
+    });
+    await db.ref('registrations/' + (formData.registration_id || Date.now())).set(formData);
+    document.getElementById('processing-overlay').style.display = 'none';
+    document.getElementById('success-screen').style.display = 'block';
+    document.getElementById('success-content').innerHTML = `<h2>Success</h2><p>Registration processed successfully.</p>`;
+}
+
+init();
+</script>
+</body>
+</html>
