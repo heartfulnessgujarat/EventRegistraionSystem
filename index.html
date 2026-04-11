@@ -27,6 +27,8 @@
     .dropdown { border: 1px solid #ddd; max-height: 180px; overflow-y: auto; background: white; position: absolute; width: 100%; z-index: 9999; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 8px; }
     .item { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f1f1f1; font-size: 14px; }
     .item:hover { background: #e8eaf6; }
+    .verify-panel { background: #fffde7; border: 1px solid #fbc02d; padding: 10px; border-radius: 8px; margin-top: 10px; display: none; }
+    .verify-btn { background: #fbc02d; color: #333; border: none; padding: 10px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 12px; width: 100%; margin-bottom: 10px; }
     #success-screen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f0f2f5; z-index: 9999; overflow-y: auto; padding: 20px; box-sizing: border-box; }
     .thank-you-card { max-width: 550px; margin: 20px auto; background: #ffffff; padding: 30px; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); border: 1px solid #e0e0e0; }
     #processing-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 10000; text-align: center; padding-top: 25vh; }
@@ -53,29 +55,59 @@
 <div id="processing-overlay"><div class="spinner"></div><h2>Processing your registration...</h2><p>Kindly do not close this window.</p></div>
 
 <script>
-let eventId = (new URLSearchParams(window.location.search).get('id') || 'EVT001').toUpperCase();
-let fieldRules = [], masterData = [], eventConfig = {}, originalData = {};
+let verificationAttempts = { email: 0, mobile: 0 };
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyPbae3F_Vm2q25LWZF1G59O0V2XRrokeqxNkLvZetTKl19HM4QubILy17nPe65Q-L-zw/exec";
 const firebaseConfig = { databaseURL: "https://ferrari-reg-2026-default-rtdb.asia-southeast1.firebasedatabase.app" };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+let eventId = (new URLSearchParams(window.location.search).get('id') || 'EVT001').toUpperCase();
+let fieldRules = [], masterData = [], eventConfig = {}, originalData = {}, verificationStates = { email: false, mobile: false };
+
+/** --- HELPER FUNCTIONS --- **/
+function getISTDate() {
+    const now = new Date();
+    const istTime = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (5.5 * 60 * 60 * 1000));
+    istTime.setHours(0, 0, 0, 0);
+    return istTime;
+}
+
+function parseCustomDate(dateStr) {
+    if (!dateStr || typeof dateStr !== 'string') return null;
+    const months = { "Jan": 0, "Feb": 1, "Mar": 2, "Apr": 3, "May": 4, "Jun": 5, "Jul": 6, "Aug": 7, "Sep": 8, "Oct": 9, "Nov": 10, "Dec": 11 };
+    const parts = dateStr.split('-');
+    return (parts.length === 3) ? new Date(parseInt(parts[2], 10), months[parts[1]], parseInt(parts[0], 10)) : null;
+}
+
+function blockUIWithNotice(message) {
+    document.body.innerHTML = `<div style="display:flex; justify-content:center; align-items:center; height:100vh; font-family:sans-serif; text-align:center;"><div><h2>Registration Notice</h2><p>${message}</p></div></div>`;
+    throw new Error(message);
+}
+
 async function init() {
     try {
         const urlParams = new URLSearchParams(window.location.search);
+        eventId = (urlParams.get('id') || "").toUpperCase();
         const mode = (urlParams.get('mode') || 'new').toLowerCase();
         const regId = urlParams.get('regId');
 
-        const [configSnap, rulesSnap] = await Promise.all([
-            db.ref('config/eventConfig').once('value'), 
+        const configSnap = await db.ref('config/eventConfig').once('value');
+        eventConfig = (configSnap.val() || {})[eventId];
+        if (!eventConfig) return;
+
+        const today = getISTDate();
+        const start = parseCustomDate(eventConfig.reg_start_date), end = parseCustomDate(eventConfig.reg_end_date);
+        if (start && end && (today < start || today > end)) return blockUIWithNotice(eventConfig.reg_close_msg || "Closed.");
+
+        const [thankSnap, bannerSnap, rulesSnap] = await Promise.all([
+            db.ref('htmlStorage/' + eventId + '/thank').once('value'),
+            db.ref('htmlStorage/' + eventId + '/banner').once('value'),
             db.ref('config/fieldRules').once('value')
         ]);
         
-        eventConfig = (configSnap.val() || {})[eventId];
+        eventConfig.final_html = thankSnap.val();
         fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
         
-        document.getElementById('title').innerText = eventConfig.title || "Registration";
-        document.getElementById('subtitle').innerText = eventConfig.subtitle || "";
-        const bannerSnap = await db.ref('htmlStorage/' + eventId + '/banner').once('value');
         if (bannerSnap.val()) {
             const cont = document.getElementById('header-img-cont');
             cont.innerHTML = bannerSnap.val();
@@ -105,161 +137,7 @@ function renderForm() {
         div.className = 'field-container';
         div.id = `cont-${r.field_id}`;
         div.style.display = (r.initial_state === 'Hidden') ? 'none' : 'block';
-        const needsEditLink = ['Editable', 'Editable_Verify', 'Editable_Lookup'].includes(r.edit_behavior);
+        const needsEdit = ['Editable', 'Editable_Verify', 'Editable_Lookup'].includes(r.edit_behavior);
         div.innerHTML = `
-            <div class="label-row">
-                <label>${r.display_label || r.field_id}</label>
-                ${needsEditLink ? `<span class="edit-link" id="edit-link-${r.field_id}" style="display:none;" onclick="unlockField('${r.field_id}')">Edit</span>` : ''}
-            </div>
+            <div class="label-row"><label>${r.display_label || r.field_id}</label>${needsEdit ? `<span class="edit-link" id="edit-link-${r.field_id}" style="display:none;" onclick="unlockField('${r.field_id}')">Edit</span>` : ''}</div>
             <input type="text" id="inp-${r.field_id}" name="${r.field_id}" oninput="onInputChange('${r.field_id}', this.value)" disabled autocomplete="off">
-            <div class="error-msg-text" id="err-${r.field_id}"></div>
-            <div class="dropdown" id="res-${r.field_id}"></div>
-        `;
-        formElement.appendChild(div);
-        if (r.field_id === 'full_name') { div.style.display = 'block'; document.getElementById('inp-full_name').disabled = false; }
-    });
-}
-
-async function onInputChange(fId, val) {
-    if (fId === 'full_name' || fId === 'centre') handleSearch(fId, val);
-    checkAllValidations();
-}
-
-async function handleSearch(fId, val) {
-    const resDiv = document.getElementById(`res-${fId}`);
-    if (val.length < 3) { resDiv.style.display = 'none'; return; }
-    if (masterData.length <= 1) {
-        const snap = await db.ref('Master_Internal_DB').once('value');
-        masterData = Object.values(snap.val() || {});
-    }
-    const searchVal = val.toLowerCase();
-    if (fId === 'full_name') {
-        const matches = [...new Set(masterData.filter(x => String(x.full_name || x['Full Name'] || "").toLowerCase().includes(searchVal)).map(x => x.full_name || x['Full Name']))];
-        renderDropdown(resDiv, matches.slice(0, 8), 'name');
-    } else if (fId === 'centre') {
-        const matchedObjects = masterData.filter(x => String(x.centre || x['Centre'] || "").toLowerCase().includes(searchVal));
-        const uniqueMap = new Map();
-        matchedObjects.forEach(item => {
-            const cityName = String(item.centre || item['Centre'] || "").trim();
-            if (cityName && !uniqueMap.has(cityName.toLowerCase())) uniqueMap.set(cityName.toLowerCase(), item);
-        });
-        renderDropdown(resDiv, Array.from(uniqueMap.values()).slice(0, 8), 'loc');
-    }
-}
-
-function renderDropdown(div, list, type) {
-    div.innerHTML = '';
-    if (list.length > 0) {
-        div.style.display = 'block';
-        list.forEach(item => {
-            const d = document.createElement('div');
-            d.className = 'item';
-            d.textContent = type === 'loc' ? (item.centre || item['Centre']) : item;
-            d.onclick = () => {
-                if (type === 'loc') selectLocation(item);
-                else selectParticipant(masterData.find(x => (x.full_name || x['Full Name']) === item));
-                div.style.display = 'none';
-            };
-            div.appendChild(d);
-        });
-    } else div.style.display = 'none';
-}
-
-function selectParticipant(p) {
-    fieldRules.forEach(r => {
-        const el = document.getElementById(`inp-${r.field_id}`);
-        if (el) { el.value = p[r.field_id] || p[r.field_id.replace('_',' ')] || ""; el.disabled = true; originalData[r.field_id] = el.value; }
-    });
-    document.getElementById('btns-start').style.display = 'flex';
-    checkAllValidations();
-}
-
-function selectLocation(l) {
-    document.getElementById('inp-centre').value = l.centre || l['Centre'];
-    fieldRules.filter(r => r.edit_behavior === 'Locked').forEach(rule => {
-        const el = document.getElementById(`inp-${rule.field_id}`);
-        if (el) el.value = l[rule.field_id] || l[rule.field_id.charAt(0).toUpperCase() + rule.field_id.slice(1)] || "";
-    });
-    checkAllValidations();
-}
-
-function enableEditMode() {
-    document.getElementById('btns-start').style.display = 'none';
-    document.getElementById('btn-master-update').style.display = 'block';
-    fieldRules.forEach(r => {
-        const link = document.getElementById(`edit-link-${r.field_id}`);
-        if (link && r.field_id !== 'full_name') link.style.display = 'inline';
-    });
-}
-
-function unlockField(id) {
-    const inp = document.getElementById(`inp-${id}`);
-    inp.disabled = false;
-    inp.focus();
-    document.getElementById(`edit-link-${id}`).style.display = 'none';
-    if (id === 'centre') inp.setAttribute("oninput", "handleSearch('centre', this.value)");
-}
-
-function validateField(id, value, rule) {
-    if (!rule || rule === 'NULL' || value.trim() === "") return value.trim() !== "";
-    const val = value.trim();
-    if (rule === 'MOB') return /^[6-9]\d{9}$/.test(val);
-    if (rule === 'PIN') return /^\d{6}$/.test(val);
-    if (rule === 'EMAIL') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
-    return true;
-}
-
-function checkAllValidations() {
-    let allValid = true;
-    fieldRules.forEach(r => {
-        const input = document.getElementById(`inp-${r.field_id}`);
-        const errDiv = document.getElementById(`err-${r.field_id}`);
-        if (input) {
-            let isValid = validateField(r.field_id, input.value, r.field_validation);
-            if (!isValid && input.value.trim() !== "") {
-                input.style.border = '2px solid red';
-                if (errDiv) { errDiv.innerText = r.error_msg || "Invalid input"; errDiv.style.display = 'block'; }
-                allValid = false;
-            } else {
-                input.style.border = '1px solid #ced4da';
-                if (errDiv) errDiv.style.display = 'none';
-            }
-            if (input.value.trim() === "" && r.initial_state === 'Visible') allValid = false;
-        }
-    });
-    document.getElementById('btn-register').disabled = !allValid;
-    document.getElementById('btn-master-update').disabled = !allValid;
-}
-
-async function loadExistingData(regId, mode) {
-    const snap = await db.ref('registrations/' + regId).once('value');
-    const data = snap.val();
-    if (!data) return;
-    originalData = data;
-    renderForm();
-    Object.keys(data).forEach(k => {
-        const f = document.getElementById(`inp-${k}`);
-        if (f) { f.value = data[k]; f.disabled = true; }
-    });
-    document.getElementById('btns-start').style.display = (mode === 'edit') ? 'flex' : 'none';
-    hideLoadingShowForm();
-}
-
-async function submitData() {
-    document.getElementById('app').style.display = 'none';
-    document.getElementById('processing-overlay').style.display = 'block';
-    const formData = { ...originalData, event_id: eventId, last_updated: new Date().toLocaleString() };
-    fieldRules.forEach(r => {
-        const el = document.getElementById(`inp-${r.field_id}`);
-        if (el) formData[r.field_id] = el.value.trim();
-    });
-    await db.ref('registrations/' + (formData.registration_id || Date.now())).set(formData);
-    document.getElementById('processing-overlay').style.display = 'none';
-    document.getElementById('success-screen').style.display = 'block';
-    document.getElementById('success-content').innerHTML = `<h2>Success</h2><p>Registration updated successfully.</p>`;
-}
-
-init();
-</script>
-</body>
-</html>
