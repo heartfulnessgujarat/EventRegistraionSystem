@@ -3,123 +3,74 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MERS - Event Registration</title>
+  <title>Event Registration 2026</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-  <style>
+<style>
     body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; margin: 0; }
-    .card { width: 100%; max-width: 480px; background: white; padding-bottom: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; }
-    .header-image-container { width: 100%; overflow: hidden; display: none; border-bottom: 3px solid #1a237e; }
-    .header-image-container img { width: 100%; height: auto; display: block; }
-    .content { padding: 20px; }
-    h1 { color: #1a237e; margin: 0 0 5px 0; font-size: 22px; text-align: center; }
-    p.subtitle { color: #666; margin: 0 0 25px 0; font-size: 14px; text-align: center; font-weight: 500; }
-    .field-container { margin-bottom: 18px; position: relative; }
-    .label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-    label { font-weight: 600; color: #444; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .edit-link { color: #1a237e; font-size: 12px; cursor: pointer; font-weight: bold; text-decoration: underline; }
-    input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 8px; box-sizing: border-box; font-size: 15px; transition: all 0.3s; background: #f8f9fa; }
-    input[type="text"]:focus { border-color: #1a237e; outline: none; box-shadow: 0 0 0 3px rgba(26,35,126,0.1); background: white; }
-    input:disabled { background: #e9ecef; cursor: not-allowed; color: #6c757d; }
-    .help-text { font-size: 11px; color: #6c757d; margin-top: 4px; }
-    .error-msg-text { color: #dc3545; font-size: 11px; margin-top: 4px; font-weight: 500; }
-    .dropdown { position: absolute; background: white; border: 1px solid #ddd; width: 100%; z-index: 1000; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); display: none; margin-top: 2px; }
-    .dropdown div { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #eee; font-size: 14px; }
-    .dropdown div:hover { background: #f0f2f5; color: #1a237e; }
-    .btn-row { display: flex; gap: 10px; margin-top: 25px; }
-    .primary-btn { flex: 1; padding: 14px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.3s; color: white; background: #1a237e; }
-    .primary-btn:disabled { background: #ccc; cursor: not-allowed; }
-    .verify-panel { background: #f8f9fa; padding: 12px; border-radius: 8px; border: 1px dashed #ced4da; margin-top: 10px; }
-    .verify-btn { width: 100%; padding: 8px; font-size: 12px; cursor: pointer; border-radius: 5px; border: none; background: #1a237e; color: white; font-weight: bold; }
-    #processing-overlay { display: none; text-align: center; padding: 40px; }
-    #success-screen { display: none; text-align: center; padding: 40px; }
-  </style>
+    .card { width: 100%; max-width: 480px; background: white; padding: 0 0 30px 0; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; }
+    .header-image-container { width: 100%; overflow: hidden; display: none; border-bottom: 3px solid #1a237e; background-color: #f5f5f5; }
+    #event-header-img { width: 100%; height: 180px; object-fit: cover; display: block; }
+    #form-content { padding: 20px 30px; }
+    h2 { color: #1a237e; margin: 10px 0 5px 0; text-align: center; font-size: 22px; }
+    .subtitle { color: #666; font-size: 13px; text-align: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+    .field-container { margin-bottom: 12px; position: relative; }
+    .label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    label { font-weight: 700; font-size: 12px; color: #1a237e; }
+    .edit-link { font-size: 11px; color: #1a237e; cursor: pointer; font-weight: bold; text-decoration: underline; display: none; }
+    input { width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 8px; box-sizing: border-box; font-size: 15px; }
+    input:disabled { background: #f8f9fa; color: #6c757d; }
+    .help-text { font-size: 10.5px; color: #5c6bc0; margin-top: 2px; font-style: italic; display: none; font-weight: 500; }
+    .error-msg-text { color: #d32f2f; font-size: 11px; margin-top: 3px; font-weight: bold; display: none; }
+    .primary-btn { width: 100%; padding: 14px; background: #1a237e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 15px; }
+    .primary-btn:disabled { opacity: 0.5; background: #999; }
+    .dropdown { border: 1px solid #ddd; max-height: 180px; overflow-y: auto; background: white; position: absolute; width: 100%; z-index: 9999; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 8px; }
+    .item { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f1f1f1; font-size: 14px; }
+    .item:hover { background: #e8eaf6; }
+    #success-screen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f0f2f5; z-index: 9999; overflow-y: auto; padding: 20px; box-sizing: border-box; }
+    .thank-you-card { max-width: 550px; margin: 20px auto; background: #ffffff; padding: 30px; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); border: 1px solid #e0e0e0; }
+    #processing-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 10000; text-align: center; padding-top: 25vh; }
+    .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #1a237e; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+</style>
 </head>
 <body>
-
 <div class="card" id="app">
-    <div id="header-img-cont" class="header-image-container"></div>
-    <div class="content">
-        <div id="loading-init" style="text-align:center; padding: 40px;">
-            <div style="border: 4px solid #f3f3f3; border-top: 4px solid #1a237e; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 15px auto;"></div>
-            <p>Loading registration form...</p>
+    <div id="loading-init"><h2>Loading registration form...</h2></div>
+    <div id="form-content" style="display:none;">
+        <div id="header-img-cont" class="header-image-container"><img id="event-header-img" src="" alt="Event Banner"></div>
+        <h2 id="title"></h2>
+        <p class="subtitle" id="subtitle"></p>
+        <div id="dynamic-fields"></div>
+        <div id="btns-start" style="display:none; flex-direction:column; gap:10px;">
+            <button id="btn-register" class="primary-btn" disabled onclick="submitData()">Confirm Registration</button>
+            <button class="primary-btn" style="background:#455a64;" onclick="enableEditMode()">I want to edit my details</button>
         </div>
-
-        <div id="form-content" style="display:none;">
-            <h1 id="title">Event Registration</h1>
-            <p class="subtitle" id="subtitle"></p>
-            
-            <div id="dynamic-fields"></div>
-
-            <div id="btns-start" class="btn-row">
-                <button id="btn-register" class="primary-btn" disabled onclick="submitData()">REGISTER NOW</button>
-            </div>
-            <div id="btns-update" class="btn-row" style="display:none;">
-                <button id="btn-master-update" class="primary-btn" onclick="handleEditClick()">I WANT TO EDIT</button>
-            </div>
-        </div>
+        <button id="btn-master-update" class="primary-btn" style="display:none;" disabled onclick="submitData()">DETAILS UPDATED, REGISTER ME</button>
     </div>
 </div>
-
-<div class="card" id="processing-overlay">
-    <div style="border: 4px solid #f3f3f3; border-top: 4px solid #1a237e; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px auto;"></div>
-    <h2>Processing...</h2>
-    <p>Please do not refresh or close this window.</p>
-</div>
-
-<div class="card" id="success-screen">
-    <div id="success-content"></div>
-</div>
-
-<style> @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } } </style>
-
+<div id="success-screen"><div id="success-content" class="thank-you-card"></div></div>
+<div id="processing-overlay"><div class="spinner"></div><h2 style="color: #1a237e;">Processing your registration...</h2><p>Kindly do not close this window.</p></div>
 
 <script>
-/** --- CONFIG & GLOBALS --- **/
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyPbae3F_Vm2q25LWZF1G59O0V2XRrokeqxNkLvZetTKl19HM4QubILy17nPe65Q-L-zw/exec";
+let eventId = (new URLSearchParams(window.location.search).get('id') || 'EVT001').toUpperCase();
+let fieldRules = [], masterData = [], eventConfig = {}, originalData = {};
 const firebaseConfig = { databaseURL: "https://ferrari-reg-2026-default-rtdb.asia-southeast1.firebasedatabase.app" };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let eventId = (new URLSearchParams(window.location.search).get('id') || 'EVT001').toUpperCase();
-let fieldRules = [], masterData = [], eventConfig = {}, originalData = {};
-let currentMode = 'new';
-let currentRegId = null;
-
-/** --- INITIALIZATION --- **/
 async function init() {
     try {
-        const urlParams = new URLSearchParams(window.location.search);
-        eventId = (urlParams.get('id') || "EVT001").toUpperCase();
-        currentMode = (urlParams.get('mode') || 'new').toLowerCase();
-        currentRegId = urlParams.get('regId');
-
-        // Fetch Event Settings & Field Rules first
-        const [configSnap, rulesSnap] = await Promise.all([
-            db.ref('config/eventConfig').once('value'),
-            db.ref('config/fieldRules').once('value')
-        ]);
-
-        eventConfig = (configSnap.val() || {})[eventId] || {};
+        const configSnap = await db.ref('config/eventConfig').once('value');
+        eventConfig = (configSnap.val() || {})[eventId];
+        const rulesSnap = await db.ref('config/fieldRules').once('value');
         fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
-
-        // UI Setup
-        const bannerSnap = await db.ref('htmlStorage/' + eventId + '/banner').once('value');
-        if (bannerSnap.val()) {
-            const cont = document.getElementById('header-img-cont');
-            cont.innerHTML = bannerSnap.val();
-            cont.style.display = 'block';
-        }
+        
         document.getElementById('title').innerText = eventConfig.title || "Registration";
         document.getElementById('subtitle').innerText = eventConfig.subtitle || "";
-
-        if ((currentMode === 'edit' || currentMode === 'delete') && currentRegId) {
-            await loadExistingData(currentRegId, currentMode);
-        } else {
-            renderForm();
-            hideLoadingShowForm();
-        }
-    } catch (e) { console.error("Initialization failed:", e); }
+        renderForm();
+        hideLoadingShowForm();
+    } catch (e) { console.error(e); }
 }
 
 function hideLoadingShowForm() {
@@ -127,19 +78,15 @@ function hideLoadingShowForm() {
     document.getElementById('form-content').style.display = 'block';
 }
 
-/** --- FORM ENGINE --- **/
 function renderForm() {
     const container = document.getElementById('dynamic-fields');
     container.innerHTML = '<form id="regForm" onsubmit="return false;"></form>';
     const formElement = document.getElementById('regForm');
-
     fieldRules.forEach(r => {
         const div = document.createElement('div');
         div.className = 'field-container';
         div.id = `cont-${r.field_id}`;
-        // Set initial visibility based on Field_rules
         div.style.display = (r.initial_state === 'Hidden') ? 'none' : 'block';
-        
         const needsEditLink = ['Editable', 'Editable_Verify', 'Editable_Lookup'].includes(r.edit_behavior);
         div.innerHTML = `
             <div class="label-row">
@@ -147,166 +94,68 @@ function renderForm() {
                 ${needsEditLink ? `<span class="edit-link" id="edit-link-${r.field_id}" style="display:none;" onclick="unlockField('${r.field_id}')">Edit</span>` : ''}
             </div>
             <input type="text" id="inp-${r.field_id}" name="${r.field_id}" oninput="onInputChange('${r.field_id}', this.value)" disabled autocomplete="off">
+            <div class="error-msg-text" id="err-${r.field_id}"></div>
             <div class="dropdown" id="res-${r.field_id}"></div>
         `;
         formElement.appendChild(div);
-
-        if (r.field_id === 'full_name' && currentMode === 'new') {
+        if (r.field_id === 'full_name') {
             div.style.display = 'block';
             document.getElementById('inp-full_name').disabled = false;
         }
     });
 }
 
-/** --- SEARCH LOGIC --- **/
 async function onInputChange(fId, val) {
-    // Search is allowed if it's a NEW registration OR the user is actively updating an existing one
-    const btn = document.getElementById('btn-master-update');
-    const isEditActive = (btn && btn.innerText === "CONFIRM & UPDATE");
-
-    if (currentMode === 'new' || isEditActive) {
-        if (fId === 'full_name' || fId === 'centre') handleSearch(fId, val);
-    }
+    if (fId === 'full_name' || fId === 'centre') handleSearch(fId, val);
     checkAllValidations();
 }
 
 async function handleSearch(fId, val) {
     const resDiv = document.getElementById(`res-${fId}`);
     if (val.length < 3) { resDiv.style.display = 'none'; return; }
-    
     if (masterData.length === 0) {
-        const snap = await db.ref('Master_Internal_DB').once('value'); 
+        const snap = await db.ref('Master_Internal_DB').once('value');
         masterData = Object.values(snap.val() || {});
     }
-
     const searchVal = val.toLowerCase();
-    const matches = masterData.filter(x => {
-        const fieldVal = String(x[fId] || x[fId.charAt(0).toUpperCase() + fId.slice(1)] || "").toLowerCase();
-        return fieldVal.includes(searchVal);
-    }).slice(0, 8);
-    
-    resDiv.innerHTML = '';
-    if (matches.length > 0) {
-        resDiv.style.display = 'block';
-        matches.forEach(m => {
+    if (fId === 'full_name') {
+        const matches = [...new Set(masterData.filter(x => String(x.full_name).toLowerCase().includes(searchVal)).map(x => x.full_name))];
+        renderDropdown(resDiv, matches.slice(0, 8), 'name');
+    } else if (fId === 'centre') {
+        const matches = masterData.filter(x => String(x.centre).toLowerCase().includes(searchVal));
+        const unique = Array.from(new Map(matches.map(m => [m.centre.toLowerCase(), m])).values());
+        renderDropdown(resDiv, unique.slice(0, 8), 'loc');
+    }
+}
+
+function renderDropdown(div, list, type) {
+    div.innerHTML = '';
+    if (list.length > 0) {
+        div.style.display = 'block';
+        list.forEach(item => {
             const d = document.createElement('div');
-            d.textContent = m[fId] || m[fId.charAt(0).toUpperCase() + fId.slice(1)];
-            d.onclick = () => { fillFromMaster(m); resDiv.style.display = 'none'; };
-            resDiv.appendChild(d);
+            d.className = 'item';
+            d.textContent = type === 'loc' ? item.centre : item;
+            d.onclick = () => {
+                if (type === 'loc') selectLocation(item);
+                else selectParticipant(masterData.find(x => x.full_name === item));
+                div.style.display = 'none';
+            };
+            div.appendChild(d);
         });
-    }
+    } else { div.style.display = 'none'; }
 }
 
-function fillFromMaster(m) {
-    fieldRules.forEach(r => {
-        const field = document.getElementById(`inp-${r.field_id}`);
-        const cont = document.getElementById(`cont-${r.field_id}`);
-        if (field) {
-            const val = m[r.field_id] || m[r.field_id.charAt(0).toUpperCase() + r.field_id.slice(1)] || "";
-            field.value = val;
-            field.disabled = true;
-            if (val !== "" || r.initial_state === 'Visible') cont.style.display = 'block';
-        }
-    });
-
-    if (currentMode === 'new') {
-        document.getElementById('btns-start').style.display = 'flex'; 
-        document.getElementById('btns-update').style.display = 'flex';
-    }
-}
-
-/** --- BUTTON ACTIONS --- **/
-function handleEditClick() {
-    const btn = document.getElementById('btn-master-update');
-    // Lock critical identity fields
-    const restricted = ['full_name', 'zone', 'district', 'state', 'country'];
-    
-    if(document.getElementById('btns-start')) document.getElementById('btns-start').style.display = 'none';
-
-    fieldRules.forEach(r => {
-        const field = document.getElementById(`inp-${r.field_id}`);
-        if (field) {
-            if (!restricted.includes(r.field_id)) {
-                field.disabled = false;
-                const link = document.getElementById(`edit-link-${r.field_id}`);
-                if (link) link.style.display = 'inline';
-            }
-            // Trigger cascading rules (Visibility/Logic) based on current values
-            onInputChange(r.field_id, field.value);
-        }
-    });
-
-    btn.innerText = "CONFIRM & UPDATE";
-    btn.style.backgroundColor = "#4CAF50";
-    btn.onclick = () => submitData();
-}
-
-function unlockField(fId) {
-    const field = document.getElementById(`inp-${fId}`);
-    if (field) {
-        field.disabled = false;
-        field.focus();
-        // Allow search on this field now that it is manually unlocked
-        onInputChange(fId, field.value);
-    }
-}
-
-function checkAllValidations() {
-    let allValid = true;
-    fieldRules.forEach(r => {
-        const input = document.getElementById(`inp-${r.field_id}`);
-        const container = document.getElementById(`cont-${r.field_id}`);
-        // Only validate fields that are actually visible to the user
-        if (input && container.style.display !== 'none' && input.value.trim() === "") {
-            allValid = false;
-        }
-    });
-    const regBtn = document.getElementById('btn-register');
-    const updBtn = document.getElementById('btn-master-update');
-    if (regBtn) regBtn.disabled = !allValid;
-    if (updBtn && updBtn.innerText === "CONFIRM & UPDATE") updBtn.disabled = !allValid;
-}
-
-/** --- RECORD HANDLING --- **/
-async function loadExistingData(regId, mode) {
-    const snap = await db.ref('registrations/' + regId).once('value');
-    const data = snap.val();
-    if (!data) return;
-    originalData = data;
-    renderForm();
-    Object.keys(data).forEach(k => {
-        const f = document.getElementById(`inp-${k}`);
-        if (f) { f.value = data[k]; f.disabled = true; }
-    });
-    if (mode === 'delete') renderDeleteConfirmation(data, regId);
-    else {
-        document.getElementById('btns-start').style.display = 'none';
-        document.getElementById('btns-update').style.display = 'flex';
-    }
-    hideLoadingShowForm();
-}
-
-async function submitData() {
-    document.getElementById('app').style.display = 'none';
-    document.getElementById('processing-overlay').style.display = 'block';
-    
-    const formData = { ...originalData, event_id: eventId, last_updated: new Date().toLocaleString() };
+function selectParticipant(p) {
     fieldRules.forEach(r => {
         const el = document.getElementById(`inp-${r.field_id}`);
-        if (el) formData[r.field_id] = el.value.trim();
+        if (el) { el.value = p[r.field_id] || ""; el.disabled = true; }
     });
-
-    const targetId = currentRegId || `${eventId}-REG-${Date.now()}`;
-    await db.ref('registrations/' + targetId).set(formData);
-    
-    document.getElementById('processing-overlay').style.display = 'none';
-    document.getElementById('success-screen').style.display = 'block';
-    document.getElementById('success-content').innerHTML = `<h2>Success</h2><p>Registration ID: ${targetId}</p>`;
+    document.getElementById('btns-start').style.display = 'flex';
+    checkAllValidations();
 }
 
-init();
-</script>
-
-  
-</body>
-</html>
+function selectLocation(l) {
+    document.getElementById('inp-centre').value = l.centre;
+    fieldRules.filter(r => r.edit_behavior === 'Locked').forEach(rule => {
+        const el = document
