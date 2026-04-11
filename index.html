@@ -74,7 +74,6 @@
 <style> @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } } </style>
 
 
-
 <script>
 /** --- CONFIG & GLOBALS --- **/
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyPbae3F_Vm2q25LWZF1G59O0V2XRrokeqxNkLvZetTKl19HM4QubILy17nPe65Q-L-zw/exec";
@@ -95,12 +94,16 @@ async function init() {
         currentMode = (urlParams.get('mode') || 'new').toLowerCase();
         currentRegId = urlParams.get('regId');
 
-        const configSnap = await db.ref('config/eventConfig').once('value');
-        eventConfig = (configSnap.val() || {})[eventId];
-        
-        const rulesSnap = await db.ref('config/fieldRules').once('value');
+        // Fetch Event Settings & Field Rules first
+        const [configSnap, rulesSnap] = await Promise.all([
+            db.ref('config/eventConfig').once('value'),
+            db.ref('config/fieldRules').once('value')
+        ]);
+
+        eventConfig = (configSnap.val() || {})[eventId] || {};
         fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
 
+        // UI Setup
         const bannerSnap = await db.ref('htmlStorage/' + eventId + '/banner').once('value');
         if (bannerSnap.val()) {
             const cont = document.getElementById('header-img-cont');
@@ -116,7 +119,7 @@ async function init() {
             renderForm();
             hideLoadingShowForm();
         }
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error("Initialization failed:", e); }
 }
 
 function hideLoadingShowForm() {
@@ -124,6 +127,7 @@ function hideLoadingShowForm() {
     document.getElementById('form-content').style.display = 'block';
 }
 
+/** --- FORM ENGINE --- **/
 function renderForm() {
     const container = document.getElementById('dynamic-fields');
     container.innerHTML = '<form id="regForm" onsubmit="return false;"></form>';
@@ -133,6 +137,7 @@ function renderForm() {
         const div = document.createElement('div');
         div.className = 'field-container';
         div.id = `cont-${r.field_id}`;
+        // Set initial visibility based on Field_rules
         div.style.display = (r.initial_state === 'Hidden') ? 'none' : 'block';
         
         const needsEditLink = ['Editable', 'Editable_Verify', 'Editable_Lookup'].includes(r.edit_behavior);
@@ -145,6 +150,7 @@ function renderForm() {
             <div class="dropdown" id="res-${r.field_id}"></div>
         `;
         formElement.appendChild(div);
+
         if (r.field_id === 'full_name' && currentMode === 'new') {
             div.style.display = 'block';
             document.getElementById('inp-full_name').disabled = false;
@@ -154,6 +160,7 @@ function renderForm() {
 
 /** --- SEARCH LOGIC --- **/
 async function onInputChange(fId, val) {
+    // Search is allowed if it's a NEW registration OR the user is actively updating an existing one
     const btn = document.getElementById('btn-master-update');
     const isEditActive = (btn && btn.innerText === "CONFIRM & UPDATE");
 
@@ -202,30 +209,31 @@ function fillFromMaster(m) {
         }
     });
 
-    // FIX: Show both Register and "I Want to Edit" buttons immediately after selection
     if (currentMode === 'new') {
-        document.getElementById('btns-start').style.display = 'flex'; // Shows Register Now
-        document.getElementById('btns-update').style.display = 'flex'; // Shows I Want to Edit
+        document.getElementById('btns-start').style.display = 'flex'; 
+        document.getElementById('btns-update').style.display = 'flex';
     }
 }
 
 /** --- BUTTON ACTIONS --- **/
 function handleEditClick() {
     const btn = document.getElementById('btn-master-update');
+    // Lock critical identity fields
     const restricted = ['full_name', 'zone', 'district', 'state', 'country'];
     
-    // Hide the initial Register button when user chooses to Edit
     if(document.getElementById('btns-start')) document.getElementById('btns-start').style.display = 'none';
 
     fieldRules.forEach(r => {
         const field = document.getElementById(`inp-${r.field_id}`);
-        if (field && !restricted.includes(r.field_id)) {
-            field.disabled = false;
-            const link = document.getElementById(`edit-link-${r.field_id}`);
-            if (link) link.style.display = 'inline';
+        if (field) {
+            if (!restricted.includes(r.field_id)) {
+                field.disabled = false;
+                const link = document.getElementById(`edit-link-${r.field_id}`);
+                if (link) link.style.display = 'inline';
+            }
+            // Trigger cascading rules (Visibility/Logic) based on current values
+            onInputChange(r.field_id, field.value);
         }
-        // Trigger rules for the newly unlocked state
-        if (field) onInputChange(r.field_id, field.value);
     });
 
     btn.innerText = "CONFIRM & UPDATE";
@@ -233,11 +241,25 @@ function handleEditClick() {
     btn.onclick = () => submitData();
 }
 
+function unlockField(fId) {
+    const field = document.getElementById(`inp-${fId}`);
+    if (field) {
+        field.disabled = false;
+        field.focus();
+        // Allow search on this field now that it is manually unlocked
+        onInputChange(fId, field.value);
+    }
+}
+
 function checkAllValidations() {
     let allValid = true;
     fieldRules.forEach(r => {
         const input = document.getElementById(`inp-${r.field_id}`);
-        if (input && r.initial_state === 'Visible' && input.value.trim() === "") allValid = false;
+        const container = document.getElementById(`cont-${r.field_id}`);
+        // Only validate fields that are actually visible to the user
+        if (input && container.style.display !== 'none' && input.value.trim() === "") {
+            allValid = false;
+        }
     });
     const regBtn = document.getElementById('btn-register');
     const updBtn = document.getElementById('btn-master-update');
@@ -245,6 +267,7 @@ function checkAllValidations() {
     if (updBtn && updBtn.innerText === "CONFIRM & UPDATE") updBtn.disabled = !allValid;
 }
 
+/** --- RECORD HANDLING --- **/
 async function loadExistingData(regId, mode) {
     const snap = await db.ref('registrations/' + regId).once('value');
     const data = snap.val();
@@ -266,24 +289,24 @@ async function loadExistingData(regId, mode) {
 async function submitData() {
     document.getElementById('app').style.display = 'none';
     document.getElementById('processing-overlay').style.display = 'block';
+    
     const formData = { ...originalData, event_id: eventId, last_updated: new Date().toLocaleString() };
     fieldRules.forEach(r => {
         const el = document.getElementById(`inp-${r.field_id}`);
         if (el) formData[r.field_id] = el.value.trim();
     });
+
     const targetId = currentRegId || `${eventId}-REG-${Date.now()}`;
     await db.ref('registrations/' + targetId).set(formData);
+    
     document.getElementById('processing-overlay').style.display = 'none';
     document.getElementById('success-screen').style.display = 'block';
-    document.getElementById('success-content').innerHTML = `<h2>Registration Saved</h2><p>ID: ${targetId}</p>`;
+    document.getElementById('success-content').innerHTML = `<h2>Success</h2><p>Registration ID: ${targetId}</p>`;
 }
 
 init();
 </script>
 
-
-
-  
   
 </body>
 </html>
