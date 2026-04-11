@@ -74,7 +74,6 @@
 <style> @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } } </style>
 
 
-
 <script>
 /** --- CONFIG & GLOBALS --- **/
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyPbae3F_Vm2q25LWZF1G59O0V2XRrokeqxNkLvZetTKl19HM4QubILy17nPe65Q-L-zw/exec";
@@ -95,7 +94,6 @@ async function init() {
         currentMode = (urlParams.get('mode') || 'new').toLowerCase();
         currentRegId = urlParams.get('regId');
 
-        // 1. Fetch Event Configuration
         const configSnap = await db.ref('config/eventConfig').once('value');
         eventConfig = (configSnap.val() || {})[eventId];
         if (!eventConfig) {
@@ -103,7 +101,6 @@ async function init() {
             return;
         }
 
-        // 2. Set UI Elements
         const bannerSnap = await db.ref('htmlStorage/' + eventId + '/banner').once('value');
         if (bannerSnap.val()) {
             const cont = document.getElementById('header-img-cont');
@@ -113,11 +110,9 @@ async function init() {
         document.getElementById('title').innerText = eventConfig.title || "Registration";
         document.getElementById('subtitle').innerText = eventConfig.subtitle || "";
 
-        // 3. Load Field Rules
         const rulesSnap = await db.ref('config/fieldRules').once('value');
         fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
 
-        // 4. Route Flow
         if ((currentMode === 'edit' || currentMode === 'delete') && currentRegId) {
             await loadExistingData(currentRegId, currentMode);
         } else {
@@ -161,7 +156,6 @@ function renderForm() {
         `;
         formElement.appendChild(div);
 
-        // Name is always the starting point for 'New' registration
         if (r.field_id === 'full_name' && currentMode === 'new') {
             div.style.display = 'block';
             document.getElementById('inp-full_name').disabled = false;
@@ -169,42 +163,33 @@ function renderForm() {
     });
 }
 
-/** --- DATA LOADING (EDIT/DELETE) --- **/
+/** --- DATA LOADING --- **/
 async function loadExistingData(regId, mode) {
     try {
         const snap = await db.ref('registrations/' + regId).once('value');
         const data = snap.val();
-        if (!data) {
-            document.getElementById('loading-init').innerHTML = "<h2>Record Not Found</h2>";
-            return;
-        }
+        if (!data) { document.getElementById('loading-init').innerHTML = "<h2>Record Not Found</h2>"; return; }
+        
         originalData = data;
         renderForm();
-
         const form = document.getElementById('regForm');
-        // Pre-fill all fields but keep them locked (Receipt Mode)
+
         Object.keys(data).forEach(key => {
             const field = form.elements[key];
-            if (field) {
-                field.value = data[key];
-                field.disabled = true;
-            }
+            if (field) { field.value = data[key]; field.disabled = true; }
         });
 
         if (mode === 'delete') {
             renderDeleteConfirmation(data, regId);
         } else {
-            // Edit mode starts with 'I Want to Edit' button
             document.getElementById('btns-start').style.display = 'none';
             document.getElementById('btns-update').style.display = 'flex';
         }
         hideLoadingShowForm();
-    } catch (e) {
-        console.error("Load Error:", e);
-    }
+    } catch (e) { console.error("Load Error:", e); }
 }
 
-/** --- DELETE LOGIC --- **/
+/** --- DELETE HELPERS --- **/
 function renderDeleteConfirmation(data, regId) {
     document.getElementById('dynamic-fields').style.display = 'none';
     const confirmBox = document.createElement('div');
@@ -220,36 +205,27 @@ function renderDeleteConfirmation(data, regId) {
                 <button onclick="executeDelete('${regId}')" style="background:#f44336; color:white; padding:12px 24px; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">YES, DELETE</button>
                 <button onclick="cancelDelete()" style="background:#607d8b; color:white; padding:12px 24px; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">NO</button>
             </div>
-        </div>
-    `;
+        </div>`;
     document.getElementById('form-content').prepend(confirmBox);
-    document.getElementById('btns-start').style.display = 'none';
 }
 
 function cancelDelete() {
-    document.getElementById('form-content').innerHTML = `
-        <div style="text-align:center; padding:50px 20px;">
-            <h2 style="color:#455a64;">Thank you for being with us...</h2>
-            <p>Your registration was not changed.</p>
-        </div>`;
+    document.getElementById('form-content').innerHTML = `<div style="text-align:center; padding:50px 20px;"><h2 style="color:#455a64;">Thank you for being with us...</h2><p>Your registration was not changed.</p></div>`;
 }
 
 async function executeDelete(regId) {
     try {
         await db.ref('registrations/' + regId).remove();
         await db.ref('counters/' + eventId).transaction(c => (c || 1) - 1);
-        document.getElementById('app').style.display = 'none';
         document.getElementById('success-screen').style.display = 'block';
-        document.getElementById('success-content').innerHTML = `
-            <h2 style="color:#f44336;">Registration Deleted</h2>
-            <p>The record has been successfully removed.</p>`;
+        document.getElementById('app').style.display = 'none';
+        document.getElementById('success-content').innerHTML = `<h2 style="color:#f44336;">Registration Deleted</h2><p>The record has been successfully removed.</p>`;
     } catch (e) { alert("Delete failed."); }
 }
 
-/** --- EDIT FLOW --- **/
+/** --- EDIT HELPERS --- **/
 function handleEditClick() {
     const btn = document.getElementById('btn-master-update');
-    // Security: These fields remain locked
     const restricted = ['full_name', 'zone', 'district', 'state', 'country'];
     
     fieldRules.forEach(r => {
@@ -260,7 +236,6 @@ function handleEditClick() {
                 const tinyLink = document.getElementById(`edit-link-${r.field_id}`);
                 if (tinyLink) tinyLink.style.display = 'inline';
             }
-            // THIS RE-ACTIVATES THE FIELD RULES FOR EACH FIELD
             onInputChange(r.field_id, field.value);
         }
     });
@@ -272,17 +247,16 @@ function handleEditClick() {
 
 function unlockField(fId) {
     const field = document.getElementById(`inp-${fId}`);
-    if (field) {
-        field.disabled = false;
-        field.focus();
-    }
+    if (field) { field.disabled = false; field.focus(); }
 }
 
 /** --- LOGIC ENGINE --- **/
 async function onInputChange(fId, val) {
     const btn = document.getElementById('btn-master-update');
-    // Only handle lookups if form is active or in "Edit Confirmation" mode
-    if (currentMode === 'new' || (btn && btn.innerText === "CONFIRM & UPDATE")) {
+    // FIX: Allowed search if it's a NEW registration OR the user is in the middle of an edit update
+    const isEditModeActive = (btn && btn.innerText === "CONFIRM & UPDATE");
+    
+    if (currentMode === 'new' || isEditModeActive) {
         if (fId === 'full_name' || fId === 'centre') handleSearch(fId, val);
     }
     checkAllValidations();
@@ -305,6 +279,7 @@ async function handleSearch(fId, val) {
     if (val.length < 3) { resDiv.style.display = 'none'; return; }
     
     if (masterData.length === 0) {
+        // Updated to the correct path for your MasterData lookup
         const snap = await db.ref('config/masterData').once('value'); 
         masterData = Object.values(snap.val() || {});
     }
@@ -336,7 +311,10 @@ function fillFromMaster(m) {
             document.getElementById(`cont-${r.field_id}`).style.display = 'block';
         }
     });
-    document.getElementById('btns-update').style.display = 'flex';
+    // For new registrations, ensure the buttons show up once a match is picked
+    if (currentMode === 'new') {
+        document.getElementById('btns-start').style.display = 'flex';
+    }
 }
 
 async function submitData() {
@@ -361,22 +339,7 @@ async function submitData() {
 
 init();
 </script>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  
   
 </body>
 </html>
