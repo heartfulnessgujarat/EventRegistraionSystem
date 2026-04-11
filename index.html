@@ -504,9 +504,10 @@ function unlockField(id) {
   inp.focus();
   if (editLink) editLink.style.display = 'none';
 
-  // 3. CENTRE SEARCH FIX: Re-bind search logic when unlocked
+  // 3. CENTRE SEARCH FIX: Re-bind search logic AND refresh master list
   if (id === 'centre') {
     inp.setAttribute("oninput", "handleSearch('centre', this.value)");
+    masterData = []; // <--- THIS IS THE ONLY ADDITION: Forces a fresh fetch from Firebase
   }
 
   // 4. Existing Email Verification Logic (Preserved)
@@ -519,8 +520,6 @@ function unlockField(id) {
     if (msg) msg.style.display = 'none';
   }
 }
-
-
  
     
   function sendCode(type) {
