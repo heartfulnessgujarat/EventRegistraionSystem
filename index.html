@@ -74,6 +74,7 @@
 <style> @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } } </style>
 
 
+
 <script>
 /** --- CONFIG & GLOBALS --- **/
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyPbae3F_Vm2q25LWZF1G59O0V2XRrokeqxNkLvZetTKl19HM4QubILy17nPe65Q-L-zw/exec";
@@ -163,103 +164,88 @@ function renderForm() {
     });
 }
 
-/** --- DATA LOADING --- **/
-async function loadExistingData(regId, mode) {
-    try {
-        const snap = await db.ref('registrations/' + regId).once('value');
-        const data = snap.val();
-        if (!data) { document.getElementById('loading-init').innerHTML = "<h2>Record Not Found</h2>"; return; }
-        
-        originalData = data;
-        renderForm();
-        const form = document.getElementById('regForm');
+/** --- LOGIC ENGINE --- **/
+async function onInputChange(fId, val) {
+    const btn = document.getElementById('btn-master-update');
+    const isEditActive = (btn && btn.innerText === "CONFIRM & UPDATE");
 
-        Object.keys(data).forEach(key => {
-            const field = form.elements[key];
-            if (field) { field.value = data[key]; field.disabled = true; }
+    // Enable search if it is a NEW registration OR the user clicked "I WANT TO EDIT"
+    if (currentMode === 'new' || isEditActive) {
+        if (fId === 'full_name' || fId === 'centre') handleSearch(fId, val);
+    }
+    checkAllValidations();
+}
+
+async function handleSearch(fId, val) {
+    const resDiv = document.getElementById(`res-${fId}`);
+    if (val.length < 3) { resDiv.style.display = 'none'; return; }
+    
+    // Ensure we pull from the correct Master Database path
+    if (masterData.length === 0) {
+        const snap = await db.ref('Master_Internal_DB').once('value'); 
+        const raw = snap.val() || {};
+        masterData = Array.isArray(raw) ? raw : Object.values(raw);
+    }
+
+    const searchVal = val.toLowerCase();
+    const matches = masterData.filter(x => {
+        const fieldVal = String(x[fId] || x[fId.charAt(0).toUpperCase() + fId.slice(1)] || "").toLowerCase();
+        return fieldVal.includes(searchVal);
+    }).slice(0, 8);
+    
+    resDiv.innerHTML = '';
+    if (matches.length > 0) {
+        resDiv.style.display = 'block';
+        matches.forEach(m => {
+            const d = document.createElement('div');
+            d.className = 'item';
+            d.textContent = m[fId] || m[fId.charAt(0).toUpperCase() + fId.slice(1)];
+            d.onclick = () => {
+                fillFromMaster(m);
+                resDiv.style.display = 'none';
+            };
+            resDiv.appendChild(d);
         });
+    } else {
+        resDiv.style.display = 'none';
+    }
+}
 
-        if (mode === 'delete') {
-            renderDeleteConfirmation(data, regId);
-        } else {
-            document.getElementById('btns-start').style.display = 'none';
-            document.getElementById('btns-update').style.display = 'flex';
+function fillFromMaster(m) {
+    fieldRules.forEach(r => {
+        const field = document.getElementById(`inp-${r.field_id}`);
+        const cont = document.getElementById(`cont-${r.field_id}`);
+        if (field) {
+            const val = m[r.field_id] || m[r.field_id.charAt(0).toUpperCase() + r.field_id.slice(1)] || "";
+            field.value = val;
+            field.disabled = true;
+            if (val !== "" || r.initial_state === 'Visible') cont.style.display = 'block';
         }
-        hideLoadingShowForm();
-    } catch (e) { console.error("Load Error:", e); }
+    });
+    if (currentMode === 'new') {
+        document.getElementById('btns-start').style.display = 'flex';
+    }
 }
 
-/** --- DELETE HELPERS --- **/
-function renderDeleteConfirmation(data, regId) {
-    document.getElementById('dynamic-fields').style.display = 'none';
-    const confirmBox = document.createElement('div');
-    confirmBox.id = "delete-confirm-box";
-    confirmBox.innerHTML = `
-        <div style="background: #fff5f5; border: 2px solid #f44336; padding: 20px; border-radius: 8px; text-align: center; margin-bottom:20px;">
-            <h3 style="color: #d32f2f; margin-top:0;">Confirm Deletion</h3>
-            <p><strong>Reg ID:</strong> ${data.registration_id}</p>
-            <p><strong>Name:</strong> ${data.full_name}</p>
-            <hr style="border:0; border-top:1px solid #ffcdd2; margin:15px 0;">
-            <p style="font-weight: bold;">DO YOU WANT TO DELETE THIS REGISTRATION?</p>
-            <div style="margin-top: 20px; display:flex; gap:10px; justify-content:center;">
-                <button onclick="executeDelete('${regId}')" style="background:#f44336; color:white; padding:12px 24px; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">YES, DELETE</button>
-                <button onclick="cancelDelete()" style="background:#607d8b; color:white; padding:12px 24px; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">NO</button>
-            </div>
-        </div>`;
-    document.getElementById('form-content').prepend(confirmBox);
-}
-
-function cancelDelete() {
-    document.getElementById('form-content').innerHTML = `<div style="text-align:center; padding:50px 20px;"><h2 style="color:#455a64;">Thank you for being with us...</h2><p>Your registration was not changed.</p></div>`;
-}
-
-async function executeDelete(regId) {
-    try {
-        await db.ref('registrations/' + regId).remove();
-        await db.ref('counters/' + eventId).transaction(c => (c || 1) - 1);
-        document.getElementById('success-screen').style.display = 'block';
-        document.getElementById('app').style.display = 'none';
-        document.getElementById('success-content').innerHTML = `<h2 style="color:#f44336;">Registration Deleted</h2><p>The record has been successfully removed.</p>`;
-    } catch (e) { alert("Delete failed."); }
-}
-
-/** --- EDIT HELPERS --- **/
+/** --- REMAINING HELPERS (Edit/Delete/Submit) --- **/
 function handleEditClick() {
     const btn = document.getElementById('btn-master-update');
     const restricted = ['full_name', 'zone', 'district', 'state', 'country'];
-    
     fieldRules.forEach(r => {
         const field = document.getElementById(`inp-${r.field_id}`);
-        if (field) {
-            if (!restricted.includes(r.field_id)) {
-                field.disabled = false;
-                const tinyLink = document.getElementById(`edit-link-${r.field_id}`);
-                if (tinyLink) tinyLink.style.display = 'inline';
-            }
-            onInputChange(r.field_id, field.value);
+        if (field && !restricted.includes(r.field_id)) {
+            field.disabled = false;
+            const link = document.getElementById(`edit-link-${r.field_id}`);
+            if (link) link.style.display = 'inline';
         }
     });
-
     btn.innerText = "CONFIRM & UPDATE";
-    btn.style.backgroundColor = "#4CAF50";
     btn.onclick = () => submitData();
 }
 
 function unlockField(fId) {
     const field = document.getElementById(`inp-${fId}`);
     if (field) { field.disabled = false; field.focus(); }
-}
-
-/** --- LOGIC ENGINE --- **/
-async function onInputChange(fId, val) {
-    const btn = document.getElementById('btn-master-update');
-    // FIX: Allowed search if it's a NEW registration OR the user is in the middle of an edit update
-    const isEditModeActive = (btn && btn.innerText === "CONFIRM & UPDATE");
-    
-    if (currentMode === 'new' || isEditModeActive) {
-        if (fId === 'full_name' || fId === 'centre') handleSearch(fId, val);
-    }
-    checkAllValidations();
 }
 
 function checkAllValidations() {
@@ -274,71 +260,28 @@ function checkAllValidations() {
     if (updBtn && updBtn.innerText === "CONFIRM & UPDATE") updBtn.disabled = !allValid;
 }
 
-async function handleSearch(fId, val) {
-    const resDiv = document.getElementById(`res-${fId}`);
-    if (val.length < 3) { resDiv.style.display = 'none'; return; }
-    
-    if (masterData.length === 0) {
-        // Updated to the correct path for your MasterData lookup
-        const snap = await db.ref('config/masterData').once('value'); 
-        masterData = Object.values(snap.val() || {});
-    }
-
-    const searchVal = val.toLowerCase();
-    const matches = masterData.filter(x => String(x[fId] || "").toLowerCase().includes(searchVal)).slice(0, 8);
-    
-    resDiv.innerHTML = '';
-    if (matches.length > 0) {
-        resDiv.style.display = 'block';
-        matches.forEach(m => {
-            const d = document.createElement('div');
-            d.textContent = m[fId];
-            d.onclick = () => {
-                fillFromMaster(m);
-                resDiv.style.display = 'none';
-            };
-            resDiv.appendChild(d);
-        });
-    }
-}
-
-function fillFromMaster(m) {
-    fieldRules.forEach(r => {
-        const field = document.getElementById(`inp-${r.field_id}`);
-        if (field && m[r.field_id]) {
-            field.value = m[r.field_id];
-            field.disabled = true;
-            document.getElementById(`cont-${r.field_id}`).style.display = 'block';
-        }
+async function loadExistingData(regId, mode) {
+    const snap = await db.ref('registrations/' + regId).once('value');
+    const data = snap.val();
+    if (!data) { document.getElementById('loading-init').innerHTML = "<h2>Not Found</h2>"; return; }
+    originalData = data;
+    renderForm();
+    Object.keys(data).forEach(k => {
+        const f = document.getElementById(`inp-${k}`);
+        if (f) { f.value = data[k]; f.disabled = true; }
     });
-    // For new registrations, ensure the buttons show up once a match is picked
-    if (currentMode === 'new') {
-        document.getElementById('btns-start').style.display = 'flex';
+    if (mode === 'delete') renderDeleteConfirmation(data, regId);
+    else {
+        document.getElementById('btns-start').style.display = 'none';
+        document.getElementById('btns-update').style.display = 'flex';
     }
-}
-
-async function submitData() {
-    try {
-        document.getElementById('app').style.display = 'none';
-        document.getElementById('processing-overlay').style.display = 'block';
-        
-        const formData = { ...originalData, event_id: eventId, last_updated: new Date().toLocaleString() };
-        fieldRules.forEach(r => {
-            const el = document.getElementById(`inp-${r.field_id}`);
-            if (el) formData[r.field_id] = el.value.trim();
-        });
-
-        const targetId = currentRegId || `${eventId}-REG-${Date.now()}`;
-        await db.ref('registrations/' + targetId).set(formData);
-
-        document.getElementById('processing-overlay').style.display = 'none';
-        document.getElementById('success-screen').style.display = 'block';
-        document.getElementById('success-content').innerHTML = `<h2>Successfully Saved!</h2><p>Registration ID: ${targetId}</p>`;
-    } catch (e) { alert("Error saving data."); location.reload(); }
+    hideLoadingShowForm();
 }
 
 init();
 </script>
+
+
   
   
 </body>
