@@ -20,7 +20,6 @@
     .edit-link { font-size: 11px; color: #1a237e; cursor: pointer; font-weight: bold; text-decoration: underline; display: none; }
     input { width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 8px; box-sizing: border-box; font-size: 15px; }
     input:disabled { background: #f8f9fa; color: #6c757d; }
-    .help-text { font-size: 10.5px; color: #5c6bc0; margin-top: 2px; font-style: italic; display: none; font-weight: 500; }
     .error-msg-text { color: #d32f2f; font-size: 11px; margin-top: 3px; font-weight: bold; display: none; }
     .primary-btn { width: 100%; padding: 14px; background: #1a237e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 15px; }
     .primary-btn:disabled { opacity: 0.5; background: #999; }
@@ -61,15 +60,34 @@ const db = firebase.database();
 
 async function init() {
     try {
-        const configSnap = await db.ref('config/eventConfig').once('value');
+        const urlParams = new URLSearchParams(window.location.search);
+        const mode = (urlParams.get('mode') || 'new').toLowerCase();
+        const regId = urlParams.get('regId');
+
+        const [configSnap, rulesSnap] = await Promise.all([
+            db.ref('config/eventConfig').once('value'),
+            db.ref('config/fieldRules').once('value')
+        ]);
+
         eventConfig = (configSnap.val() || {})[eventId];
-        const rulesSnap = await db.ref('config/fieldRules').once('value');
         fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
         
         document.getElementById('title').innerText = eventConfig.title || "Registration";
         document.getElementById('subtitle').innerText = eventConfig.subtitle || "";
-        renderForm();
-        hideLoadingShowForm();
+        
+        const bannerSnap = await db.ref('htmlStorage/' + eventId + '/banner').once('value');
+        if (bannerSnap.val()) {
+            const cont = document.getElementById('header-img-cont');
+            cont.innerHTML = bannerSnap.val();
+            cont.style.display = 'block';
+        }
+
+        if ((mode === 'edit' || mode === 'delete') && regId) {
+            await loadExistingData(regId, mode);
+        } else {
+            renderForm();
+            hideLoadingShowForm();
+        }
     } catch (e) { console.error(e); }
 }
 
@@ -85,77 +103,3 @@ function renderForm() {
     fieldRules.forEach(r => {
         const div = document.createElement('div');
         div.className = 'field-container';
-        div.id = `cont-${r.field_id}`;
-        div.style.display = (r.initial_state === 'Hidden') ? 'none' : 'block';
-        const needsEditLink = ['Editable', 'Editable_Verify', 'Editable_Lookup'].includes(r.edit_behavior);
-        div.innerHTML = `
-            <div class="label-row">
-                <label>${r.display_label || r.field_id}</label>
-                ${needsEditLink ? `<span class="edit-link" id="edit-link-${r.field_id}" style="display:none;" onclick="unlockField('${r.field_id}')">Edit</span>` : ''}
-            </div>
-            <input type="text" id="inp-${r.field_id}" name="${r.field_id}" oninput="onInputChange('${r.field_id}', this.value)" disabled autocomplete="off">
-            <div class="error-msg-text" id="err-${r.field_id}"></div>
-            <div class="dropdown" id="res-${r.field_id}"></div>
-        `;
-        formElement.appendChild(div);
-        if (r.field_id === 'full_name') {
-            div.style.display = 'block';
-            document.getElementById('inp-full_name').disabled = false;
-        }
-    });
-}
-
-async function onInputChange(fId, val) {
-    if (fId === 'full_name' || fId === 'centre') handleSearch(fId, val);
-    checkAllValidations();
-}
-
-async function handleSearch(fId, val) {
-    const resDiv = document.getElementById(`res-${fId}`);
-    if (val.length < 3) { resDiv.style.display = 'none'; return; }
-    if (masterData.length === 0) {
-        const snap = await db.ref('Master_Internal_DB').once('value');
-        masterData = Object.values(snap.val() || {});
-    }
-    const searchVal = val.toLowerCase();
-    if (fId === 'full_name') {
-        const matches = [...new Set(masterData.filter(x => String(x.full_name).toLowerCase().includes(searchVal)).map(x => x.full_name))];
-        renderDropdown(resDiv, matches.slice(0, 8), 'name');
-    } else if (fId === 'centre') {
-        const matches = masterData.filter(x => String(x.centre).toLowerCase().includes(searchVal));
-        const unique = Array.from(new Map(matches.map(m => [m.centre.toLowerCase(), m])).values());
-        renderDropdown(resDiv, unique.slice(0, 8), 'loc');
-    }
-}
-
-function renderDropdown(div, list, type) {
-    div.innerHTML = '';
-    if (list.length > 0) {
-        div.style.display = 'block';
-        list.forEach(item => {
-            const d = document.createElement('div');
-            d.className = 'item';
-            d.textContent = type === 'loc' ? item.centre : item;
-            d.onclick = () => {
-                if (type === 'loc') selectLocation(item);
-                else selectParticipant(masterData.find(x => x.full_name === item));
-                div.style.display = 'none';
-            };
-            div.appendChild(d);
-        });
-    } else { div.style.display = 'none'; }
-}
-
-function selectParticipant(p) {
-    fieldRules.forEach(r => {
-        const el = document.getElementById(`inp-${r.field_id}`);
-        if (el) { el.value = p[r.field_id] || ""; el.disabled = true; }
-    });
-    document.getElementById('btns-start').style.display = 'flex';
-    checkAllValidations();
-}
-
-function selectLocation(l) {
-    document.getElementById('inp-centre').value = l.centre;
-    fieldRules.filter(r => r.edit_behavior === 'Locked').forEach(rule => {
-        const el = document
