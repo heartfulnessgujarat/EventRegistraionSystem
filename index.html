@@ -97,10 +97,9 @@ async function init() {
 
         const configSnap = await db.ref('config/eventConfig').once('value');
         eventConfig = (configSnap.val() || {})[eventId];
-        if (!eventConfig) {
-            document.getElementById('loading-init').innerHTML = "<h2>Event Not Found</h2>";
-            return;
-        }
+        
+        const rulesSnap = await db.ref('config/fieldRules').once('value');
+        fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
 
         const bannerSnap = await db.ref('htmlStorage/' + eventId + '/banner').once('value');
         if (bannerSnap.val()) {
@@ -111,19 +110,13 @@ async function init() {
         document.getElementById('title').innerText = eventConfig.title || "Registration";
         document.getElementById('subtitle').innerText = eventConfig.subtitle || "";
 
-        const rulesSnap = await db.ref('config/fieldRules').once('value');
-        fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
-
         if ((currentMode === 'edit' || currentMode === 'delete') && currentRegId) {
             await loadExistingData(currentRegId, currentMode);
         } else {
             renderForm();
             hideLoadingShowForm();
         }
-    } catch (e) {
-        console.error("Init Error:", e);
-        document.getElementById('loading-init').innerHTML = "<h2>System Error. Please refresh.</h2>";
-    }
+    } catch (e) { console.error(e); }
 }
 
 function hideLoadingShowForm() {
@@ -131,7 +124,6 @@ function hideLoadingShowForm() {
     document.getElementById('form-content').style.display = 'block';
 }
 
-/** --- FORM ENGINE --- **/
 function renderForm() {
     const container = document.getElementById('dynamic-fields');
     container.innerHTML = '<form id="regForm" onsubmit="return false;"></form>';
@@ -144,19 +136,15 @@ function renderForm() {
         div.style.display = (r.initial_state === 'Hidden') ? 'none' : 'block';
         
         const needsEditLink = ['Editable', 'Editable_Verify', 'Editable_Lookup'].includes(r.edit_behavior);
-
         div.innerHTML = `
             <div class="label-row">
                 <label>${r.display_label || r.field_id}</label>
                 ${needsEditLink ? `<span class="edit-link" id="edit-link-${r.field_id}" style="display:none;" onclick="unlockField('${r.field_id}')">Edit</span>` : ''}
             </div>
             <input type="text" id="inp-${r.field_id}" name="${r.field_id}" oninput="onInputChange('${r.field_id}', this.value)" disabled autocomplete="off">
-            <div class="help-text" id="help-${r.field_id}">${r.field_help_text || ''}</div>
-            <div class="error-msg-text" id="err-${r.field_id}"></div>
             <div class="dropdown" id="res-${r.field_id}"></div>
         `;
         formElement.appendChild(div);
-
         if (r.field_id === 'full_name' && currentMode === 'new') {
             div.style.display = 'block';
             document.getElementById('inp-full_name').disabled = false;
@@ -164,12 +152,11 @@ function renderForm() {
     });
 }
 
-/** --- LOGIC ENGINE --- **/
+/** --- SEARCH LOGIC --- **/
 async function onInputChange(fId, val) {
     const btn = document.getElementById('btn-master-update');
     const isEditActive = (btn && btn.innerText === "CONFIRM & UPDATE");
 
-    // Enable search if it is a NEW registration OR the user clicked "I WANT TO EDIT"
     if (currentMode === 'new' || isEditActive) {
         if (fId === 'full_name' || fId === 'centre') handleSearch(fId, val);
     }
@@ -180,11 +167,9 @@ async function handleSearch(fId, val) {
     const resDiv = document.getElementById(`res-${fId}`);
     if (val.length < 3) { resDiv.style.display = 'none'; return; }
     
-    // Ensure we pull from the correct Master Database path
     if (masterData.length === 0) {
         const snap = await db.ref('Master_Internal_DB').once('value'); 
-        const raw = snap.val() || {};
-        masterData = Array.isArray(raw) ? raw : Object.values(raw);
+        masterData = Object.values(snap.val() || {});
     }
 
     const searchVal = val.toLowerCase();
@@ -198,16 +183,10 @@ async function handleSearch(fId, val) {
         resDiv.style.display = 'block';
         matches.forEach(m => {
             const d = document.createElement('div');
-            d.className = 'item';
             d.textContent = m[fId] || m[fId.charAt(0).toUpperCase() + fId.slice(1)];
-            d.onclick = () => {
-                fillFromMaster(m);
-                resDiv.style.display = 'none';
-            };
+            d.onclick = () => { fillFromMaster(m); resDiv.style.display = 'none'; };
             resDiv.appendChild(d);
         });
-    } else {
-        resDiv.style.display = 'none';
     }
 }
 
@@ -222,15 +201,22 @@ function fillFromMaster(m) {
             if (val !== "" || r.initial_state === 'Visible') cont.style.display = 'block';
         }
     });
+
+    // FIX: Show both Register and "I Want to Edit" buttons immediately after selection
     if (currentMode === 'new') {
-        document.getElementById('btns-start').style.display = 'flex';
+        document.getElementById('btns-start').style.display = 'flex'; // Shows Register Now
+        document.getElementById('btns-update').style.display = 'flex'; // Shows I Want to Edit
     }
 }
 
-/** --- REMAINING HELPERS (Edit/Delete/Submit) --- **/
+/** --- BUTTON ACTIONS --- **/
 function handleEditClick() {
     const btn = document.getElementById('btn-master-update');
     const restricted = ['full_name', 'zone', 'district', 'state', 'country'];
+    
+    // Hide the initial Register button when user chooses to Edit
+    if(document.getElementById('btns-start')) document.getElementById('btns-start').style.display = 'none';
+
     fieldRules.forEach(r => {
         const field = document.getElementById(`inp-${r.field_id}`);
         if (field && !restricted.includes(r.field_id)) {
@@ -238,14 +224,13 @@ function handleEditClick() {
             const link = document.getElementById(`edit-link-${r.field_id}`);
             if (link) link.style.display = 'inline';
         }
+        // Trigger rules for the newly unlocked state
+        if (field) onInputChange(r.field_id, field.value);
     });
-    btn.innerText = "CONFIRM & UPDATE";
-    btn.onclick = () => submitData();
-}
 
-function unlockField(fId) {
-    const field = document.getElementById(`inp-${fId}`);
-    if (field) { field.disabled = false; field.focus(); }
+    btn.innerText = "CONFIRM & UPDATE";
+    btn.style.backgroundColor = "#4CAF50";
+    btn.onclick = () => submitData();
 }
 
 function checkAllValidations() {
@@ -263,7 +248,7 @@ function checkAllValidations() {
 async function loadExistingData(regId, mode) {
     const snap = await db.ref('registrations/' + regId).once('value');
     const data = snap.val();
-    if (!data) { document.getElementById('loading-init').innerHTML = "<h2>Not Found</h2>"; return; }
+    if (!data) return;
     originalData = data;
     renderForm();
     Object.keys(data).forEach(k => {
@@ -278,8 +263,24 @@ async function loadExistingData(regId, mode) {
     hideLoadingShowForm();
 }
 
+async function submitData() {
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('processing-overlay').style.display = 'block';
+    const formData = { ...originalData, event_id: eventId, last_updated: new Date().toLocaleString() };
+    fieldRules.forEach(r => {
+        const el = document.getElementById(`inp-${r.field_id}`);
+        if (el) formData[r.field_id] = el.value.trim();
+    });
+    const targetId = currentRegId || `${eventId}-REG-${Date.now()}`;
+    await db.ref('registrations/' + targetId).set(formData);
+    document.getElementById('processing-overlay').style.display = 'none';
+    document.getElementById('success-screen').style.display = 'block';
+    document.getElementById('success-content').innerHTML = `<h2>Registration Saved</h2><p>ID: ${targetId}</p>`;
+}
+
 init();
 </script>
+
 
 
   
