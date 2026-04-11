@@ -73,6 +73,8 @@
 
 <style> @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } } </style>
 
+
+
 <script>
 /** --- CONFIG & GLOBALS --- **/
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyPbae3F_Vm2q25LWZF1G59O0V2XRrokeqxNkLvZetTKl19HM4QubILy17nPe65Q-L-zw/exec";
@@ -93,7 +95,7 @@ async function init() {
         currentMode = (urlParams.get('mode') || 'new').toLowerCase();
         currentRegId = urlParams.get('regId');
 
-        // 1. Get Event Settings
+        // 1. Fetch Event Configuration
         const configSnap = await db.ref('config/eventConfig').once('value');
         eventConfig = (configSnap.val() || {})[eventId];
         if (!eventConfig) {
@@ -101,7 +103,7 @@ async function init() {
             return;
         }
 
-        // 2. Load Banner & Titles
+        // 2. Set UI Elements
         const bannerSnap = await db.ref('htmlStorage/' + eventId + '/banner').once('value');
         if (bannerSnap.val()) {
             const cont = document.getElementById('header-img-cont');
@@ -111,11 +113,11 @@ async function init() {
         document.getElementById('title').innerText = eventConfig.title || "Registration";
         document.getElementById('subtitle').innerText = eventConfig.subtitle || "";
 
-        // 3. Load Rules
+        // 3. Load Field Rules
         const rulesSnap = await db.ref('config/fieldRules').once('value');
         fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
 
-        // 4. Route based on Mode
+        // 4. Route Flow
         if ((currentMode === 'edit' || currentMode === 'delete') && currentRegId) {
             await loadExistingData(currentRegId, currentMode);
         } else {
@@ -133,7 +135,7 @@ function hideLoadingShowForm() {
     document.getElementById('form-content').style.display = 'block';
 }
 
-/** --- FORM RENDER --- **/
+/** --- FORM ENGINE --- **/
 function renderForm() {
     const container = document.getElementById('dynamic-fields');
     container.innerHTML = '<form id="regForm" onsubmit="return false;"></form>';
@@ -145,12 +147,12 @@ function renderForm() {
         div.id = `cont-${r.field_id}`;
         div.style.display = (r.initial_state === 'Hidden') ? 'none' : 'block';
         
-        const needsEdit = ['Editable', 'Editable_Verify', 'Editable_Lookup'].includes(r.edit_behavior);
+        const needsEditLink = ['Editable', 'Editable_Verify', 'Editable_Lookup'].includes(r.edit_behavior);
 
         div.innerHTML = `
             <div class="label-row">
                 <label>${r.display_label || r.field_id}</label>
-                ${needsEdit ? `<span class="edit-link" id="edit-link-${r.field_id}" style="display:none;" onclick="unlockField('${r.field_id}')">Edit</span>` : ''}
+                ${needsEditLink ? `<span class="edit-link" id="edit-link-${r.field_id}" style="display:none;" onclick="unlockField('${r.field_id}')">Edit</span>` : ''}
             </div>
             <input type="text" id="inp-${r.field_id}" name="${r.field_id}" oninput="onInputChange('${r.field_id}', this.value)" disabled autocomplete="off">
             <div class="help-text" id="help-${r.field_id}">${r.field_help_text || ''}</div>
@@ -158,6 +160,8 @@ function renderForm() {
             <div class="dropdown" id="res-${r.field_id}"></div>
         `;
         formElement.appendChild(div);
+
+        // Name is always the starting point for 'New' registration
         if (r.field_id === 'full_name' && currentMode === 'new') {
             div.style.display = 'block';
             document.getElementById('inp-full_name').disabled = false;
@@ -178,7 +182,7 @@ async function loadExistingData(regId, mode) {
         renderForm();
 
         const form = document.getElementById('regForm');
-        // Fill and Lock
+        // Pre-fill all fields but keep them locked (Receipt Mode)
         Object.keys(data).forEach(key => {
             const field = form.elements[key];
             if (field) {
@@ -190,6 +194,7 @@ async function loadExistingData(regId, mode) {
         if (mode === 'delete') {
             renderDeleteConfirmation(data, regId);
         } else {
+            // Edit mode starts with 'I Want to Edit' button
             document.getElementById('btns-start').style.display = 'none';
             document.getElementById('btns-update').style.display = 'flex';
         }
@@ -199,7 +204,7 @@ async function loadExistingData(regId, mode) {
     }
 }
 
-/** --- DELETE FLOW --- **/
+/** --- DELETE LOGIC --- **/
 function renderDeleteConfirmation(data, regId) {
     document.getElementById('dynamic-fields').style.display = 'none';
     const confirmBox = document.createElement('div');
@@ -231,32 +236,33 @@ function cancelDelete() {
 
 async function executeDelete(regId) {
     try {
-        document.getElementById('app').style.display = 'none';
-        document.getElementById('processing-overlay').style.display = 'block';
         await db.ref('registrations/' + regId).remove();
         await db.ref('counters/' + eventId).transaction(c => (c || 1) - 1);
-        document.getElementById('processing-overlay').style.display = 'none';
+        document.getElementById('app').style.display = 'none';
         document.getElementById('success-screen').style.display = 'block';
         document.getElementById('success-content').innerHTML = `
             <h2 style="color:#f44336;">Registration Deleted</h2>
             <p>The record has been successfully removed.</p>`;
-    } catch (e) { alert("Delete failed."); location.reload(); }
+    } catch (e) { alert("Delete failed."); }
 }
 
 /** --- EDIT FLOW --- **/
 function handleEditClick() {
     const btn = document.getElementById('btn-master-update');
+    // Security: These fields remain locked
     const restricted = ['full_name', 'zone', 'district', 'state', 'country'];
     
     fieldRules.forEach(r => {
         const field = document.getElementById(`inp-${r.field_id}`);
-        if (field && !restricted.includes(r.field_id)) {
-            field.disabled = false;
-            const tinyLink = document.getElementById(`edit-link-${r.field_id}`);
-            if (tinyLink) tinyLink.style.display = 'inline';
+        if (field) {
+            if (!restricted.includes(r.field_id)) {
+                field.disabled = false;
+                const tinyLink = document.getElementById(`edit-link-${r.field_id}`);
+                if (tinyLink) tinyLink.style.display = 'inline';
+            }
+            // THIS RE-ACTIVATES THE FIELD RULES FOR EACH FIELD
+            onInputChange(r.field_id, field.value);
         }
-        // Trigger cascading rules
-        onInputChange(r.field_id, field.value);
     });
 
     btn.innerText = "CONFIRM & UPDATE";
@@ -272,11 +278,12 @@ function unlockField(fId) {
     }
 }
 
-/** --- LOGIC & SUBMISSION --- **/
+/** --- LOGIC ENGINE --- **/
 async function onInputChange(fId, val) {
-    // Search logic for new registrations
-    if (currentMode === 'new' && (fId === 'full_name' || fId === 'centre')) {
-        handleSearch(fId, val);
+    const btn = document.getElementById('btn-master-update');
+    // Only handle lookups if form is active or in "Edit Confirmation" mode
+    if (currentMode === 'new' || (btn && btn.innerText === "CONFIRM & UPDATE")) {
+        if (fId === 'full_name' || fId === 'centre') handleSearch(fId, val);
     }
     checkAllValidations();
 }
@@ -298,11 +305,8 @@ async function handleSearch(fId, val) {
     if (val.length < 3) { resDiv.style.display = 'none'; return; }
     
     if (masterData.length === 0) {
-        const rule = fieldRules.find(r => r.field_id === fId);
-        if (rule?.lookup_tab) {
-            const snap = await db.ref(rule.lookup_tab).once('value');
-            masterData = Object.values(snap.val() || {});
-        }
+        const snap = await db.ref('config/masterData').once('value'); 
+        masterData = Object.values(snap.val() || {});
     }
 
     const searchVal = val.toLowerCase();
@@ -329,8 +333,10 @@ function fillFromMaster(m) {
         if (field && m[r.field_id]) {
             field.value = m[r.field_id];
             field.disabled = true;
+            document.getElementById(`cont-${r.field_id}`).style.display = 'block';
         }
     });
+    document.getElementById('btns-update').style.display = 'flex';
 }
 
 async function submitData() {
@@ -338,29 +344,39 @@ async function submitData() {
         document.getElementById('app').style.display = 'none';
         document.getElementById('processing-overlay').style.display = 'block';
         
-        const form = document.getElementById('regForm');
-        const formData = { ...originalData, event_id: eventId, timestamp: new Date().toLocaleString() };
-        
+        const formData = { ...originalData, event_id: eventId, last_updated: new Date().toLocaleString() };
         fieldRules.forEach(r => {
             const el = document.getElementById(`inp-${r.field_id}`);
             if (el) formData[r.field_id] = el.value.trim();
         });
 
-        if (currentMode === 'new') {
-            const t = await db.ref('counters/' + eventId).transaction(c => (c || 0) + 1);
-            formData.registration_id = `${eventId}-REG-${Date.now()}`;
-            await db.ref('registrations/' + formData.registration_id).set(formData);
-        } else {
-            await db.ref('registrations/' + currentRegId).update(formData);
-        }
+        const targetId = currentRegId || `${eventId}-REG-${Date.now()}`;
+        await db.ref('registrations/' + targetId).set(formData);
 
         document.getElementById('processing-overlay').style.display = 'none';
         document.getElementById('success-screen').style.display = 'block';
-        document.getElementById('success-content').innerHTML = `<h2>Success!</h2><p>Your registration has been saved.</p>`;
+        document.getElementById('success-content').innerHTML = `<h2>Successfully Saved!</h2><p>Registration ID: ${targetId}</p>`;
     } catch (e) { alert("Error saving data."); location.reload(); }
 }
 
 init();
 </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
 </body>
 </html>
