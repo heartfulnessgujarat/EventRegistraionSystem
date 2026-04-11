@@ -360,17 +360,20 @@ function renderDropdown(div, list, type) {
   }
 }
 
+
 async function handleSearch(fId, val) {
   const resDiv = document.getElementById(`res-${fId}`);
   if (val.length < 3) { resDiv.style.display = 'none'; return; }
   
   const rule = fieldRules.find(r => r.field_id === fId);
-  const lookupTab = rule ? rule.lookup_tab : null;
+  const lookupTab = rule ? rule.lookup_tab : "Master_Internal_DB"; // Fallback to Master if rule is loading
 
-  // --- CRITICAL FIX: ENSURE WE ARE LOOKING AT THE MASTER DATABASE ---
-  // If masterData is empty, or if we are searching for a 'centre', 
-  // we go back to Firebase to get the full "Master_Internal_DB"
-  if (masterData.length <= 1 && lookupTab) { 
+  /** * THE "SCENARIO B" FIX: 
+   * During an Email Edit, masterData.length is exactly 1 (the user's record).
+   * We force a fetch if we are searching a lookup field like 'centre'
+   * to ensure the system "wakes up" and sees the whole database.
+   */
+  if (lookupTab && (masterData.length <= 1 || fId === 'centre')) { 
     const snap = await db.ref(lookupTab).once('value'); 
     const raw = snap.val() || {};
     masterData = Array.isArray(raw) ? raw : Object.values(raw);
@@ -378,6 +381,7 @@ async function handleSearch(fId, val) {
 
   const searchVal = val.toLowerCase();
 
+  // --- FULL NAME SEARCH LOGIC ---
   if (fId === 'full_name') {
     const allMatches = masterData
       .filter(x => {
@@ -389,15 +393,15 @@ async function handleSearch(fId, val) {
     const uniqueNames = [...new Set(allMatches)];
     renderDropdown(resDiv, uniqueNames.slice(0, 8), 'name');
 
+  // --- CENTRE SEARCH LOGIC ---
   } else if (fId === 'centre') {
-    // 1. LOOKUP: Filter the Master_Internal_DB for the 'centre' column
     const matchedObjects = masterData.filter(x => {
-      // We look for 'centre' or 'Centre' keys in the Firebase object
+      // Direct property access as per your verified column titles
       const c = x.centre || x['Centre'] || ""; 
       return String(c).toLowerCase().includes(searchVal);
     });
 
-    // 2. UNIQUE: Make sure Navsari/Surat show up only once
+    // UNIQUE: Ensure cities like "Navsari" only appear once in the dropdown
     const uniqueMap = new Map();
     matchedObjects.forEach(item => {
       const cityName = String(item.centre || item['Centre'] || "").trim();
@@ -407,11 +411,11 @@ async function handleSearch(fId, val) {
     });
 
     const finalUniqueList = Array.from(uniqueMap.values());
-
-    // 3. RENDER: Show the list from the Master database
     renderDropdown(resDiv, finalUniqueList.slice(0, 8), 'loc');
   }
 }
+
+
 
   function selectParticipant(p) {
     fieldRules.forEach(r => {
