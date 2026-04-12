@@ -98,15 +98,18 @@
   
         <p class="subtitle" id="subtitle"></p>
     <div id="dynamic-fields"></div>
-    <div id="btns-start" style="display:none; flex-direction:column; gap:10px;">
-      <button id="btn-register" class="primary-btn" disabled onclick="submitData()">Confirm Registration</button>
-      <button class="primary-btn" style="background:#455a64;" onclick="enableEditMode()">I want to edit my details</button>
+
+    
+    
+  
+  
+<div id="btns-start" style="display:none; flex-direction:column; gap:10px; padding: 20px;">
+        <button id="btn-register" class="primary-btn" disabled onclick="proceedToLogistics()">DETAILS ARE OKAY, CLICK HERE TO PROCEED FURTHER</button>
+        
+        <button class="primary-btn" style="background:#455a64;" onclick="enableEditMode()">I WANT TO EDIT DETAILS</button>
     </div>
-    <button id="btn-master-update" class="primary-btn" style="display:none;" disabled onclick="submitData()">DETAILS UPDATED, REGISTER ME</button>
-  </div>
-</div>
 
-
+    <button id="btn-master-update" class="primary-btn" style="display:none; margin: 0 20px 20px 20px;" disabled onclick="proceedToLogistics()">I HAVE UPDATED DETAILS, CLICK HERE TO PROCEED FURTHER</button>
 
   
 <div id="extra-sections-container" style="display: none; padding: 0 20px 20px 20px;">
@@ -738,6 +741,7 @@ async function submitData() {
             statusMsg = "EDITED ON " + istNow.toLocaleString();
         }
 
+      
         // --- 3. DATA PREPARATION ---
         const formData = {
             registration_id: finalRegId,
