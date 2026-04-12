@@ -398,7 +398,13 @@ async function handleSearch(fId, val) {
    * to ensure the system "wakes up" and sees the whole database.
    */
   if (lookupTab && (masterData.length <= 1 || fId === 'centre')) { 
-    const snap = await db.ref(lookupTab).once('value'); 
+
+// OLD LINE: const snap = await db.ref(lookupTab).once('value');
+// NEW SURGICAL UPDATE:
+const snap = await db.ref('masters/' + lookupTab).once('value');
+    
+    
+    
     const raw = snap.val() || {};
     masterData = Array.isArray(raw) ? raw : Object.values(raw);
   }
