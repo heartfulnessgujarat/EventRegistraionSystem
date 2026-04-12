@@ -349,6 +349,14 @@ function renderForm() {
   });
 }
 
+
+  async function onInputChange(fId, val) {
+  if (fId === 'full_name' || fId === 'centre') handleSearch(fId, val);
+  checkAllValidations();
+}
+
+
+
   
 function renderDropdown(div, list, type) {
   div.innerHTML = '';
