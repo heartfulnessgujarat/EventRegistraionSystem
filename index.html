@@ -285,10 +285,26 @@ async function init() {
         document.getElementById('loading-init').innerHTML = "<h2>Error loading form. Please refresh.</h2>";
     }
 }
+
+
+
+
+  
+
 function renderForm() {
   const container = document.getElementById('dynamic-fields');
   container.innerHTML = '';
+  
   fieldRules.forEach(r => {
+    
+    // --- MERS SURGERY START: Section Filter ---
+    // Only show fields belonging to Section1. 
+    // This keeps Section 2 (Stay Options, etc.) invisible for now.
+    if (r.section_number && r.section_number.toString() !== "Section1") {
+      return; 
+    }
+    // --- MERS SURGERY END ---
+
     const div = document.createElement('div');
     div.className = 'field-container';
     div.id = `cont-${r.field_id}`;
@@ -334,14 +350,6 @@ function renderForm() {
 }
 
   
-  
-  async function onInputChange(fId, val) {
-    if (fId === 'full_name' || fId === 'centre') handleSearch(fId, val);
-    checkAllValidations();
-  }
-
-
-
 function renderDropdown(div, list, type) {
   div.innerHTML = '';
   
