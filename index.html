@@ -150,10 +150,17 @@
   const db = firebase.database();
   const eventId = (new URLSearchParams(window.location.search).get('id') || 'EVT001').toUpperCase();
 
-  let fieldRules = [], masterData = [], eventConfig = {};
+
+  // --- MERS: CONSOLIDATED GLOBAL DATA ---
+  let fieldRules = [];
+  let masterData = [];
+  let eventConfig = {};
   let originalData = {}; 
   let verificationStates = { email: false, mobile: false };
-
+  let moreSections = []; // Added for Section Titles/Logistics
+  // --------------------------------------
+  
+  
 /** --- START: GATEKEEPER HELPER FUNCTIONS --- **/
 function getISTDate() {
   const now = new Date();
