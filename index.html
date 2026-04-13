@@ -1000,13 +1000,10 @@ async function processFinalDeletion(regId) {
     }
 }
 
-
-  async function buildExtraSections(targetSectionNumber) {
+async function buildExtraSections(targetSectionNumber) {
     if (!targetSectionNumber) targetSectionNumber = "Section2";
 
     // --- STEP 1: SAVE CURRENT SELECTIONS ---
-    // Before we wipe the screen, look at every input starting with "extra_" 
-    // and save what the user typed/selected into our memory bank.
     const currentInputs = document.querySelectorAll('[id^="extra_"]');
     currentInputs.forEach(input => {
         if (input.value) {
@@ -1074,14 +1071,12 @@ async function processFinalDeletion(regId) {
                         } catch (err) { console.error("Lookup Error", err); }
                     } else {
                         input = document.createElement('input');
-                        // Smart check for date/time types
                         input.type = (fieldId.toLowerCase().includes('date')) ? 'date' : (fieldId.toLowerCase().includes('time') ? 'time' : 'text');
                         input.className = 'form-control';
                         input.id = inputId;
                     }
 
                     // --- STEP 2: RECALL SELECTIONS ---
-                    // If we have a saved value in the memory bank for this ID, put it back!
                     if (mersTempData[inputId]) {
                         input.value = mersTempData[inputId];
                     }
@@ -1092,27 +1087,26 @@ async function processFinalDeletion(regId) {
             }
         }
 
-        // --- STEP 3: RESET BUTTON IDENTITY ---
+        // --- STEP 3: RESET BUTTON IDENTITY (FORCEFUL LABELS) ---
         if (targetSectionNumber === "Section2") {
             actionBtn.style.display = "block";
             actionBtn.innerText = "PROCEED TO TRAVEL DETAILS";
-            // Set the click to go to Section 3
             actionBtn.onclick = function() { buildExtraSections('Section3'); };
         } else if (targetSectionNumber === "Section3") {
             actionBtn.style.display = "block";
             actionBtn.innerText = "CONFIRM & REGISTER";
-            // Set the click to handle final submission
             actionBtn.onclick = function() { 
-                console.log("Final Data Collected:", mersTempData);
-                alert("Proceeding to final registration check...");
-                // finalSubmitRegistration(); 
+                console.log("Final Submission Data:", mersTempData);
+                // Trigger your final save logic here
+                if(typeof finalSubmitRegistration === "function") {
+                    finalSubmitRegistration();
+                } else {
+                    alert("Ready to Register! (Final function not yet linked)");
+                }
             };
         }
     }
-}
-
-
-  
+}  
 function finalSubmitRegistration() {
     let finalData = { ...currentUser }; // Start with Section 1 data
 
