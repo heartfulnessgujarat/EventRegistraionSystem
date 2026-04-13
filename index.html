@@ -1134,27 +1134,62 @@ async function processFinalDeletion(regId) {
 }
 
 
-  
   function finalSubmitRegistration() {
-    let finalData = { ...currentUser }; // Start with Section 1 data
+    // 1. Start with the verified profile data from Section 1
+    let finalData = { ...currentUser }; 
 
-    // Dynamically grab every "extra_" field currently on the screen
-    moreSections.forEach(sectionObj => {
-        Object.keys(sectionObj).forEach(key => {
-            if (key.startsWith('question') && sectionObj[key]) {
-                const fieldId = sectionObj[key];
-                const inputElement = document.getElementById(`extra_${fieldId}`);
-                if (inputElement) {
-                    finalData[fieldId] = inputElement.value;
-                }
-            }
-        });
+    // 2. Merge in all the extra data we've been saving in our memory bank (mersTempData)
+    // This ensures Section 2 data is NOT lost while the user is on Section 3.
+    Object.keys(mersTempData).forEach(key => {
+        // We remove the 'extra_' prefix so the database keys are clean (e.g., 'gender' instead of 'extra_gender')
+        const cleanKey = key.replace('extra_', '');
+        finalData[cleanKey] = mersTempData[key];
     });
 
-    // Proceed to save finalData to Firebase...
-    console.log("MERS: Final Payload Ready:", finalData);
-    // [Insert your Firebase .set() logic here]
+    // 3. Catch any last-minute values currently on the screen (Section 3 values)
+    const currentInputs = document.querySelectorAll('[id^="extra_"]');
+    currentInputs.forEach(input => {
+        const cleanKey = input.id.replace('extra_', '');
+        finalData[cleanKey] = input.value;
+    });
+
+    console.log("MERS: Solid Final Payload:", finalData);
+
+    // 4. Save to Firebase and show Success Screen
+    const regPath = `registrations/${finalData.event_id}/${finalData.registration_id}`;
+    
+    db.ref(regPath).set(finalData)
+        .then(() => {
+            // Hide the app and show the Thank You message
+            document.getElementById('form-content').style.display = 'none';
+            document.getElementById('success-screen').style.display = 'block';
+            window.scrollTo(0, 0);
+        })
+        .catch((error) => {
+            console.error("Firebase Save Error:", error);
+            alert("Submission failed. Please try again.");
+        });
 }
+
+
+
+function showSuccessScreen() {
+    // Hide the main form card
+    document.getElementById('form-content').style.display = 'none';
+    
+    // Show the success overlay/screen
+    const successDiv = document.getElementById('success-screen');
+    if (successDiv) {
+        successDiv.style.display = 'block';
+        
+        // Scroll to top so they see the message
+        window.scrollTo(0, 0);
+        
+        // If you have a personalized message logic, it triggers here
+        console.log("MERS: Success screen visible.");
+    }
+}
+
 
   
   // MERS: Transition from Section 1 (Profile) to Section 2 (Logistics)
