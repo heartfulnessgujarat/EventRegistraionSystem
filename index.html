@@ -349,6 +349,84 @@ async function init() {
 }
 
 
+async function buildExtraSections() {
+    const container = document.getElementById('extra-sections-container');
+    // Clear any previous dynamic content but KEEP our Back/Confirm buttons
+    // We do this by targeting a sub-div for fields if you created one, 
+    // or by rebuilding the fields and re-appending the buttons.
+    
+    // For MERS, let's create a dedicated wrapper for the dynamic questions
+    let contentWrapper = document.getElementById('extra-fields-wrapper');
+    if (!contentWrapper) {
+        contentWrapper = document.createElement('div');
+        contentWrapper.id = 'extra-fields-wrapper';
+        container.insertBefore(contentWrapper, document.getElementById('btn-back-to-profile'));
+    }
+    contentWrapper.innerHTML = ''; // Clear only the questions
+
+    // 1. Get the list of sections from our blueprint (more_sections)
+    // We sort them so Section 2 appears before Section 3
+    const sectionList = [...new Set(fieldRules
+        .filter(r => r.section_number && r.section_number !== "Section1")
+        .map(r => r.section_number))]
+        .sort();
+
+    sectionList.forEach(sectionId => {
+        // Find the blueprint for this section title
+        const blueprint = moreSections.find(m => m.section_id === sectionId);
+        
+        // Create Section Header
+        const sectionHeader = document.createElement('div');
+        sectionHeader.className = 'section-header'; // You can style this in CSS
+        sectionHeader.innerHTML = `<h3 style="margin-top:20px; border-bottom:2px solid #eee; padding-bottom:5px;">${blueprint ? blueprint.section_title : sectionId}</h3>`;
+        contentWrapper.appendChild(sectionHeader);
+
+        // 2. Filter rules that belong to THIS specific section
+        const rulesForThisSection = fieldRules.filter(r => r.section_number === sectionId);
+
+        rulesForThisSection.forEach(r => {
+            const div = document.createElement('div');
+            div.className = 'field-container';
+            div.id = `cont-${r.field_id}`;
+            
+            // Draw the field (Labels, Inputs, Dropdowns)
+            div.innerHTML = `
+                <div class="label-row">
+                    <label>${r.display_label || r.field_id}</label>
+                </div>
+                <input type="text" id="inp-${r.field_id}" 
+                       placeholder="${r.field_help_text || ''}" 
+                       oninput="onExtraInputChange('${r.field_id}', this.value)" 
+                       autocomplete="off">
+                <div class="dropdown" id="res-${r.field_id}"></div>
+                <div class="error-msg-text" id="err-${r.field_id}"></div>
+            `;
+            contentWrapper.appendChild(div);
+
+            // 3. SPECIAL HANDLING: If it's a Lookup field (like Stay Options)
+            // We trigger the search logic immediately if there's an existing value
+            if (r.edit_behavior === 'Editable_Lookup') {
+                const existingVal = document.getElementById(`inp-${r.field_id}`).value;
+                if(existingVal) handleExtraLookup(r.field_id, existingVal);
+            }
+        });
+    });
+}
+
+// Helper for Section 2+ Input handling
+function onExtraInputChange(fId, val) {
+    const rule = fieldRules.find(r => r.field_id === fId);
+    if (rule && rule.edit_behavior === 'Editable_Lookup') {
+        handleExtraLookup(fId, val);
+    }
+    // You can add validation triggers here later
+}
+
+
+
+
+
+  
  
   async function onInputChange(fId, val) {
   if (fId === 'full_name' || fId === 'centre') handleSearch(fId, val);
