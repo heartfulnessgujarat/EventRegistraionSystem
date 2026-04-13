@@ -1007,6 +1007,29 @@ document.getElementById('btn-back-to-profile').onclick = function() {
 };
     
   init();
+
+// ... existing code ...
+
+// MERS: Back Button Logic
+document.getElementById('btn-back-to-profile').onclick = function() {
+    console.log("MERS: Returning to Section 1...");
+    
+    // 1. Hide the Section2 Room
+    document.getElementById('Section2').style.display = 'none';
+    
+    // 2. Show the Section1 Room (Everything remains exactly as the user left it)
+    document.getElementById('Section1').style.display = 'block';
+    
+    // 3. Smooth scroll back to the top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+// ... existing code (like init(); ) ...
+
+
+
+
+  
 </script>
 </body>
 </html>
