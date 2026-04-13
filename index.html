@@ -244,20 +244,26 @@ async function init() {
             }
         }
 
-        // 4. LOAD UI & MERS DATA (Parallel Fetch for Speed)
-        // We fetch the Banner, Thank You HTML, Master Search Data, and Section Blueprints all at once.
+        // 4. LOAD UI & MERS DATA (Surgically Updated for Path and Type)
         const [thankSnap, bannerSnap, masterSnap, moreSectionsSnap] = await Promise.all([
             db.ref('htmlStorage/' + eventId + '/thank').once('value'),
             db.ref('htmlStorage/' + eventId + '/banner').once('value'),
-            db.ref('Master_Internal_DB').once('value'),
+            // PATH FIX: Pointing to the new masters sub-directory
+            db.ref('masters/Master_Internal_DB').once('value'), 
             db.ref('more_sections').once('value')
         ]);
 
         eventConfig.final_html = thankSnap.val() || "<h2>Registration Successful!</h2>";
         const bannerHtml = bannerSnap.val(); 
         
-        // Assign MERS Data to Global Variables
-        masterData = masterSnap.val() || [];
+        // --- TYPE PROTECTION FIX: Convert Object to Array for .filter ---
+        const rawMaster = masterSnap.val();
+        if (rawMaster && !Array.isArray(rawMaster)) {
+            masterData = Object.values(rawMaster);
+        } else {
+            masterData = rawMaster || [];
+        }
+
         moreSections = moreSectionsSnap.val() || [];
 
         document.getElementById('title').innerHTML = eventConfig.title || "Registration";
@@ -286,7 +292,6 @@ async function init() {
                 location.href = window.location.pathname + "?id=" + eventId;
             }
         } else {
-            // Normal New Registration
             renderForm();
             document.getElementById('loading-init').style.display = 'none';
             document.getElementById('form-content').style.display = 'block';
@@ -297,6 +302,7 @@ async function init() {
         document.getElementById('loading-init').innerHTML = "<h2>Error loading form. Please refresh.</h2>";
     }
 }
+
 
   
   function renderForm() {
