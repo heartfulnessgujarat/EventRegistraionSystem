@@ -1142,51 +1142,55 @@ async function processFinalDeletion(regId) {
   }
 
 function finalSubmitRegistration() {
-    // 1. USE regData (This is the variable defined in your script for Section 1 data)
-    if (typeof regData === 'undefined') {
-        console.error("MERS: regData is missing!");
-        alert("System Error: Registration data not found. Please refresh.");
+    // 1. LOOKUP: Try to find the data in the global window object or the variable
+    let sourceData = (typeof regData !== 'undefined') ? regData : window.regData;
+
+    if (!sourceData) {
+        console.error("MERS: Source data not found in regData.");
+        alert("System Error: Registration data not found. Please refresh the page and try again.");
         return;
     }
 
-    let finalData = { ...regData }; 
+    // 2. CLONE: Start with the Section 1 profile data
+    let finalData = { ...sourceData }; 
 
-    // 2. Merge in the extra choices (Gender, Travel, etc.)
+    // 3. MERGE: Add the MERS memory bank data (Section 2 & 3)
     Object.keys(mersTempData).forEach(key => {
         const cleanKey = key.replace('extra_', '');
         finalData[cleanKey] = mersTempData[key];
     });
 
-    // 3. Catch current screen values
+    // 4. SCRAPE: Catch any last-minute values currently on the screen
     const currentInputs = document.querySelectorAll('[id^="extra_"]');
     currentInputs.forEach(input => {
         const cleanKey = input.id.replace('extra_', '');
         finalData[cleanKey] = input.value;
     });
 
-    // 4. Set registration status to CONFIRMED
+    // 5. UPDATE: Status and Path
     finalData["registration_status"] = "CONFIRMED";
     finalData["last_updated"] = new Date().toLocaleString();
 
-    console.log("MERS: Saving Data for:", finalData.registration_id);
-
-    // 5. Save to Firebase
     const regPath = `registrations/${finalData.event_id}/${finalData.registration_id}`;
     
+    console.log("MERS: Attempting to save to:", regPath);
+
+    // 6. SAVE: Push to Firebase
     db.ref(regPath).set(finalData)
         .then(() => {
-            // SUCCESS: Show the Thank You screen
+            // SUCCESS: Hide form and show your Thank You screen
             document.getElementById('form-content').style.display = 'none';
             document.getElementById('success-screen').style.display = 'block';
             window.scrollTo(0, 0);
         })
         .catch((error) => {
             console.error("Firebase Save Error:", error);
-            alert("Submission failed. Please try again.");
+            alert("Submission failed. Please check your connection.");
         });
 }
 
 
+  
 
 function showSuccessScreen() {
     // Hide the main form card
