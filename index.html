@@ -1142,35 +1142,40 @@ async function processFinalDeletion(regId) {
   }
 
 function finalSubmitRegistration() {
-    // 1. Start with the profile data (Section 1) found in your Firebase fetch
-    // Using mersTempData_Section1 which contains your registration_id and event_id
-    let finalData = { ...mersTempData_Section1 }; 
+    // 1. USE regData (This is the variable defined in your script for Section 1 data)
+    if (typeof regData === 'undefined') {
+        console.error("MERS: regData is missing!");
+        alert("System Error: Registration data not found. Please refresh.");
+        return;
+    }
 
-    // 2. Merge in all the extra choices (Gender, Travel, etc.) from Section 2 & 3
+    let finalData = { ...regData }; 
+
+    // 2. Merge in the extra choices (Gender, Travel, etc.)
     Object.keys(mersTempData).forEach(key => {
         const cleanKey = key.replace('extra_', '');
         finalData[cleanKey] = mersTempData[key];
     });
 
-    // 3. Catch any current values still on the screen
+    // 3. Catch current screen values
     const currentInputs = document.querySelectorAll('[id^="extra_"]');
     currentInputs.forEach(input => {
         const cleanKey = input.id.replace('extra_', '');
         finalData[cleanKey] = input.value;
     });
 
-    // 4. Set a clean timestamp for this update
-    finalData["last_updated_timestamp"] = new Date().toLocaleString();
+    // 4. Set registration status to CONFIRMED
+    finalData["registration_status"] = "CONFIRMED";
+    finalData["last_updated"] = new Date().toLocaleString();
 
-    console.log("MERS: Finalizing Save for ID:", finalData.registration_id);
+    console.log("MERS: Saving Data for:", finalData.registration_id);
 
     // 5. Save to Firebase
-    // Path: registrations / EVT001 / EVT001-REG-11-APR...
     const regPath = `registrations/${finalData.event_id}/${finalData.registration_id}`;
     
     db.ref(regPath).set(finalData)
         .then(() => {
-            // SUCCESS: Hide the form and show the Thank You message
+            // SUCCESS: Show the Thank You screen
             document.getElementById('form-content').style.display = 'none';
             document.getElementById('success-screen').style.display = 'block';
             window.scrollTo(0, 0);
