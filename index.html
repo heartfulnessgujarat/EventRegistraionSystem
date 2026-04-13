@@ -996,67 +996,31 @@ async function processFinalDeletion(regId) {
 function buildExtraSections(targetSectionNumber) {
     const container = document.getElementById('dynamic-sections-content');
     const titleHeader = document.getElementById('title-Section2');
-    container.innerHTML = ""; // Clear the room
+    // Identify your buttons (make sure these IDs match your HTML)
+    const nextBtn = document.getElementById('next-to-section3'); 
+    const registerBtn = document.getElementById('final-confirm-btn'); 
 
-    if (!moreSections || moreSections.length === 0) {
-        container.innerHTML = "<p style='text-align:center;'>No additional information required.</p>";
-        return;
-    }
+    container.innerHTML = ""; 
 
-    // 1. FIND ONLY THE SPECIFIC SECTION (e.g., "Section2")
     const sectionObj = moreSections.find(s => s.section_number === targetSectionNumber);
     
     if (sectionObj) {
-        // Update Header
         titleHeader.innerText = sectionObj.section_name || "Details";
 
-        // 2. Scan keys for questions
-        Object.keys(sectionObj).forEach(key => {
-            if (key.startsWith('question') && sectionObj[key]) {
-                const fieldId = sectionObj[key];
-                const rule = fieldRules.find(r => r.field_id === fieldId);
-                
-                if (rule) {
-                    const fieldWrapper = document.createElement('div');
-                    fieldWrapper.className = 'form-group';
-                    fieldWrapper.style.marginBottom = "15px";
+        // ... [The Loop that draws the questions goes here] ...
+        // (Keep the loop logic from my previous message)
 
-                    const label = document.createElement('label');
-                    // FIX: Changed rule.label to rule.display_label
-                    label.innerHTML = `<strong>${rule.display_label || fieldId}</strong>`;
-                    label.style.display = "block";
-                    fieldWrapper.appendChild(label);
-
-                    let input;
-                    if (rule.type === 'dropdown' || rule.edit_behavior === 'Editable_Lookup') {
-                        input = document.createElement('select');
-                        input.className = 'form-control';
-                        input.id = `extra_${fieldId}`;
-                        
-                        const placeholder = document.createElement('option');
-                        placeholder.text = "-- Select --";
-                        placeholder.value = "";
-                        input.appendChild(placeholder);
-
-                        const choices = rule.options ? rule.options.split(',') : [];
-                        choices.forEach(choice => {
-                            const opt = document.createElement('option');
-                            opt.value = choice.trim();
-                            opt.text = choice.trim();
-                            input.appendChild(opt);
-                        });
-                    } else {
-                        input = document.createElement('input');
-                        input.type = 'text';
-                        input.className = 'form-control';
-                        input.id = `extra_${fieldId}`;
-                    }
-
-                    fieldWrapper.appendChild(input);
-                    container.appendChild(fieldWrapper);
-                }
-            }
-        });
+        // --- THE SMALL CHECK STARTS HERE ---
+        // If we just built Section 3, show 'Register', hide 'Next'
+        if (targetSectionNumber === "Section3") {
+            if(registerBtn) registerBtn.style.display = "block";
+            if(nextBtn) nextBtn.style.display = "none";
+        } else {
+            // Otherwise (for Section 2), show 'Next', hide 'Register'
+            if(registerBtn) registerBtn.style.display = "none";
+            if(nextBtn) nextBtn.style.display = "block";
+        }
+        // --- THE SMALL CHECK ENDS HERE ---
     }
 }
 
