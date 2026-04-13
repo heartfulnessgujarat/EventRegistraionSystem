@@ -368,72 +368,72 @@ async function init() {
   });
 }
 
-
-
 async function buildExtraSections() {
-    console.log("MERS: Starting Build...");
+    console.log("MERS: Rendering 7 Logistics Fields...");
     const container = document.getElementById('extra-sections-container');
-    if (!container) {
-        console.error("MERS: Container 'extra-sections-container' not found in HTML!");
-        return;
-    }
+    if (!container) return;
 
-    // DEBUG LOGS - Check these in your console!
-    console.log("Current fieldRules count:", fieldRules.length);
-    console.table(fieldRules.map(r => ({id: r.field_id, section: r.section_number})));
+    // 1. Show the container first
+    container.style.display = 'block';
 
-    // 1. Force a clean slate
-    container.innerHTML = '<button onclick="location.reload()" class="btn-secondary" style="margin-bottom:20px; width:100%;">← Back to Profile</button>';
+    // 2. Create the Header and Content
+    container.innerHTML = `
+        <button onclick="location.reload()" class="btn-secondary" style="margin-bottom:20px; width:100%; cursor:pointer;">
+            ← Back to Profile
+        </button>
+        <div id="mers-dynamic-content"></div>
+    `;
     
-    const contentWrapper = document.createElement('div');
-    contentWrapper.id = 'extra-fields-wrapper';
-    container.appendChild(contentWrapper);
+    const contentWrapper = document.getElementById('mers-dynamic-content');
 
-    // 2. Filter logic - we check for ANY section that isn't Section1
+    // 3. Filter for Section 2 & 3 (Case Insensitive)
     const rulesForExtra = fieldRules.filter(r => {
         const sec = String(r.section_number || "").trim().toLowerCase();
         return sec !== "" && sec !== "section1";
     });
 
-    console.log("Rules found for Section 2+:", rulesForExtra.length);
-
-    if (rulesForExtra.length === 0) {
-        contentWrapper.innerHTML = `
-            <div style="padding:20px; background:#fff3e0; border:1px solid #ffe0b2; border-radius:8px; color:#e65100;">
-                <strong>No Extra Sections Found:</strong><br>
-                Check if your Field_Rules tab has 'Section2' or 'Section3' in the section_number column.
-            </div>`;
-        return;
-    }
-
-    // 3. Group by Section and Render
-    const sections = [...new Set(rulesForExtra.map(r => r.section_number))];
+    // 4. Get unique sections (Section2, Section3)
+    const sections = [...new Set(rulesForExtra.map(r => r.section_number))].sort();
     
     sections.forEach(secId => {
         const sectionDiv = document.createElement('div');
+        sectionDiv.style.marginBottom = "25px";
         sectionDiv.style.padding = "15px";
-        sectionDiv.style.marginBottom = "20px";
-        sectionDiv.style.background = "#f9f9f9";
+        sectionDiv.style.border = "1px solid #e0e0e0";
         sectionDiv.style.borderRadius = "8px";
         
-        sectionDiv.innerHTML = `<h3 style="color:#1a237e; border-bottom:2px solid #1a237e;">${secId}</h3>`;
+        // Add Section Header
+        sectionDiv.innerHTML = `<h3 style="color:#1a237e; border-bottom:2px solid #1a237e; margin-top:0;">${secId}</h3>`;
         
+        // Add Fields for this section
         rulesForExtra.filter(r => r.section_number === secId).forEach(r => {
             const fDiv = document.createElement('div');
             fDiv.style.marginBottom = "15px";
+            fDiv.style.textAlign = "left";
+            
             fDiv.innerHTML = `
-                <label style="display:block; font-weight:bold;">${r.display_label || r.field_id}</label>
-                <input type="text" id="inp-${r.field_id}" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:5px;">
+                <label style="display:block; font-weight:bold; margin-bottom:5px; color:#333;">${r.display_label || r.field_id}</label>
+                <input type="text" id="inp-${r.field_id}" 
+                       placeholder="Select ${r.display_label || r.field_id}..."
+                       style="width:100%; padding:12px; border:1px solid #ccc; border-radius:5px; box-sizing:border-box;"
+                       onclick="handleExtraLookup('${r.field_id}', this.value)">
+                <div id="res-${r.field_id}" style="display:none; background:white; border:1px solid #ddd; position:absolute; z-index:999; width:90%;"></div>
             `;
             sectionDiv.appendChild(fDiv);
         });
         contentWrapper.appendChild(sectionDiv);
     });
+
+    // 5. Add Final Save Button
+    const saveBtn = document.createElement('button');
+    saveBtn.innerText = "Confirm & Register";
+    saveBtn.className = "btn-primary";
+    saveBtn.style.cssText = "width:100%; padding:15px; background:#1a237e; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:10px;";
+    saveBtn.onclick = function() { alert("Data captured for Section 2 & 3!"); };
+    contentWrapper.appendChild(saveBtn);
 }
 
 
-
-  
 
 // Helper for Section 2+ Input handling
 function onExtraInputChange(fId, val) {
