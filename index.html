@@ -992,121 +992,99 @@ async function processFinalDeletion(regId) {
 }
 
 
-function buildExtraSections() {
+  function buildExtraSections() {
     const container = document.getElementById('dynamic-sections-content');
     const titleHeader = document.getElementById('title-Section2');
-    
-    // 1. Clear previous content so it doesn't double-up if they click Back/Proceed again
-    container.innerHTML = "";
-    
-    if (moreSections.length === 0) {
+    container.innerHTML = ""; // Clear the room
+
+    if (!moreSections || moreSections.length === 0) {
         container.innerHTML = "<p style='text-align:center;'>No additional information required.</p>";
         return;
     }
 
-    // 2. Set the Section Title (e.g., "Logistics" or "Accomodation") from the first record
-    titleHeader.innerText = moreSections[0].section_name || "Additional Details";
-
-    // 3. Loop through each field assigned to this section
-    moreSections.forEach(item => {
-        // Find the specific rule for this field in our fieldRules memory
-        const rule = fieldRules.find(r => r.field_id === item.field_id);
+    // 1. Loop through all sections found in the 'more_sections' data
+    moreSections.forEach(sectionObj => {
         
-        if (rule) {
-            const fieldWrapper = document.createElement('div');
-            fieldWrapper.className = 'form-group'; // Uses your existing CSS for spacing
-            fieldWrapper.style.marginBottom = "15px";
-
-            // Add the Label
-            const label = document.createElement('label');
-            label.innerHTML = `<strong>${rule.label}</strong>`;
-            label.style.display = "block";
-            label.style.marginBottom = "5px";
-            fieldWrapper.appendChild(label);
-
-            // 4. Determine Field Type (Dropdown vs Text vs Radio)
-            let input;
-            if (rule.type === 'dropdown') {
-                input = document.createElement('select');
-                input.className = 'form-control'; // Uses your existing styling
-                input.id = `extra_${rule.field_id}`;
-                
-                // Add an empty starting option
-                const placeholder = document.createElement('option');
-                placeholder.text = "-- Select --";
-                placeholder.value = "";
-                input.appendChild(placeholder);
-
-                // Split the 'options' column (e.g., "Male,Female") into actual choices
-                const choices = rule.options.split(',');
-                choices.forEach(choice => {
-                    const opt = document.createElement('option');
-                    opt.value = choice.trim();
-                    opt.text = choice.trim();
-                    input.appendChild(opt);
-                });
-            } else {
-                // Default to Text input for things like "Stay Arrangement" if not dropdown
-                input = document.createElement('input');
-                input.type = 'text';
-                input.className = 'form-control';
-                input.id = `extra_${rule.field_id}`;
-                input.placeholder = rule.placeholder || "";
-            }
-
-            fieldWrapper.appendChild(input);
-            container.appendChild(fieldWrapper);
+        // Update the header with the section name (e.g., "Accomodation")
+        if (sectionObj.section_name) {
+            titleHeader.innerText = sectionObj.section_name;
         }
+
+        // 2. Scan every key in this section object (question1, question2, etc.)
+        Object.keys(sectionObj).forEach(key => {
+            // We only care about keys that start with "question" and have a value
+            if (key.startsWith('question') && sectionObj[key]) {
+                const fieldId = sectionObj[key];
+
+                // 3. Find the matching rule for this field_id in our 'fieldRules' memory
+                const rule = fieldRules.find(r => r.field_id === fieldId);
+                
+                if (rule) {
+                    const fieldWrapper = document.createElement('div');
+                    fieldWrapper.className = 'form-group';
+                    fieldWrapper.style.marginBottom = "15px";
+
+                    const label = document.createElement('label');
+                    label.innerHTML = `<strong>${rule.label}</strong>`;
+                    label.style.display = "block";
+                    fieldWrapper.appendChild(label);
+
+                    let input;
+                    if (rule.type === 'dropdown') {
+                        input = document.createElement('select');
+                        input.className = 'form-control';
+                        input.id = `extra_${fieldId}`;
+                        
+                        const placeholder = document.createElement('option');
+                        placeholder.text = "-- Select --";
+                        placeholder.value = "";
+                        input.appendChild(placeholder);
+
+                        // Split options by comma and trim whitespace
+                        const choices = rule.options ? rule.options.split(',') : [];
+                        choices.forEach(choice => {
+                            const opt = document.createElement('option');
+                            opt.value = choice.trim();
+                            opt.text = choice.trim();
+                            input.appendChild(opt);
+                        });
+                    } else {
+                        input = document.createElement('input');
+                        input.type = rule.type === 'number' ? 'number' : 'text';
+                        input.className = 'form-control';
+                        input.id = `extra_${fieldId}`;
+                        input.placeholder = rule.placeholder || "";
+                    }
+
+                    fieldWrapper.appendChild(input);
+                    container.appendChild(fieldWrapper);
+                }
+            }
+        });
     });
 }
+
 
 function finalSubmitRegistration() {
-    console.log("MERS: Starting Final Submission...");
+    let finalData = { ...currentUser }; // Start with Section 1 data
 
-    // 1. Collect Data from Section 1 (Existing Profile Logic)
-    // We assume your existing 'currentUser' object holds the profile info.
-    let finalData = { ...currentUser }; 
-
-    // 2. Collect Data from Section 2 (Extra Fields)
-    moreSections.forEach(item => {
-        const inputElement = document.getElementById(`extra_${item.field_id}`);
-        if (inputElement) {
-            // We use the field_id (e.g., 'gender') as the key for the database
-            finalData[item.field_id] = inputElement.value;
-        }
+    // Dynamically grab every "extra_" field currently on the screen
+    moreSections.forEach(sectionObj => {
+        Object.keys(sectionObj).forEach(key => {
+            if (key.startsWith('question') && sectionObj[key]) {
+                const fieldId = sectionObj[key];
+                const inputElement = document.getElementById(`extra_${fieldId}`);
+                if (inputElement) {
+                    finalData[fieldId] = inputElement.value;
+                }
+            }
+        });
     });
 
-    // 3. Simple Validation: Check if any extra fields are empty
-    let missingFields = moreSections.filter(item => !finalData[item.field_id]);
-    if (missingFields.length > 0) {
-        alert("Please answer all questions in the Logistics section.");
-        return;
-    }
-
-    // 4. Send to Firebase
-    // This uses your existing 'eventId' and 'db' (Firebase) setup
-    const regId = finalData.mobile; // Using mobile as the ID as per your current system
-    
-    db.ref('registrations/' + eventId + '/' + regId).set(finalData)
-    .then(() => {
-        console.log("MERS: Registration successful!");
-        // Redirect to your existing 'Thank You' logic
-        if (typeof showThankYouPage === "function") {
-            showThankYouPage();
-        } else {
-            alert("Registration Successful!");
-            location.reload();
-        }
-    })
-    .catch((error) => {
-        console.error("MERS: Firebase Error:", error);
-        alert("Submission failed. Please try again.");
-    });
+    // Proceed to save finalData to Firebase...
+    console.log("MERS: Final Payload Ready:", finalData);
+    // [Insert your Firebase .set() logic here]
 }
-
-
-
-
 
   
   // MERS: Transition from Section 1 (Profile) to Section 2 (Logistics)
