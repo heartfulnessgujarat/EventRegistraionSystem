@@ -1083,21 +1083,15 @@ async function processFinalDeletion(regId) {
                 <p>The seat has been released for others.</p>
             </div>`;
         document.getElementById('success-screen').style.display = 'block';
-
-    } catch (error) {
-        alert("Deletion failed. Please try again.");
-        document.getElementById('processing-overlay').style.display = 'none';
-    }
-}
-
-
-  // MERS: Transition from Section 1 (Profile) to Section 2 (Logistics)
 function proceedToLogistics() {
     console.log("MERS: Transitioning to Section 2...");
 
-    // 1. Hide the Search/Profile section
+    // 1. Hide the Search/Profile section AND the subtitle
     const profileSection = document.getElementById('profile-container');
     if (profileSection) profileSection.style.display = 'none';
+    
+    const subtitle = document.getElementById('subtitle');
+    if (subtitle) subtitle.style.display = 'none';
 
     // 2. Hide the original button containers
     const btnsStart = document.getElementById('btns-start');
@@ -1106,36 +1100,31 @@ function proceedToLogistics() {
     const btnMasterUpdate = document.getElementById('btn-master-update');
     if (btnMasterUpdate) btnMasterUpdate.style.display = 'none';
 
-    // 3. Show the new Extra Sections container we created in Step A
+    // 3. Show the new Extra Sections container
     const extraSection = document.getElementById('extra-sections-container');
     if (extraSection) {
         extraSection.style.display = 'block';
     }
 
-    // 4. Smooth scroll to the top of the new section
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // 4. Force scroll to top
+    window.scrollTo(0, 0);
 
-    // 5. Trigger the dynamic builder (we will write this function next)
+    // 5. Build the sections
     if (typeof buildExtraSections === "function") {
         buildExtraSections();
     } else {
         console.warn("MERS: buildExtraSections function not defined yet.");
     }
 }
+    } catch (error) {
+        alert("Deletion failed. Please try again.");
+        document.getElementById('processing-overlay').style.display = 'none';
+    }
+}
 
-// MERS: Back Button Logic to return to Profile
-document.getElementById('btn-back-to-profile').onclick = function() {
-    // Hide Logistics
-    document.getElementById('extra-sections-container').style.display = 'none';
-    
-    // Show Profile and the correct buttons
-    document.getElementById('profile-container').style.display = 'block';
-    
-    // Note: We show btns-start by default; your existing showButtons() 
-    // logic will handle the specific visibility of edit vs confirm.
-    document.getElementById('btns-start').style.display = 'flex';
-};
 
+  // MERS: Transition from Section 1 (Profile) to Section 2 (Logistics)
+  
 
     
   init();
