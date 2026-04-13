@@ -166,8 +166,7 @@
 </div>
 
 <script>
-  let moreSections = []; // Stores the 'more_sections' tab data
-let fieldRules = [];   // Stores the 'Field_Rules' tab data
+  
   let verificationAttempts = { email: 0, mobile: 0 };
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyPbae3F_Vm2q25LWZF1G59O0V2XRrokeqxNkLvZetTKl19HM4QubILy17nPe65Q-L-zw/exec";
   const firebaseConfig = { databaseURL: "https://ferrari-reg-2026-default-rtdb.asia-southeast1.firebasedatabase.app" };
@@ -176,7 +175,9 @@ let fieldRules = [];   // Stores the 'Field_Rules' tab data
   const db = firebase.database();
   const eventId = (new URLSearchParams(window.location.search).get('id') || 'EVT001').toUpperCase();
 
-  let fieldRules = [], masterData = [], eventConfig = {};
+
+  let fieldRules = [], masterData = [], eventConfig = {}, moreSections = [];
+ 
   let originalData = {}; 
   let verificationStates = { email: false, mobile: false };
 
