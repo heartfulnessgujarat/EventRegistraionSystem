@@ -369,58 +369,74 @@ async function init() {
 }
 
 async function buildExtraSections() {
-    // 1. Target the existing MERS container from your HTML
+    console.log("MERS: Building Extra Sections...");
     const container = document.getElementById('extra-sections-container');
     if (!container) return;
 
-    // 2. Create or find a 'wrapper' for the questions so we don't disturb the buttons
-    let contentWrapper = document.getElementById('extra-fields-wrapper');
-    if (!contentWrapper) {
-        contentWrapper = document.createElement('div');
-        contentWrapper.id = 'extra-fields-wrapper';
-        // We put it at the top of the container
-        container.prepend(contentWrapper);
-    }
-    contentWrapper.innerHTML = ''; // Clear only previous questions
+    // 1. Force a clean slate
+    container.innerHTML = '<button id="btn-back-to-profile" class="btn-secondary" style="margin-bottom:20px; width:100%;">← Back to Profile</button>';
+    
+    const contentWrapper = document.createElement('div');
+    contentWrapper.id = 'extra-fields-wrapper';
+    container.appendChild(contentWrapper);
 
-    // 3. Filter for Section 2, Section 3, etc. (Exclude Section 1)
+    // 2. Filter for Section 2, 3, etc.
     const sectionList = [...new Set(fieldRules
-        .filter(r => r.section_number && r.section_number.toString().trim() !== "Section1")
+        .filter(r => r.section_number && String(r.section_number).trim() !== "Section1")
         .map(r => r.section_number))]
         .sort();
 
-    // 4. Loop through each section defined in your blueprint
-    sectionList.forEach(sectionId => {
-        const blueprint = moreSections.find(m => m.section_id === sectionId);
-        
-        const sectionHeader = document.createElement('div');
-        sectionHeader.innerHTML = `<h3 style="margin-top:20px; color:#1a237e; border-bottom:1px solid #ddd;">
-            ${blueprint ? blueprint.section_title : sectionId}
-        </h3>`;
-        contentWrapper.appendChild(sectionHeader);
+    if (sectionList.length === 0) {
+        contentWrapper.innerHTML = "<p style='text-align:center; padding:20px;'>No extra fields defined for this event.</p>";
+        return;
+    }
 
+    // 3. Loop and Build
+    sectionList.forEach(sectionId => {
+        // Find Title
+        let sectionTitle = sectionId;
+        if (Array.isArray(moreSections)) {
+            const blueprint = moreSections.find(m => m.section_id === sectionId);
+            if (blueprint && blueprint.section_title) {
+                sectionTitle = blueprint.section_title;
+            }
+        }
+
+        const sectionDiv = document.createElement('div');
+        sectionDiv.style.marginBottom = "30px";
+        sectionDiv.innerHTML = `<h3 style="color:#1a237e; border-bottom:2px solid #1a237e; padding-bottom:5px;">${sectionTitle}</h3>`;
+        
         const rulesForThisSection = fieldRules.filter(r => r.section_number === sectionId);
 
         rulesForThisSection.forEach(r => {
-            const div = document.createElement('div');
-            div.className = 'field-container';
-            div.style.marginBottom = '15px';
+            const fieldDiv = document.createElement('div');
+            fieldDiv.className = 'field-container';
+            fieldDiv.style.marginBottom = '15px';
             
-            div.innerHTML = `
-                <div class="label-row">
-                    <label style="font-weight:bold; font-size:14px;">${r.display_label || r.field_id}</label>
-                </div>
+            fieldDiv.innerHTML = `
+                <label style="display:block; font-weight:bold; margin-bottom:5px;">${r.display_label || r.field_id}</label>
                 <input type="text" id="inp-${r.field_id}" 
-                       style="width:100%; padding:10px; border:1px solid #ccc; border-radius:5px;"
+                       style="width:100%; padding:12px; border:1px solid #ccc; border-radius:8px; box-sizing:border-box;"
                        placeholder="${r.field_help_text || ''}" 
-                       oninput="onExtraInputChange('${r.field_id}', this.value)" 
+                       onclick="handleExtraLookup('${r.field_id}', this.value)"
+                       oninput="handleExtraLookup('${r.field_id}', this.value)" 
                        autocomplete="off">
-                <div class="dropdown" id="res-${r.field_id}" style="display:none; border:1px solid #ddd; background:white; position:absolute; z-index:1000; width:90%;"></div>
-                <div class="error-msg-text" id="err-${r.field_id}" style="color:red; font-size:12px;"></div>
+                <div id="res-${r.field_id}" class="lookup-dropdown" style="display:none; background:white; border:1px solid #ddd; position:absolute; z-index:1000; width:100%; max-height:200px; overflow-y:auto; box-shadow:0 4px 6px rgba(0,0,0,0.1);"></div>
+                <div id="err-${r.field_id}" style="color:red; font-size:12px; margin-top:5px;"></div>
             `;
-            contentWrapper.appendChild(div);
+            sectionDiv.appendChild(fieldDiv);
         });
+        contentWrapper.appendChild(sectionDiv);
     });
+
+    // 4. Add a Final Submit/Update Button at the bottom
+    const saveBtn = document.createElement('button');
+    saveBtn.innerHTML = "Finalize Registration";
+    saveBtn.className = "btn-primary"; // Uses your existing primary color
+    saveBtn.style.width = "100%";
+    saveBtn.style.marginTop = "20px";
+    saveBtn.onclick = function() { alert("Registration Data Collected!"); }; 
+    contentWrapper.appendChild(saveBtn);
 }
 
 
