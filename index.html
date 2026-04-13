@@ -151,14 +151,18 @@
   const eventId = (new URLSearchParams(window.location.search).get('id') || 'EVT001').toUpperCase();
 
 
-  // --- MERS: CONSOLIDATED GLOBAL DATA ---
+// --- MERS: CONSOLIDATED GLOBAL DATA ---
   let fieldRules = [];
-  let masterData = [];
+  let masterData = [];      // Added for Search results
+  let moreSections = [];    // Added for Section Titles/Logistics
   let eventConfig = {};
   let originalData = {}; 
   let verificationStates = { email: false, mobile: false };
-  let moreSections = []; // Added for Section Titles/Logistics
   // --------------------------------------
+
+
+
+
   
   
 /** --- START: GATEKEEPER HELPER FUNCTIONS --- **/
