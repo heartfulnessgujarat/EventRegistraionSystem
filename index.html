@@ -423,7 +423,58 @@ function onExtraInputChange(fId, val) {
 }
 
 
+async function handleExtraLookup(fId, val) {
+    const resDiv = document.getElementById(`res-${fId}`);
+    if (!val || val.length < 1) {
+        resDiv.style.display = 'none';
+        return;
+    }
 
+    // 1. Find the rule for this field to get the correct Master tab name
+    const rule = fieldRules.find(r => r.field_id === fId);
+    if (!rule || !rule.lookup_tab) return;
+
+    const lookupTab = rule.lookup_tab; // e.g., "master_stay_options"
+    const searchCol = rule.lookup_column || fId;
+
+    try {
+        // 2. Fetch data from the new 'masters/' folder in Firebase
+        const snap = await db.ref(`masters/${lookupTab}`).once('value');
+        const data = snap.val();
+        if (!data) return;
+
+        // 3. Filter the results based on what the user is typing
+        const matches = Object.keys(data).filter(key => {
+            const item = data[key];
+            return item[searchCol] && item[searchCol].toString().toLowerCase().includes(val.toLowerCase());
+        });
+
+        // 4. Draw the dropdown results
+        if (matches.length > 0) {
+            resDiv.innerHTML = matches.map(key => {
+                const displayVal = data[key][searchCol];
+                return `<div onclick="selectExtraValue('${fId}', '${displayVal.replace(/'/g, "\\'")}')">${displayVal}</div>`;
+            }).join('');
+            resDiv.style.display = 'block';
+        } else {
+            resDiv.style.display = 'none';
+        }
+    } catch (e) {
+        console.error("MERS: Lookup Error", e);
+    }
+}
+
+// Helper to handle the selection from the dropdown
+function selectExtraValue(fId, val) {
+    const inp = document.getElementById(`inp-${fId}`);
+    inp.value = val;
+    document.getElementById(`res-${fId}`).style.display = 'none';
+    
+    // Trigger any validation if necessary
+    if (typeof checkAllValidations === "function") {
+        checkAllValidations();
+    }
+}
 
 
   
