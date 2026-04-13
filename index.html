@@ -1042,6 +1042,7 @@ async function buildExtraSections(targetSectionNumber) {
                     let input;
                     const inputId = `extra_${fieldId}`;
 
+                    // --- THE LOOKUP DROPDOWN FETCH LOGIC ---
                     if (rule.edit_behavior === 'Editable_lookup_Dropdown') {
                         input = document.createElement('select');
                         input.className = 'form-control';
@@ -1057,10 +1058,14 @@ async function buildExtraSections(targetSectionNumber) {
                             const colName = rule.lookup_column;
                             
                             if (tabName && colName) {
+                                // Fetch from the 'masters' folder
                                 const lookupSnap = await db.ref(`masters/${tabName}`).once('value');
                                 const lookupData = lookupSnap.val();
                                 if (lookupData) {
-                                    const choices = Object.values(lookupData).map(row => row[colName]).filter(val => val);
+                                    const choices = Object.values(lookupData)
+                                        .map(row => row[colName])
+                                        .filter(val => val);
+                                    
                                     [...new Set(choices)].forEach(choice => {
                                         const opt = document.createElement('option');
                                         opt.value = choice;
@@ -1071,8 +1076,16 @@ async function buildExtraSections(targetSectionNumber) {
                             }
                         } catch (err) { console.error("Lookup Error", err); }
                     } else {
+                        // Logic for Date, Time, or Text
                         input = document.createElement('input');
-                        input.type = (fieldId.toLowerCase().includes('date')) ? 'date' : (fieldId.toLowerCase().includes('time') ? 'time' : 'text');
+                        const fieldLower = fieldId.toLowerCase();
+                        if (fieldLower.includes('date')) {
+                            input.type = 'date';
+                        } else if (fieldLower.includes('time')) {
+                            input.type = 'time';
+                        } else {
+                            input.type = 'text';
+                        }
                         input.className = 'form-control';
                         input.id = inputId;
                     }
@@ -1088,30 +1101,28 @@ async function buildExtraSections(targetSectionNumber) {
             }
         }
 
-
-
-// --- STEP 3: RESET BUTTON IDENTITY (FORCEFUL LABELS) ---
+        // --- STEP 3: RESET BUTTON IDENTITY (FORCEFUL LABELS) ---
         if (targetSectionNumber === "Section2") {
             actionBtn.style.display = "block";
-            actionBtn.innerText = "PROCEED TO TRAVEL DETAILS"; // This forces the change
+            actionBtn.innerText = "PROCEED TO TRAVEL DETAILS";
             actionBtn.onclick = function() { buildExtraSections('Section3'); };
         } else if (targetSectionNumber === "Section3") {
             actionBtn.style.display = "block";
-            actionBtn.innerText = "CONFIRM & REGISTER"; // This forces the change for final step
+            actionBtn.innerText = "CONFIRM & REGISTER";
             actionBtn.onclick = function() { 
                 console.log("Final Submission Data:", mersTempData);
                 if(typeof finalSubmitRegistration === "function") {
                     finalSubmitRegistration();
                 } else {
-                    alert("Ready to Register!");
+                    alert("Submission logic triggered! Check console for data.");
                 }
             };
         }
-
-
     }
-}  
-function finalSubmitRegistration() {
+}
+  
+  
+  function finalSubmitRegistration() {
     let finalData = { ...currentUser }; // Start with Section 1 data
 
     // Dynamically grab every "extra_" field currently on the screen
