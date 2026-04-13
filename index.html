@@ -282,9 +282,22 @@ async function init() {
       
         document.getElementById('subtitle').innerHTML = eventConfig.subtitle || "";
         
-        // Load Field Rules
+       // --- MERS: DATA BRIDGE FOR EXTRA SECTIONS ---
+        
+        // 1. Load Field Rules (Filtering for this specific Event ID)
         const rulesSnap = await db.ref('config/fieldRules').once('value');
-        fieldRules = Object.values(rulesSnap.val() || {}).filter(r => String(r.event_id).toUpperCase() === eventId);
+        const allRules = rulesSnap.val() || {};
+        fieldRules = Object.values(allRules).filter(r => String(r.event_id).toUpperCase() === eventId);
+        console.log("MERS: Field Rules Loaded:", fieldRules.length);
+
+        // 2. Load More Sections (The Page 2 Map)
+        const sectionsSnap = await db.ref('config/more_sections').once('value');
+        const allSections = sectionsSnap.val() || {};
+        // Filter sections to only show those belonging to this event
+        moreSections = Object.values(allSections).filter(s => String(s.event_id).toUpperCase() === eventId);
+        console.log("MERS: More Sections Loaded:", moreSections.length);
+
+        // --- END MERS DATA BRIDGE ---
         
         // --- NEW: ROUTING LOGIC ---
         if (mode === 'edit' || mode === 'delete') {
