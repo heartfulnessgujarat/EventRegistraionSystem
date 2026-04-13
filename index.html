@@ -217,7 +217,6 @@ function blockUIWithNotice(message) {
   throw new Error("Registration Locked: " + message);
 }
 /** --- END: GATEKEEPER HELPER FUNCTIONS --- **/
-
 async function init() {
     try {
         // --- NEW: URL PARAMETER CAPTURE ---
@@ -283,25 +282,31 @@ async function init() {
         
         // --- MERS: PROTECTED DATA BRIDGE ---
         
-        // 1. Load Field Rules (With Safety)
+        // 1. Load Field Rules (The "How to behave" data)
         try {
             const rulesSnap = await db.ref('config/fieldRules').once('value');
             const allRules = rulesSnap.val() || {};
+            // We keep the filter here because fieldRules is a large master list
             fieldRules = Object.values(allRules).filter(r => String(r.event_id).toUpperCase() === eventId);
             console.log("MERS: Field Rules Loaded:", fieldRules.length);
         } catch (ruleErr) {
-            console.warn("MERS: fieldRules fetch failed, using empty array.", ruleErr);
+            console.warn("MERS: fieldRules fetch failed.", ruleErr);
             fieldRules = [];
         }
 
-        // 2. Load More Sections (With Safety)
+        // 2. Load More Sections (The "What questions to show" data)
         try {
             const sectionsSnap = await db.ref('config/more_sections').once('value');
             const allSections = sectionsSnap.val() || {};
-            moreSections = Object.values(allSections).filter(s => String(s.event_id).toUpperCase() === eventId);
+            
+            /** * SURGICAL FIX: We remove the .filter() here.
+             * Your Firebase structure for 'more_sections' holds Section2 and Section3 directly.
+             * By using Object.values(), we ensure moreSections contains those section objects.
+             **/
+            moreSections = Object.values(allSections); 
             console.log("MERS: More Sections Loaded:", moreSections.length);
         } catch (secErr) {
-            console.warn("MERS: more_sections fetch failed, using empty array.", secErr);
+            console.warn("MERS: more_sections fetch failed.", secErr);
             moreSections = [];
         }
 
@@ -327,8 +332,6 @@ async function init() {
         document.getElementById('loading-init').innerHTML = "<h2>Error loading form. Please refresh.</h2>";
     }
 }
-  
-
   function renderForm() {
   const container = document.getElementById('dynamic-fields');
   container.innerHTML = '';
