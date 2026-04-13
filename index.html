@@ -368,78 +368,72 @@ async function init() {
   });
 }
 
+
+
 async function buildExtraSections() {
-    console.log("MERS: Building Extra Sections...");
+    console.log("MERS: Starting Build...");
     const container = document.getElementById('extra-sections-container');
-    if (!container) return;
+    if (!container) {
+        console.error("MERS: Container 'extra-sections-container' not found in HTML!");
+        return;
+    }
+
+    // DEBUG LOGS - Check these in your console!
+    console.log("Current fieldRules count:", fieldRules.length);
+    console.table(fieldRules.map(r => ({id: r.field_id, section: r.section_number})));
 
     // 1. Force a clean slate
-    container.innerHTML = '<button id="btn-back-to-profile" class="btn-secondary" style="margin-bottom:20px; width:100%;">← Back to Profile</button>';
+    container.innerHTML = '<button onclick="location.reload()" class="btn-secondary" style="margin-bottom:20px; width:100%;">← Back to Profile</button>';
     
     const contentWrapper = document.createElement('div');
     contentWrapper.id = 'extra-fields-wrapper';
     container.appendChild(contentWrapper);
 
-    // 2. Filter for Section 2, 3, etc.
-    const sectionList = [...new Set(fieldRules
-        .filter(r => r.section_number && String(r.section_number).trim() !== "Section1")
-        .map(r => r.section_number))]
-        .sort();
+    // 2. Filter logic - we check for ANY section that isn't Section1
+    const rulesForExtra = fieldRules.filter(r => {
+        const sec = String(r.section_number || "").trim().toLowerCase();
+        return sec !== "" && sec !== "section1";
+    });
 
-    if (sectionList.length === 0) {
-        contentWrapper.innerHTML = "<p style='text-align:center; padding:20px;'>No extra fields defined for this event.</p>";
+    console.log("Rules found for Section 2+:", rulesForExtra.length);
+
+    if (rulesForExtra.length === 0) {
+        contentWrapper.innerHTML = `
+            <div style="padding:20px; background:#fff3e0; border:1px solid #ffe0b2; border-radius:8px; color:#e65100;">
+                <strong>No Extra Sections Found:</strong><br>
+                Check if your Field_Rules tab has 'Section2' or 'Section3' in the section_number column.
+            </div>`;
         return;
     }
 
-    // 3. Loop and Build
-    sectionList.forEach(sectionId => {
-        // Find Title
-        let sectionTitle = sectionId;
-        if (Array.isArray(moreSections)) {
-            const blueprint = moreSections.find(m => m.section_id === sectionId);
-            if (blueprint && blueprint.section_title) {
-                sectionTitle = blueprint.section_title;
-            }
-        }
-
+    // 3. Group by Section and Render
+    const sections = [...new Set(rulesForExtra.map(r => r.section_number))];
+    
+    sections.forEach(secId => {
         const sectionDiv = document.createElement('div');
-        sectionDiv.style.marginBottom = "30px";
-        sectionDiv.innerHTML = `<h3 style="color:#1a237e; border-bottom:2px solid #1a237e; padding-bottom:5px;">${sectionTitle}</h3>`;
+        sectionDiv.style.padding = "15px";
+        sectionDiv.style.marginBottom = "20px";
+        sectionDiv.style.background = "#f9f9f9";
+        sectionDiv.style.borderRadius = "8px";
         
-        const rulesForThisSection = fieldRules.filter(r => r.section_number === sectionId);
-
-        rulesForThisSection.forEach(r => {
-            const fieldDiv = document.createElement('div');
-            fieldDiv.className = 'field-container';
-            fieldDiv.style.marginBottom = '15px';
-            
-            fieldDiv.innerHTML = `
-                <label style="display:block; font-weight:bold; margin-bottom:5px;">${r.display_label || r.field_id}</label>
-                <input type="text" id="inp-${r.field_id}" 
-                       style="width:100%; padding:12px; border:1px solid #ccc; border-radius:8px; box-sizing:border-box;"
-                       placeholder="${r.field_help_text || ''}" 
-                       onclick="handleExtraLookup('${r.field_id}', this.value)"
-                       oninput="handleExtraLookup('${r.field_id}', this.value)" 
-                       autocomplete="off">
-                <div id="res-${r.field_id}" class="lookup-dropdown" style="display:none; background:white; border:1px solid #ddd; position:absolute; z-index:1000; width:100%; max-height:200px; overflow-y:auto; box-shadow:0 4px 6px rgba(0,0,0,0.1);"></div>
-                <div id="err-${r.field_id}" style="color:red; font-size:12px; margin-top:5px;"></div>
+        sectionDiv.innerHTML = `<h3 style="color:#1a237e; border-bottom:2px solid #1a237e;">${secId}</h3>`;
+        
+        rulesForExtra.filter(r => r.section_number === secId).forEach(r => {
+            const fDiv = document.createElement('div');
+            fDiv.style.marginBottom = "15px";
+            fDiv.innerHTML = `
+                <label style="display:block; font-weight:bold;">${r.display_label || r.field_id}</label>
+                <input type="text" id="inp-${r.field_id}" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:5px;">
             `;
-            sectionDiv.appendChild(fieldDiv);
+            sectionDiv.appendChild(fDiv);
         });
         contentWrapper.appendChild(sectionDiv);
     });
-
-    // 4. Add a Final Submit/Update Button at the bottom
-    const saveBtn = document.createElement('button');
-    saveBtn.innerHTML = "Finalize Registration";
-    saveBtn.className = "btn-primary"; // Uses your existing primary color
-    saveBtn.style.width = "100%";
-    saveBtn.style.marginTop = "20px";
-    saveBtn.onclick = function() { alert("Registration Data Collected!"); }; 
-    contentWrapper.appendChild(saveBtn);
 }
 
 
+
+  
 
 // Helper for Section 2+ Input handling
 function onExtraInputChange(fId, val) {
