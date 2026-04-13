@@ -1128,6 +1128,52 @@ function proceedToLogistics() {
 
     
   init();
+
+  // ... existing functions ...
+
+// --- MERS: TRANSITION ENGINE ---
+window.proceedToLogistics = function() {
+    console.log("MERS: proceedToLogistics triggered successfully.");
+
+    // 1. Hide the Search/Profile section
+    const profileSection = document.getElementById('profile-container');
+    if (profileSection) profileSection.style.display = 'none';
+    
+    const formContent = document.getElementById('form-content');
+    if (formContent) formContent.style.display = 'none';
+
+    // 2. Hide the original button containers
+    const btnsStart = document.getElementById('btns-start');
+    if (btnsStart) btnsStart.style.display = 'none';
+    
+    const btnMasterUpdate = document.getElementById('btn-master-update');
+    if (btnMasterUpdate) btnMasterUpdate.style.display = 'none';
+
+    // 3. Show the Extra Sections container
+    const extraSection = document.getElementById('extra-sections-container');
+    if (extraSection) {
+        extraSection.style.display = 'block';
+    }
+
+    // 4. Reset scroll
+    window.scrollTo(0, 0);
+
+    // 5. Trigger the dynamic builder
+    if (typeof buildExtraSections === "function") {
+        buildExtraSections();
+    } else {
+        console.error("MERS Error: buildExtraSections function is missing!");
+    }
+};
+
+// Start the app
+init(); 
+
+</script>
+</body>
+
+  
+  
 </script>
 </body>
 </html>
