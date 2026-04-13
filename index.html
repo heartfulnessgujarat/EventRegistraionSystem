@@ -1001,7 +1001,7 @@ async function processFinalDeletion(regId) {
     }
 }
 
-async function buildExtraSections(targetSectionNumber) {
+  async function buildExtraSections(targetSectionNumber) {
     if (!targetSectionNumber) targetSectionNumber = "Section2";
 
     // --- STEP 1: SAVE CURRENT SELECTIONS ---
@@ -1015,8 +1015,8 @@ async function buildExtraSections(targetSectionNumber) {
     const container = document.getElementById('dynamic-sections-content');
     const titleHeader = document.getElementById('title-Section2');
     const actionBtn = document.getElementById('btn-next-action'); 
+    const backBtn = document.getElementById('btn-back-to-profile'); // Back button ID from your HTML
 
-    // Clear the UI for the new section
     container.innerHTML = ""; 
 
     const sectionObj = moreSections.find(s => s.section_number === targetSectionNumber);
@@ -1036,17 +1036,19 @@ async function buildExtraSections(targetSectionNumber) {
                     fieldWrapper.style.textAlign = "left";
 
                     const label = document.createElement('label');
-                    label.innerHTML = `<strong>${rule.display_label || fieldId}</strong>`;
+                    // Mark with * if mandatory
+                    const isMandatory = rule.field_validation !== "NULL";
+                    label.innerHTML = `<strong>${rule.display_label || fieldId} ${isMandatory ? '<span style="color:red">*</span>' : ''}</strong>`;
                     fieldWrapper.appendChild(label);
 
                     let input;
                     const inputId = `extra_${fieldId}`;
 
-                    // --- THE LOOKUP DROPDOWN FETCH LOGIC ---
                     if (rule.edit_behavior === 'Editable_lookup_Dropdown') {
                         input = document.createElement('select');
                         input.className = 'form-control';
                         input.id = inputId;
+                        input.dataset.mandatory = isMandatory; // Bookmark for validation
                         
                         const placeholder = document.createElement('option');
                         placeholder.text = "-- Select --";
@@ -1058,14 +1060,10 @@ async function buildExtraSections(targetSectionNumber) {
                             const colName = rule.lookup_column;
                             
                             if (tabName && colName) {
-                                // Fetch from the 'masters' folder
                                 const lookupSnap = await db.ref(`masters/${tabName}`).once('value');
                                 const lookupData = lookupSnap.val();
                                 if (lookupData) {
-                                    const choices = Object.values(lookupData)
-                                        .map(row => row[colName])
-                                        .filter(val => val);
-                                    
+                                    const choices = Object.values(lookupData).map(row => row[colName]).filter(val => val);
                                     [...new Set(choices)].forEach(choice => {
                                         const opt = document.createElement('option');
                                         opt.value = choice;
@@ -1076,51 +1074,66 @@ async function buildExtraSections(targetSectionNumber) {
                             }
                         } catch (err) { console.error("Lookup Error", err); }
                     } else {
-                        // Logic for Date, Time, or Text
                         input = document.createElement('input');
                         const fieldLower = fieldId.toLowerCase();
-                        if (fieldLower.includes('date')) {
-                            input.type = 'date';
-                        } else if (fieldLower.includes('time')) {
-                            input.type = 'time';
-                        } else {
-                            input.type = 'text';
-                        }
+                        input.type = fieldLower.includes('date') ? 'date' : (fieldLower.includes('time') ? 'time' : 'text');
                         input.className = 'form-control';
                         input.id = inputId;
+                        input.dataset.mandatory = isMandatory;
                     }
 
-                    // --- STEP 2: RECALL SELECTIONS ---
-                    if (mersTempData[inputId]) {
-                        input.value = mersTempData[inputId];
-                    }
-
+                    if (mersTempData[inputId]) { input.value = mersTempData[inputId]; }
                     fieldWrapper.appendChild(input);
                     container.appendChild(fieldWrapper);
                 }
             }
         }
 
-        // --- STEP 3: RESET BUTTON IDENTITY (FORCEFUL LABELS) ---
-        if (targetSectionNumber === "Section2") {
-            actionBtn.style.display = "block";
-            actionBtn.innerText = "PROCEED TO TRAVEL DETAILS";
-            actionBtn.onclick = function() { buildExtraSections('Section3'); };
-        } else if (targetSectionNumber === "Section3") {
-            actionBtn.style.display = "block";
-            actionBtn.innerText = "CONFIRM & REGISTER";
-            actionBtn.onclick = function() { 
-                console.log("Final Submission Data:", mersTempData);
-                if(typeof finalSubmitRegistration === "function") {
-                    finalSubmitRegistration();
-                } else {
-                    alert("Submission logic triggered! Check console for data.");
+        // --- STEP 3: RESET BUTTON IDENTITY & VALIDATION ---
+        
+        // Fix for Back Button Navigation
+        if (backBtn) {
+            if (targetSectionNumber === "Section2") {
+                backBtn.onclick = function() { 
+                    document.getElementById('Section2').style.display = 'none';
+                    document.getElementById('Section1').style.display = 'block';
+                };
+            } else if (targetSectionNumber === "Section3") {
+                backBtn.onclick = function() { buildExtraSections('Section2'); };
+            }
+        }
+
+        // Fix for Forward Button & Mandatory Check
+        actionBtn.onclick = function() {
+            // Mandatory Field Check
+            const inputs = container.querySelectorAll('[data-mandatory="true"]');
+            for (let i of inputs) {
+                if (!i.value) {
+                    alert("Please fill in all required fields marked with *");
+                    i.style.border = "2px solid red";
+                    return; // Stop here
                 }
-            };
+                i.style.border = "1px solid #ced4da"; // Reset border if filled
+            }
+
+            if (targetSectionNumber === "Section2") {
+                buildExtraSections('Section3');
+            } else {
+                console.log("Final Submission Data:", mersTempData);
+                alert("Confirmed! Final registration logic starting...");
+            }
+        };
+
+        // Reset Text
+        if (targetSectionNumber === "Section2") {
+            actionBtn.innerText = "PROCEED TO TRAVEL DETAILS";
+        } else {
+            actionBtn.innerText = "CONFIRM & REGISTER";
         }
     }
 }
-  
+
+
   
   function finalSubmitRegistration() {
     let finalData = { ...currentUser }; // Start with Section 1 data
