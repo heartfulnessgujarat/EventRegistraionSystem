@@ -1089,9 +1089,10 @@ async function processFinalDeletion(regId) {
             }
         }
 
-        // --- STEP 3: RESET BUTTON IDENTITY & VALIDATION ---
+
+// --- STEP 3: RESET BUTTON IDENTITY & NAVIGATION ---
         
-        // Fix for Back Button Navigation
+        // Handle Back Button Logic
         if (backBtn) {
             if (targetSectionNumber === "Section2") {
                 backBtn.onclick = function() { 
@@ -1103,35 +1104,46 @@ async function processFinalDeletion(regId) {
             }
         }
 
-        // Fix for Forward Button & Mandatory Check
+        // Handle Forward/Submit Button Logic
         actionBtn.onclick = function() {
-            // Mandatory Field Check
+            // 1. Mandatory Field Check
             const inputs = container.querySelectorAll('[data-mandatory="true"]');
             for (let i of inputs) {
                 if (!i.value) {
                     alert("Please fill in all required fields marked with *");
                     i.style.border = "2px solid red";
-                    return; // Stop here
+                    return; 
                 }
-                i.style.border = "1px solid #ced4da"; // Reset border if filled
+                i.style.border = "1px solid #ced4da"; 
             }
 
+            // 2. Navigation or Submission
             if (targetSectionNumber === "Section2") {
                 buildExtraSections('Section3');
             } else {
-                console.log("Final Submission Data:", mersTempData);
-                alert("Confirmed! Final registration logic starting...");
+                // Final save of Section 3 values into memory bank
+                const currentInputs = document.querySelectorAll('[id^="extra_"]');
+                currentInputs.forEach(input => {
+                    mersTempData[input.id] = input.value;
+                });
+
+                finalSubmitRegistration(); 
             }
         };
 
-        // Reset Text
+        // Update the Button Label Text
         if (targetSectionNumber === "Section2") {
             actionBtn.innerText = "PROCEED TO TRAVEL DETAILS";
         } else {
             actionBtn.innerText = "CONFIRM & REGISTER";
         }
-    }
-}
+
+
+
+
+
+
+
 
 
   function finalSubmitRegistration() {
