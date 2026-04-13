@@ -993,37 +993,91 @@ async function processFinalDeletion(regId) {
     }
 }
 
-  function buildExtraSections(targetSectionNumber) {
+function buildExtraSections(targetSectionNumber) {
+    // 1. Defaulting Logic: If no section is passed, assume we start at Section2
+    if (!targetSectionNumber) targetSectionNumber = "Section2";
+
     const container = document.getElementById('dynamic-sections-content');
     const titleHeader = document.getElementById('title-Section2');
-    // Identify your buttons (make sure these IDs match your HTML)
-    const nextBtn = document.getElementById('next-to-section3'); 
-    const registerBtn = document.getElementById('final-confirm-btn'); 
+    
+    // Ensure these IDs match your HTML exactly
+    const nextBtn = document.getElementById('btn-next-to-section3'); 
+    const registerBtn = document.getElementById('btn-confirm-register'); 
 
     container.innerHTML = ""; 
 
+    if (!moreSections || moreSections.length === 0) {
+        container.innerHTML = "<p style='text-align:center;'>No additional information required.</p>";
+        return;
+    }
+
+    // 2. Find the specific section data
     const sectionObj = moreSections.find(s => s.section_number === targetSectionNumber);
     
     if (sectionObj) {
         titleHeader.innerText = sectionObj.section_name || "Details";
 
-        // ... [The Loop that draws the questions goes here] ...
-        // (Keep the loop logic from my previous message)
+        // 3. Build the questions
+        Object.keys(sectionObj).forEach(key => {
+            if (key.startsWith('question') && sectionObj[key]) {
+                const fieldId = sectionObj[key];
+                const rule = fieldRules.find(r => r.field_id === fieldId);
+                
+                if (rule) {
+                    const fieldWrapper = document.createElement('div');
+                    fieldWrapper.className = 'form-group';
+                    fieldWrapper.style.marginBottom = "15px";
 
-        // --- THE SMALL CHECK STARTS HERE ---
-        // If we just built Section 3, show 'Register', hide 'Next'
+                    const label = document.createElement('label');
+                    // FIX: Using display_label to avoid "undefined"
+                    label.innerHTML = `<strong>${rule.display_label || fieldId}</strong>`;
+                    label.style.display = "block";
+                    fieldWrapper.appendChild(label);
+
+                    let input;
+                    if (rule.type === 'dropdown' || rule.edit_behavior === 'Editable_Lookup') {
+                        input = document.createElement('select');
+                        input.className = 'form-control';
+                        input.id = `extra_${fieldId}`;
+                        
+                        const placeholder = document.createElement('option');
+                        placeholder.text = "-- Select --";
+                        placeholder.value = "";
+                        input.appendChild(placeholder);
+
+                        const choices = rule.options ? rule.options.split(',') : [];
+                        choices.forEach(choice => {
+                            const opt = document.createElement('option');
+                            opt.value = choice.trim();
+                            opt.text = choice.trim();
+                            input.appendChild(opt);
+                        });
+                    } else {
+                        input = document.createElement('input');
+                        input.type = 'text';
+                        input.className = 'form-control';
+                        input.id = `extra_${fieldId}`;
+                    }
+
+                    fieldWrapper.appendChild(input);
+                    container.appendChild(fieldWrapper);
+                }
+            }
+        });
+
+        // 4. Button Toggle Logic
         if (targetSectionNumber === "Section3") {
             if(registerBtn) registerBtn.style.display = "block";
             if(nextBtn) nextBtn.style.display = "none";
         } else {
-            // Otherwise (for Section 2), show 'Next', hide 'Register'
             if(registerBtn) registerBtn.style.display = "none";
             if(nextBtn) nextBtn.style.display = "block";
         }
-        // --- THE SMALL CHECK ENDS HERE ---
+    } else {
+        console.error("MERS: Could not find section data for:", targetSectionNumber);
+        container.innerHTML = "<p>Error: Section data not found.</p>";
     }
 }
-
 
 
 
