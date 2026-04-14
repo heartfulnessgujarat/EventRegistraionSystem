@@ -777,8 +777,7 @@ async function handleSectionNavigation() {
 }
 
 // 2. THE SACRED ENGINE: The April 10th logic, now firing at the very end
-
-async function submitData() {
+  async function submitData() {
     console.log("%c [DIAGNOSTIC] submitData started! ", "background: #222; color: #bada55; font-size: 14px;");
 
     // --- 1. THE GUARD (THE INTERCEPTOR) ---
@@ -793,10 +792,10 @@ async function submitData() {
         });
 
         handleSectionNavigation();
-        return; // EXIT: Stops the email/save logic from firing too early
+        return; 
     }
 
-    // --- 2. THE SACRED ENGINE (Released only for Section 3) ---
+    // --- 2. THE SACRED ENGINE (SECTION 3 CONFIRMED) ---
     try {
         console.log("[DIAGNOSTIC] Section 3 confirmed. Releasing the Engine...");
         
@@ -804,15 +803,14 @@ async function submitData() {
         const mode = (urlParams.get('mode') || 'new').toLowerCase();
         const existingRegId = urlParams.get('regId');
 
-        // UI LOCK
-        document.getElementById('app').style.display = 'none';
+        // UI LOCK - We hide sections individually instead of the whole 'app'
         document.getElementById('processing-overlay').style.display = 'block';
 
         let finalRegId = existingRegId;
         let finalTimestamp = originalData.timestamp || "";
         let statusMsg = "CONFIRMED";
 
-        // --- ID & CAPACITY LOGIC (Your Stable April 10th Logic) ---
+        // --- ID & CAPACITY LOGIC ---
         if (mode === 'new') {
             const capacityLimit = parseInt(eventConfig.hall_capacity || "0");
             const counterRef = db.ref('counters/' + eventId);
@@ -858,43 +856,47 @@ async function submitData() {
 
         // 4. SAVE & EMAIL
         await db.ref('registrations/' + finalRegId).set(formData);
-        console.log("[DIAGNOSTIC] Firebase Save successful. ID: " + finalRegId);
+        console.log("[DIAGNOSTIC] Firebase Save successful.");
 
         const scriptUrl = "https://script.google.com/macros/s/AKfycbyPbae3F_Vm2q25LWZF1G59O0V2XRrokeqxNkLvZetTKl19HM4QubILy17nPe65Q-L-zw/exec"; 
         fetch(`${scriptUrl}?action=sendEmail&regId=${finalRegId}&eventId=${eventId}`)
             .then(() => console.log("[DIAGNOSTIC] Email trigger sent successfully."))
             .catch(err => console.error("[DIAGNOSTIC] Email failed:", err));
 
-        // --- 5. THE CLEAN SWEEP (Sensors Added Here) ---
+        // --- 5. THE CLEAN SWEEP (MERS VERSION) ---
         console.log("[DIAGNOSTIC] Starting Final UI Swap...");
 
-        // Hide Sections
+        // Hide Sections 1 and 2 explicitly
         const s1 = document.getElementById('Section1');
         const s2 = document.getElementById('Section2');
-        if (s1) { s1.style.display = 'none'; console.log("[DIAGNOSTIC] Section 1 Hidden."); }
-        if (s2) { s2.style.display = 'none'; console.log("[DIAGNOSTIC] Section 2 Hidden."); }
-        document.getElementById('app').style.display = 'none';
+        if (s1) { s1.style.display = 'none'; }
+        if (s2) { s2.style.display = 'none'; }
+        
+        // Hide the header/banner area so the success message is prominent
+        const header = document.querySelector('.event-header');
+        if (header) header.style.display = 'none';
 
-        // Check Success Elements
+        // CRITICAL FIX: We do NOT hide 'app' because success-screen is inside it.
+        // Instead, we just make sure 'app' is visible.
+        document.getElementById('app').style.display = 'block';
+
+        // Show Success Elements
         const successDiv = document.getElementById('success-screen');
         const contentDiv = document.getElementById('success-content');
         
-        console.log("[DIAGNOSTIC] Success screen found?", !!successDiv);
-        console.log("[DIAGNOSTIC] Success content found?", !!contentDiv);
-
         if (contentDiv) {
-            contentDiv.innerHTML = eventConfig.final_html || "<h2>Registration Successful! (Fallback)</h2>";
-            console.log("[DIAGNOSTIC] HTML Injected.");
+            contentDiv.innerHTML = eventConfig.final_html || "<h2>Registration Successful!</h2>";
+            console.log("[DIAGNOSTIC] HTML Injected into thank-you-card.");
         }
 
         if (successDiv) {
             successDiv.style.display = 'block';
-            console.log("[DIAGNOSTIC] success-screen set to BLOCK.");
+            console.log("[DIAGNOSTIC] success-screen revealed.");
         }
 
         document.getElementById('processing-overlay').style.display = 'none';
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        console.log("[DIAGNOSTIC] All clear. Message should be visible.");
+        console.log("[DIAGNOSTIC] Finish line reached!");
 
     } catch (error) {
         console.error("[DIAGNOSTIC CRASH]:", error);
@@ -902,11 +904,6 @@ async function submitData() {
         document.getElementById('app').style.display = 'block';
     }
 }
-
-
-
-
-  
   
 function manualFormatCheck() {
   const emailInput = document.getElementById('inp-email');
