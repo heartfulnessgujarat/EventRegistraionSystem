@@ -748,36 +748,43 @@ function checkAllValidations() {
     if (regBtn) regBtn.disabled = !allValid;
   }
 
+
 async function handleSectionNavigation() {
     try {
-        // Just hide the current view and show the overlay briefly for a smooth transition
+        // 1. Diagnostic Log: Where are we starting?
+        if (typeof currentSection === 'undefined') currentSection = 1;
+        console.log("MERS: Navigation Button Clicked. Current Section is:", currentSection);
+
+        // 2. UI Transition: Show the user something is happening
         document.getElementById('app').style.display = 'none';
         document.getElementById('processing-overlay').style.display = 'block';
 
-        // Logic to decide where to go next
+        // 3. THE PAGE TURNER: Move the user to the next logical stop
         if (currentSection === 1) {
+            console.log("MERS: Handing over to buildExtraSections for Section 2...");
             currentSection = 2;
-            await buildExtraSections(2); // Move to Section 2
+            await buildExtraSections(2); 
         } else if (currentSection === 2) {
+            console.log("MERS: Handing over to buildExtraSections for Section 3...");
             currentSection = 3;
-            await buildExtraSections(3); // Move to Section 3
+            await buildExtraSections(3);
         }
 
-        // Hide overlay and show the app again with the new section
+        // 4. Reveal the App: The new section should now be visible
         document.getElementById('processing-overlay').style.display = 'none';
         document.getElementById('app').style.display = 'block';
+        console.log("MERS: Transition Complete. Now viewing Section:", currentSection);
 
     } catch (error) {
-        console.error("Navigation Error:", error);
+        console.error("MERS: Navigation Error observed:", error);
         document.getElementById('processing-overlay').style.display = 'none';
         document.getElementById('app').style.display = 'block';
-        alert("Navigation failed. Please try again.");
+        alert("Navigation failed. Please check the console log.");
     }
 }
 
 
-
-
+  
 
   
 async function submitData() {
