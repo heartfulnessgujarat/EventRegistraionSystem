@@ -1141,55 +1141,67 @@ async function processFinalDeletion(regId) {
     }
   }
 
-function finalSubmitRegistration() {
-    // 1. ACCESS GLOBAL STORAGE
-    // In your system, the Section 1 data is preserved in 'mersTempData_Section1'
-    if (typeof mersTempData_Section1 === 'undefined' || !mersTempData_Section1) {
-        console.error("MERS: Global Section 1 data missing.");
+
+async function finalSubmitRegistration() {
+    // 1. DATA GATHERING: Combine the Section 1 profile with MERS sections
+    // Your index.html uses 'originalData' to hold the master profile info.
+    if (!originalData || !originalData.registration_id) {
+        console.error("MERS: Critical profile data missing from originalData.");
         alert("System Error: Profile data not found. Please refresh.");
         return;
     }
 
-    // 2. CLONE DATA
-    let finalData = { ...mersTempData_Section1 }; 
+    // 2. THE PAYLOAD: Merge original profile + temporary MERS data
+    let finalPayload = { 
+        ...originalData,
+        ...mersTempData, // This contains Gender, Travel, etc.
+        registration_status: "CONFIRMED", // This triggers your GAS Script logic
+        last_updated_at: new Date().toLocaleString()
+    };
 
-    // 3. MERGE MERS MEMORY (Section 2 & 3)
-    Object.keys(mersTempData).forEach(key => {
-        const cleanKey = key.replace('extra_', '');
-        finalData[cleanKey] = mersTempData[key];
-    });
-
-    // 4. SCRAPE CURRENT SCREEN
+    // 3. FINAL SCRAPE: Catch any visible inputs from the current screen (Section 3)
     const currentInputs = document.querySelectorAll('[id^="extra_"]');
     currentInputs.forEach(input => {
         const cleanKey = input.id.replace('extra_', '');
-        finalData[cleanKey] = input.value;
+        finalPayload[cleanKey] = input.value;
     });
 
-    // 5. FINALIZE STATUS
-    finalData["registration_status"] = "CONFIRMED";
-    finalData["last_updated"] = new Date().toLocaleString();
+    // 4. THE PATH: Must match the path your Code.gs and original system use
+    const regPath = 'registrations/' + finalPayload.registration_id;
 
-    // 6. SAVE TO FIREBASE
-    const eventId = finalData.event_id || "EVT001"; // Fallback if needed
-    const regId = finalData.registration_id;
-    const regPath = `registrations/${eventId}/${regId}`;
-    
-    console.log("MERS: Saving to path:", regPath);
+    try {
+        // Show your existing processing UI
+        document.getElementById('app').style.display = 'none';
+        document.getElementById('processing-overlay').style.display = 'block';
 
-    db.ref(regPath).set(finalData)
-        .then(() => {
-            // SUCCESS: Show the Thank You screen
-            document.getElementById('form-content').style.display = 'none';
-            document.getElementById('success-screen').style.display = 'block';
-            window.scrollTo(0, 0);
-        })
-        .catch((error) => {
-            console.error("Firebase Save Error:", error);
-            alert("Submission failed. Please check your connection.");
-        });
+        // 5. THE WRITE: Push to Firebase
+        await db.ref(regPath).update(finalPayload);
+
+        // 6. SUCCESS TRANSITION: 
+        // Once written, GAS will see the change. We just show the UI.
+        document.getElementById('processing-overlay').style.display = 'none';
+        
+        const successScreen = document.getElementById('success-screen');
+        const successContent = document.getElementById('success-content');
+        
+        if (successScreen && successContent) {
+            // Fill with the custom HTML fetched in init()
+            successContent.innerHTML = eventConfig.final_html || "<h2>Registration Successful!</h2>";
+            successScreen.style.display = 'block';
+        }
+        
+        window.scrollTo(0, 0);
+
+    } catch (error) {
+        console.error("MERS Save Error:", error);
+        document.getElementById('processing-overlay').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        alert("Save failed. Please check your internet connection.");
+    }
 }
 
+
+  
 
 function showSuccessScreen() {
     // Hide the main form card
