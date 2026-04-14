@@ -748,43 +748,50 @@ function checkAllValidations() {
     if (regBtn) regBtn.disabled = !allValid;
   }
 
-
 async function handleSectionNavigation() {
-    try {
-        // 1. Diagnostic Log: Where are we starting?
-        if (typeof currentSection === 'undefined') currentSection = 1;
-        console.log("MERS: Navigation Button Clicked. Current Section is:", currentSection);
+    // 1. THE TRACE: This tells us exactly who called this function
+    console.log("%c MERS DIAGNOSTIC: Navigation Triggered", "color: blue; font-weight: bold;");
+    console.trace(); 
 
-        // 2. UI Transition: Show the user something is happening
+    try {
+        if (typeof currentSection === 'undefined') window.currentSection = 1;
+        
+        console.log("MERS X-RAY: Current Section is:", window.currentSection);
+        console.log("MERS X-RAY: Event ID:", typeof eventId !== 'undefined' ? eventId : 'MISSING');
+
+        // 2. DETECTOR: If this function contains a fetch, we log it immediately
+        // We are looking for any "ghost" code that shouldn't be here
+        const funcString = handleSectionNavigation.toString();
+        if (funcString.includes("fetch") || funcString.includes("scriptUrl")) {
+            console.error("%c ALERT: This function STILL contains Email/Fetch logic! Update failed.", "background: red; color: white;");
+        }
+
+        // 3. UI Transition
         document.getElementById('app').style.display = 'none';
         document.getElementById('processing-overlay').style.display = 'block';
 
-        // 3. THE PAGE TURNER: Move the user to the next logical stop
-        if (currentSection === 1) {
-            console.log("MERS: Handing over to buildExtraSections for Section 2...");
-            currentSection = 2;
+        if (window.currentSection === 1) {
+            window.currentSection = 2;
             await buildExtraSections(2); 
-        } else if (currentSection === 2) {
-            console.log("MERS: Handing over to buildExtraSections for Section 3...");
-            currentSection = 3;
+        } else if (window.currentSection === 2) {
+            window.currentSection = 3;
             await buildExtraSections(3);
         }
 
-        // 4. Reveal the App: The new section should now be visible
         document.getElementById('processing-overlay').style.display = 'none';
         document.getElementById('app').style.display = 'block';
-        console.log("MERS: Transition Complete. Now viewing Section:", currentSection);
+        
+        console.log("%c MERS SUCCESS: Page turned to Section " + window.currentSection, "color: green;");
 
     } catch (error) {
-        console.error("MERS: Navigation Error observed:", error);
+        console.error("MERS X-RAY ERROR:", error);
         document.getElementById('processing-overlay').style.display = 'none';
         document.getElementById('app').style.display = 'block';
-        alert("Navigation failed. Please check the console log.");
     }
 }
 
 
-  
+
 
   
 async function submitData() {
