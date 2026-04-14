@@ -1142,31 +1142,39 @@ async function processFinalDeletion(regId) {
   }
 
 
-async function finalSubmitRegistration() {
-    // 1. DATA GATHERING: Combine the Section 1 profile with MERS sections
-    // Your index.html uses 'originalData' to hold the master profile info.
-    if (!originalData || !originalData.registration_id) {
-        console.error("MERS: Critical profile data missing from originalData.");
-        alert("System Error: Profile data not found. Please refresh.");
-        return;
-    }
 
-    // 2. THE PAYLOAD: Merge original profile + temporary MERS data
+async function finalSubmitRegistration() {
+    // 1. GET THE ADDRESS (Safety Net)
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlEventId = urlParams.get('id') || eventId; 
+    const urlRegId = urlParams.get('regId');
+
+    // 2. CONSTRUCT THE DATA
+    // We combine: url info + original profile + the new MERS choices
     let finalPayload = { 
         ...originalData,
-        ...mersTempData, // This contains Gender, Travel, etc.
-        registration_status: "CONFIRMED", // This triggers your GAS Script logic
+        ...mersTempData,
+        event_id: originalData.event_id || urlEventId,
+        registration_id: originalData.registration_id || urlRegId,
+        registration_status: "CONFIRMED",
         last_updated_at: new Date().toLocaleString()
     };
 
-    // 3. FINAL SCRAPE: Catch any visible inputs from the current screen (Section 3)
+    // 3. CRITICAL CHECK: Does it have a Registration ID?
+    if (!finalPayload.registration_id) {
+        console.error("MERS: No Registration ID found in originalData or URL.");
+        alert("System Error: Profile ID missing. Please refresh and select your name.");
+        return;
+    }
+
+    // 4. SCRAPE VISIBLE INPUTS (Section 3)
     const currentInputs = document.querySelectorAll('[id^="extra_"]');
     currentInputs.forEach(input => {
         const cleanKey = input.id.replace('extra_', '');
         finalPayload[cleanKey] = input.value;
     });
 
-    // 4. THE PATH: Must match the path your Code.gs and original system use
+    // 5. DATABASE PATH
     const regPath = 'registrations/' + finalPayload.registration_id;
 
     try {
@@ -1174,18 +1182,16 @@ async function finalSubmitRegistration() {
         document.getElementById('app').style.display = 'none';
         document.getElementById('processing-overlay').style.display = 'block';
 
-        // 5. THE WRITE: Push to Firebase
+        // 6. THE WRITE: Push to Firebase
         await db.ref(regPath).update(finalPayload);
 
-        // 6. SUCCESS TRANSITION: 
-        // Once written, GAS will see the change. We just show the UI.
+        // 7. SUCCESS TRANSITION
         document.getElementById('processing-overlay').style.display = 'none';
         
         const successScreen = document.getElementById('success-screen');
         const successContent = document.getElementById('success-content');
         
         if (successScreen && successContent) {
-            // Fill with the custom HTML fetched in init()
             successContent.innerHTML = eventConfig.final_html || "<h2>Registration Successful!</h2>";
             successScreen.style.display = 'block';
         }
@@ -1196,7 +1202,7 @@ async function finalSubmitRegistration() {
         console.error("MERS Save Error:", error);
         document.getElementById('processing-overlay').style.display = 'none';
         document.getElementById('app').style.display = 'block';
-        alert("Save failed. Please check your internet connection.");
+        alert("Save failed. Please check your connection.");
     }
 }
 
