@@ -851,8 +851,7 @@ async function handleSectionNavigation() {
     }
 }
 
-
-  async function submitData() {
+async function submitData() {
     try {
         const urlParams = new URLSearchParams(window.location.search);
         const mode = (urlParams.get('mode') || 'new').toLowerCase();
@@ -912,24 +911,28 @@ async function handleSectionNavigation() {
             statusMsg = "EDITED ON " + istNow.toLocaleString();
         }
 
-        // --- 3. DATA PREPARATION ---
+        // --- 3. DATA PREPARATION (The MERS Merge) ---
         const formData = {
+            ...originalData,      // Section 1 Data (Profile)
+            ...mersTempData,      // Section 2 & 3 Data (Choices)
             registration_id: finalRegId,
             timestamp: finalTimestamp,
             registration_status: statusMsg,
             email_sent: (mode === 'new') ? "No" : (originalData.email_sent || "No"),
-            ...eventConfig
+            event_id: eventId     // Ensure Event ID is pinned
         };
 
-        fieldRules.forEach(r => {
-            const input = document.getElementById(`inp-${r.field_id}`);
-            if (input) formData[r.field_id] = input.value.trim();
+        // Scrape any remaining visible inputs from the final screen
+        const finalInputs = document.querySelectorAll('[id^="extra_"]');
+        finalInputs.forEach(input => {
+            const cleanKey = input.id.replace('extra_', '');
+            formData[cleanKey] = input.value;
         });
 
         // 4. SAVE TO FIREBASE
         await db.ref('registrations/' + finalRegId).set(formData);
 
-        // 5. TRIGGER EMAIL (Only for New or if email changed)
+        // 5. TRIGGER EMAIL (The Ferrari Engine)
         const scriptUrl = "https://script.google.com/macros/s/AKfycbyPbae3F_Vm2q25LWZF1G59O0V2XRrokeqxNkLvZetTKl19HM4QubILy17nPe65Q-L-zw/exec"; 
         fetch(`${scriptUrl}?action=sendEmail&regId=${finalRegId}&eventId=${eventId}`)
             .then(() => console.log("Email trigger sent."))
@@ -952,8 +955,6 @@ async function handleSectionNavigation() {
         alert("Submission failed. Please try again.");
     }
 }
-
-
 
  
 function manualFormatCheck() {
