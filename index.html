@@ -1170,19 +1170,18 @@ async function processFinalDeletion(regId) {
                     }
                     // -----------------------------------------------------------
                                 
-                    fieldWrapper.appendChild(input);
-
-
+                   
 fieldWrapper.appendChild(input);
 
-                    // --- MERS SURGICAL WATERFALL & DIAGNOSTICS ---
+                    // --- MERS STEP-BY-STEP WATERFALL ---
                     const fieldLower = fieldId.toLowerCase();
 
-                    // 1. Initial State: Only Arrival Date is born visible
-                    const isArrivalDate = (fieldLower === 'arrival_date');
-                    const isTravelField = fieldLower.includes('arrival') || fieldLower.includes('departure');
+                    // 1. Initial State: Only hide the 3 specific "Follow-up" Travel questions
+                    const isStep2 = fieldLower.includes('arrival_time');
+                    const isStep3 = fieldLower.includes('departure_date');
+                    const isStep4 = fieldLower.includes('departure_time');
 
-                    if (isTravelField && !isArrivalDate) {
+                    if (isStep2 || isStep3 || isStep4) {
                         fieldWrapper.style.display = 'none'; 
                     }
 
@@ -1190,36 +1189,41 @@ fieldWrapper.appendChild(input);
                         const val = this.value;
                         if (!val) return;
 
-                        // Translate Firebase Dates for math (YYYY-MM-DD)
                         const eventStart = formatFirebaseDate(eventConfig.event_start_date);
                         const eventEnd = formatFirebaseDate(eventConfig.event_end_date);
 
-                        // LOGIC A: ARRIVAL DATE -> REVEAL ARRIVAL TIME
+                        // GATE 1: ARRIVAL DATE -> REVEALS ARRIVAL TIME
                         if (fieldLower === 'arrival_date') {
                             if (eventStart && val > eventStart) {
                                 alert("❌ Error: Arrival date cannot be after Event Start (" + eventConfig.event_start_date + ")");
                                 this.value = ""; return;
                             }
+                            // Show Step 2
                             const next = document.getElementById('wrapper_extra_arrival_time');
                             if (next) next.style.display = 'block';
                         }
 
-                        // LOGIC B: ARRIVAL TIME -> REVEAL DEPARTURE DATE
+                        // GATE 2: ARRIVAL TIME -> REVEALS DEPARTURE DATE
                         if (fieldLower === 'arrival_time') {
-                            const arrDate = document.getElementById('extra_arrival_date').value;
+                            const arrDateInput = document.getElementById('extra_arrival_date');
+                            const arrDate = arrDateInput ? arrDateInput.value : "";
                             const startTime = (eventConfig.event_start_time || "00:00").padStart(5, '0');
+                            
                             if (arrDate === eventStart && val > startTime) {
-                                alert("❌ Error: On Day 1, Arrival Time must be before " + eventConfig.event_start_time);
+                                alert("❌ Error: On Day 1, Arrival must be before " + eventConfig.event_start_time);
                                 this.value = ""; return;
                             }
+                            // Show Step 3
                             const next = document.getElementById('wrapper_extra_departure_date');
                             if (next) next.style.display = 'block';
                         }
 
-                        // LOGIC C: DEPARTURE DATE -> REVEAL DEPARTURE TIME
+                        // GATE 3: DEPARTURE DATE -> REVEALS DEPARTURE TIME
                         if (fieldLower === 'departure_date') {
-                            const arrDate = document.getElementById('extra_arrival_date').value;
-                            if (val < arrDate) {
+                            const arrDateInput = document.getElementById('extra_arrival_date');
+                            const arrDate = arrDateInput ? arrDateInput.value : "";
+                            
+                            if (arrDate && val < arrDate) {
                                 alert("❌ Error: Departure cannot be before Arrival.");
                                 this.value = ""; return;
                             }
@@ -1227,14 +1231,16 @@ fieldWrapper.appendChild(input);
                                 alert("❌ Error: Departure cannot be before Event End (" + eventConfig.event_end_date + ")");
                                 this.value = ""; return;
                             }
+                            // Show Step 4
                             const next = document.getElementById('wrapper_extra_departure_time');
                             if (next) next.style.display = 'block';
                         }
 
-                        // LOGIC D: DEPARTURE TIME
+                        // GATE 4: DEPARTURE TIME (Final Validation)
                         if (fieldLower === 'departure_time') {
                             const depDate = document.getElementById('extra_departure_date').value;
                             const endTime = (eventConfig.event_end_time || "00:00").padStart(5, '0');
+                            
                             if (depDate === eventEnd && val < endTime) {
                                 alert("❌ Error: On the last day, Departure must be after " + eventConfig.event_end_time);
                                 this.value = ""; return;
