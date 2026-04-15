@@ -1133,7 +1133,23 @@ async function processFinalDeletion(regId) {
                         input.dataset.mandatory = isMandatory;
                     }
 
-                    if (mersTempData[inputId]) { input.value = mersTempData[inputId]; }
+                  
+                    
+                  // --- SURGICAL REPLACEMENT: PRE-FILL LOGIC FOR EDIT MODE ---
+                    // 1. Check if we have temporary data (user just typed it)
+                    if (mersTempData[inputId]) { 
+                        input.value = mersTempData[inputId]; 
+                    } 
+                    // 2. Otherwise, if in Edit Mode, check the database (originalData)
+                    else if (typeof originalData !== 'undefined' && originalData[inputId]) {
+                        input.value = originalData[inputId];
+                    }
+                    // -----------------------------------------------------------
+
+
+                  
+
+                  
                     fieldWrapper.appendChild(input);
                     container.appendChild(fieldWrapper);
                 }
