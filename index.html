@@ -1148,53 +1148,67 @@ async function processFinalDeletion(regId) {
                                 
                     fieldWrapper.appendChild(input);
 
+// --- REVISED STRICT WATERFALL & INTERLOCK ---
+                    const fieldLower = fieldId.toLowerCase();
 
-// --- SURGICAL ADDITION: WATERFALL & INTERLOCK WATCHER ---
-const fieldLower = fieldId.toLowerCase();
+                    // 1. Initial State: Only Arrival Date is visible. Hide all other Travel fields.
+                    const travelFields = ['arrival_time', 'departure_date', 'departure_time'];
+                    if (travelFields.some(term => fieldLower.includes(term))) {
+                        fieldWrapper.style.display = 'none'; 
+                    }
 
-// 1. Initial State: Hide Dependent Fields
-if (fieldLower.includes('arrival_time') || fieldLower.includes('departure')) {
-    fieldWrapper.style.display = 'none'; 
-}
+                    input.addEventListener('change', function() {
+                        const val = this.value;
+                        if (!val) return;
 
-// 2. The Logic Controller
-input.addEventListener('change', function() {
-    const val = this.value;
-    
-    // IF ARRIVAL DATE IS PICKED
-    if (fieldLower === 'arrival_date') {
-        // Validation: Arrival cannot be after Event Start (Point B)
-        const eventStart = eventConfig.event_start_date;
-        if (eventStart && val > eventStart) {
-            alert("Note: Your arrival date is after the event has started.");
-        }
-        
-        // Waterfall: Reveal Arrival Time and Departure Date
-        const arrTime = document.getElementById('extra_arrival_time');
-        const depDate = document.getElementById('extra_departure_date');
-        if (arrTime) arrTime.parentElement.style.display = 'block';
-        if (depDate) depDate.parentElement.style.display = 'block';
-    }
+                        // A. ARRIVAL DATE CHECK
+                        if (fieldLower === 'arrival_date') {
+                            if (eventConfig.event_start_date && val > eventConfig.event_start_date) {
+                                alert("❌ Error: Arrival date cannot be after the Event Start Date (" + eventConfig.event_start_date + ")");
+                                this.value = ""; return; // RESET
+                            }
+                            // Reveal Next Steps
+                            ['extra_arrival_time', 'extra_departure_date'].forEach(id => {
+                                const el = document.getElementById(id);
+                                if (el) el.parentElement.style.display = 'block';
+                            });
+                        }
 
-    // IF DEPARTURE DATE IS PICKED
-    if (fieldLower === 'departure_date') {
-        const arrivalDate = document.getElementById('extra_arrival_date').value;
-        
-        // Validation: Departure cannot be before Arrival (Point A)
-        if (arrivalDate && val < arrivalDate) {
-            alert("Error: Departure date cannot be earlier than arrival date.");
-            this.value = ""; // Clear invalid date
-            return;
-        }
+                        // B. ARRIVAL TIME CHECK
+                        if (fieldLower === 'arrival_time') {
+                            const arrDate = document.getElementById('extra_arrival_date').value;
+                            if (arrDate === eventConfig.event_start_date && val > eventConfig.event_start_time) {
+                                alert("❌ Error: On Day 1, Arrival Time must be before " + eventConfig.event_start_time);
+                                this.value = ""; return;
+                            }
+                        }
 
-        // Waterfall: Reveal Departure Time
-        const depTime = document.getElementById('extra_departure_time');
-        if (depTime) depTime.parentElement.style.display = 'block';
-    }
-});
-// ---------------------------------------------------------
+                        // C. DEPARTURE DATE CHECK
+                        if (fieldLower === 'departure_date') {
+                            const arrDate = document.getElementById('extra_arrival_date').value;
+                            if (val < arrDate) {
+                                alert("❌ Error: Departure cannot be before Arrival date.");
+                                this.value = ""; return;
+                            }
+                            if (eventConfig.event_end_date && val < eventConfig.event_end_date) {
+                                alert("❌ Error: Departure cannot be before the Event End Date (" + eventConfig.event_end_date + ")");
+                                this.value = ""; return;
+                            }
+                            // Reveal Final Step
+                            const depTime = document.getElementById('extra_departure_time');
+                            if (depTime) depTime.parentElement.style.display = 'block';
+                        }
 
-
+                        // D. DEPARTURE TIME CHECK
+                        if (fieldLower === 'departure_time') {
+                            const depDate = document.getElementById('extra_departure_date').value;
+                            if (depDate === eventConfig.event_end_date && val < eventConfig.event_end_time) {
+                                alert("❌ Error: On the last day, Departure must be after " + eventConfig.event_end_time);
+                                this.value = ""; return;
+                            }
+                        }
+                    });
+                    // --- END OF REVISED BLOCK ---
 
 
 
