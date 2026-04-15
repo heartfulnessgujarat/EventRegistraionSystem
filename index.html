@@ -1145,12 +1145,62 @@ async function processFinalDeletion(regId) {
                         input.value = originalData[inputId];
                     }
                     // -----------------------------------------------------------
-
-
-                  
-
-                  
+                                
                     fieldWrapper.appendChild(input);
+
+
+// --- SURGICAL ADDITION: WATERFALL & INTERLOCK WATCHER ---
+const fieldLower = fieldId.toLowerCase();
+
+// 1. Initial State: Hide Dependent Fields
+if (fieldLower.includes('arrival_time') || fieldLower.includes('departure')) {
+    fieldWrapper.style.display = 'none'; 
+}
+
+// 2. The Logic Controller
+input.addEventListener('change', function() {
+    const val = this.value;
+    
+    // IF ARRIVAL DATE IS PICKED
+    if (fieldLower === 'arrival_date') {
+        // Validation: Arrival cannot be after Event Start (Point B)
+        const eventStart = eventConfig.event_start_date;
+        if (eventStart && val > eventStart) {
+            alert("Note: Your arrival date is after the event has started.");
+        }
+        
+        // Waterfall: Reveal Arrival Time and Departure Date
+        const arrTime = document.getElementById('extra_arrival_time');
+        const depDate = document.getElementById('extra_departure_date');
+        if (arrTime) arrTime.parentElement.style.display = 'block';
+        if (depDate) depDate.parentElement.style.display = 'block';
+    }
+
+    // IF DEPARTURE DATE IS PICKED
+    if (fieldLower === 'departure_date') {
+        const arrivalDate = document.getElementById('extra_arrival_date').value;
+        
+        // Validation: Departure cannot be before Arrival (Point A)
+        if (arrivalDate && val < arrivalDate) {
+            alert("Error: Departure date cannot be earlier than arrival date.");
+            this.value = ""; // Clear invalid date
+            return;
+        }
+
+        // Waterfall: Reveal Departure Time
+        const depTime = document.getElementById('extra_departure_time');
+        if (depTime) depTime.parentElement.style.display = 'block';
+    }
+});
+// ---------------------------------------------------------
+
+
+
+
+
+
+                  
+                  
                     container.appendChild(fieldWrapper);
                 }
             }
