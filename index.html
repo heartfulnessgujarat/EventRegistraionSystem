@@ -1406,6 +1406,20 @@ function translateToISO(val) {
     const actionBtn = document.getElementById('btn-next-action');
     if (!actionBtn) return;
 
+// --- EMERGENCY BYPASS START ---
+    // If the button text says "PROCEED", unlock it automatically so we can test Section 3
+    if (actionBtn.innerText.includes("PROCEED")) {
+        actionBtn.disabled = false;
+        actionBtn.style.opacity = "1";
+        actionBtn.style.cursor = "pointer";
+        return; // Exit the function here so it doesn't try to lock it again
+    }
+    // --- EMERGENCY BYPASS END ---
+
+
+
+
+    
     // 1. Get ALL inputs in the dynamic area
     const container = document.getElementById('dynamic-sections-content');
     if (!container) return;
