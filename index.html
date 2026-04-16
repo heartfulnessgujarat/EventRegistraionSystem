@@ -1415,13 +1415,24 @@ document.getElementById('btn-back-to-profile').onclick = function() {
 
 // ... existing code (like init(); ) ...
 
-// --- SURGICAL ADDITION: DATE TRANSLATOR ---
+/**
+ * SURGICAL ADDITION: DATE TRANSLATOR
+ * Converts DD-MM-YYYY (Firebase/Sheet) to YYYY-MM-DD (HTML/ISO)
+ * This allows the mathematical comparison (Date1 > Date2) to work.
+ */
 function translateToISO(dateStr) {
-    if (!dateStr || !dateStr.includes('-')) return "";
+    if (!dateStr || typeof dateStr !== 'string' || !dateStr.includes('-')) {
+        console.warn("MERS Translator: Invalid date string received:", dateStr);
+        return "";
+    }
     const parts = dateStr.split('-');
-    // Converts 01-03-2026 to 2026-03-01
-    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    // Rearranges [DD, MM, YYYY] to YYYY-MM-DD
+    if (parts.length === 3) {
+        return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    return "";
 }
+
 
 
   
