@@ -1112,13 +1112,13 @@ async function buildExtraSections(targetSectionNumber) {
     const actionBtn = document.getElementById('btn-next-action'); 
     const backBtn = document.getElementById('btn-back-to-profile');
 
-    // 1. Save current progress so user doesn't lose data when switching sections
+    // 1. Save current progress
     const currentInputs = document.querySelectorAll('[id^="extra_"]');
     currentInputs.forEach(input => { if (input.value) mersTempData[input.id] = input.value; });
 
     container.innerHTML = ""; 
 
-    // 2. Identify which questions belong to this Section (Driven by Google Sheet)
+    // 2. Identify the Section (Section 2, Section 3, etc.)
     const sectionObj = moreSections.find(s => s.section_number === targetSectionNumber);
     
     if (sectionObj) {
@@ -1137,12 +1137,14 @@ async function buildExtraSections(targetSectionNumber) {
                     fieldWrapper.style.textAlign = "left";
 
                     // --- DATA-DRIVEN VISIBILITY ---
-                    // If your Google Sheet says "Hidden", we start hidden.
+                    // Only hides if the Google Sheet EXPLICITLY says "Hidden"
                     if (rule.initial_state === "Hidden") {
                         fieldWrapper.style.display = 'none';
+                    } else {
+                        fieldWrapper.style.display = 'block';
                     }
 
-                    // --- RED STAR LOGIC (Based on your Validation column) ---
+                    // --- MANDATORY STAR LOGIC ---
                     const isMandatory = (rule.field_validation && rule.field_validation !== "NULL");
                     const label = document.createElement('label');
                     label.innerHTML = `<strong>${rule.display_label || fieldId} ${isMandatory ? '<span style="color:red">*</span>' : ''}</strong>`;
@@ -1151,7 +1153,7 @@ async function buildExtraSections(targetSectionNumber) {
                     let input;
                     const inputId = `extra_${fieldId}`;
 
-                    // --- DROPDOWN VS INPUT (Data-Driven) ---
+                    // --- INPUT GENERATION ---
                     if (rule.edit_behavior === 'Editable_lookup_Dropdown') {
                         input = document.createElement('select');
                         input.className = 'form-control';
@@ -1160,9 +1162,20 @@ async function buildExtraSections(targetSectionNumber) {
                         placeholder.text = "-- Select --"; placeholder.value = "";
                         input.appendChild(placeholder);
 
-                        // Populate using your lookup logic
+                        // Use your existing logic to populate lookups
                         if (rule.lookup_tab && rule.lookup_column) {
-                            populateLookup(input, rule.lookup_tab, rule.lookup_column);
+                            try {
+                                const lookupSnap = await db.ref(`masters/${rule.lookup_tab}`).once('value');
+                                const lookupData = lookupSnap.val();
+                                if (lookupData) {
+                                    const choices = Object.values(lookupData).map(row => row[rule.lookup_column]).filter(v => v);
+                                    [...new Set(choices)].forEach(choice => {
+                                        const opt = document.createElement('option');
+                                        opt.value = choice; opt.text = choice;
+                                        input.appendChild(opt);
+                                    });
+                                }
+                            } catch (e) { console.error("Lookup Error", e); }
                         }
                     } else {
                         input = document.createElement('input');
@@ -1173,12 +1186,9 @@ async function buildExtraSections(targetSectionNumber) {
                     }
 
                     input.dataset.mandatory = isMandatory;
-                    input.dataset.id = fieldId; // Stores the raw ID for the interlock
-
-                    // Restore saved data if it exists
                     if (mersTempData[inputId]) input.value = mersTempData[inputId];
 
-                    // --- THE NEW SMART TRIGGER ---
+                    // --- THE BRAIN TRIGGER ---
                     input.onchange = function() {
                         handleFieldChange(this, rule);
                     };
@@ -1189,14 +1199,25 @@ async function buildExtraSections(targetSectionNumber) {
             }
         }
 
-        // --- NAVIGATION LOGIC ---
+        // --- NAVIGATION LOGIC (Restored for all sections) ---
         actionBtn.onclick = function() {
-            if (validateSection(container)) {
-                if (targetSectionNumber === "Section2") {
-                    buildExtraSections('Section3');
-                } else {
-                    submitData();
+            // Validate visible mandatory fields
+            const visibleInputs = container.querySelectorAll('[data-mandatory="true"]');
+            for (let i of visibleInputs) {
+                if (!i.value && i.parentElement.style.display !== 'none') {
+                    alert("Please fill in all required fields.");
+                    i.style.border = "2px solid red";
+                    return;
                 }
+                i.style.border = "1px solid #ced4da";
+            }
+
+            if (targetSectionNumber === "Section2") {
+                buildExtraSections('Section3');
+            } else {
+                const finalInputs = document.querySelectorAll('[id^="extra_"]');
+                finalInputs.forEach(input => { mersTempData[input.id] = input.value; });
+                submitData();
             }
         };
 
@@ -1212,6 +1233,7 @@ async function buildExtraSections(targetSectionNumber) {
         actionBtn.innerText = (targetSectionNumber === "Section2") ? "PROCEED TO TRAVEL DETAILS" : "CONFIRM & REGISTER";
     }
 }
+
 
 
 
