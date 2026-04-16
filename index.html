@@ -1104,7 +1104,7 @@ async function processFinalDeletion(regId) {
     }
 }
 
-async function buildExtraSections(targetSectionNumber) {
+  async function buildExtraSections(targetSectionNumber) {
     if (!targetSectionNumber) targetSectionNumber = "Section2";
 
     const container = document.getElementById('dynamic-sections-content');
@@ -1118,110 +1118,97 @@ async function buildExtraSections(targetSectionNumber) {
 
     container.innerHTML = ""; 
 
-// Add this near the top of buildExtraSections
-actionBtn.disabled = true;
-actionBtn.style.opacity = "0.5";
-actionBtn.style.cursor = "not-allowed";
+    // --- INITIAL BUTTON LOCK ---
+    actionBtn.disabled = true;
+    actionBtn.style.opacity = "0.5";
+    actionBtn.style.cursor = "not-allowed";
 
-  
     // 2. Identify the Section (Section 2, Section 3, etc.)
     const sectionObj = moreSections.find(s => s.section_number === targetSectionNumber);
     
     if (sectionObj) {
         titleHeader.innerText = sectionObj.section_name || "Details";
 
-        for (const key of Object.keys(sectionObj)) {
-            if (key.startsWith('question') && sectionObj[key]) {
-                const fieldId = sectionObj[key];
-                const rule = fieldRules.find(r => r.field_id === fieldId);
-                
-                if (rule) {
-                    const fieldWrapper = document.createElement('div');
-                    fieldWrapper.className = 'form-group';
-                    fieldWrapper.id = `wrapper_extra_${fieldId}`; 
-                    fieldWrapper.style.marginBottom = "20px";
-                    fieldWrapper.style.textAlign = "left";
+        // We use a regular for loop to handle the async/await lookups properly
+        const questionKeys = Object.keys(sectionObj).filter(key => key.startsWith('question') && sectionObj[key]);
+        
+        for (const key of questionKeys) {
+            const fieldId = sectionObj[key];
+            const rule = fieldRules.find(r => r.field_id === fieldId);
+            
+            if (rule) {
+                const fieldWrapper = document.createElement('div');
+                fieldWrapper.className = 'form-group';
+                fieldWrapper.id = `wrapper_extra_${fieldId}`; 
+                fieldWrapper.style.marginBottom = "20px";
+                fieldWrapper.style.textAlign = "left";
 
-                    // --- DATA-DRIVEN VISIBILITY ---
-                    // Only hides if the Google Sheet EXPLICITLY says "Hidden"
-                    if (rule.initial_state === "Hidden") {
-                        fieldWrapper.style.display = 'none';
-                    } else {
-                        fieldWrapper.style.display = 'block';
-                    }
-
-                    // --- MANDATORY STAR LOGIC ---
-                    const isMandatory = (rule.field_validation && rule.field_validation !== "NULL");
-                    const label = document.createElement('label');
-                    label.innerHTML = `<strong>${rule.display_label || fieldId} ${isMandatory ? '<span style="color:red">*</span>' : ''}</strong>`;
-                    fieldWrapper.appendChild(label);
-
-                    let input;
-                    const inputId = `extra_${fieldId}`;
-
-                    // --- INPUT GENERATION ---
-                    if (rule.edit_behavior === 'Editable_lookup_Dropdown') {
-                        input = document.createElement('select');
-                        input.className = 'form-control';
-                        input.id = inputId;
-                        const placeholder = document.createElement('option');
-                        placeholder.text = "-- Select --"; placeholder.value = "";
-                        input.appendChild(placeholder);
-
-                        // Use your existing logic to populate lookups
-                        if (rule.lookup_tab && rule.lookup_column) {
-                            try {
-                                const lookupSnap = await db.ref(`masters/${rule.lookup_tab}`).once('value');
-                                const lookupData = lookupSnap.val();
-                                if (lookupData) {
-                                    const choices = Object.values(lookupData).map(row => row[rule.lookup_column]).filter(v => v);
-                                    [...new Set(choices)].forEach(choice => {
-                                        const opt = document.createElement('option');
-                                        opt.value = choice; opt.text = choice;
-                                        input.appendChild(opt);
-                                    });
-                                }
-                            } catch (e) { console.error("Lookup Error", e); }
-                        }
-                    } else {
-                        input = document.createElement('input');
-                        const fieldLower = fieldId.toLowerCase();
-                        input.type = fieldLower.includes('date') ? 'date' : (fieldLower.includes('time') ? 'time' : 'text');
-                        input.className = 'form-control';
-                        input.id = inputId;
-                    }
-
-                    input.dataset.mandatory = isMandatory;                  
-                    if (mersTempData[inputId]) input.value = mersTempData[inputId];
-                  input.onchange = function() {
-    handleFieldChange(this, rule);
-};
-
-             input.oninput = function() {
-    updateButtonState(); // This makes the button check the form on every letter typed
-};
-
-                    
-
-                    fieldWrapper.appendChild(input);
-                    container.appendChild(fieldWrapper);
+                // --- WATERFALL VISIBILITY ---
+                if (rule.initial_state === "Hidden") {
+                    fieldWrapper.style.display = 'none';
+                } else {
+                    fieldWrapper.style.display = 'block';
                 }
+
+                // --- MANDATORY STAR LOGIC ---
+                const isMandatory = (rule.field_validation && rule.field_validation !== "NULL" && rule.field_validation !== "N/A");
+                const label = document.createElement('label');
+                label.innerHTML = `<strong>${rule.display_label || fieldId} ${isMandatory ? '<span style="color:red">*</span>' : ''}</strong>`;
+                fieldWrapper.appendChild(label);
+
+                let input;
+                const inputId = `extra_${fieldId}`;
+
+                // --- INPUT GENERATION ---
+                if (rule.edit_behavior === 'Editable_lookup_Dropdown') {
+                    input = document.createElement('select');
+                    input.className = 'form-control';
+                    input.id = inputId;
+                    const placeholder = document.createElement('option');
+                    placeholder.text = "-- Select --"; placeholder.value = "";
+                    input.appendChild(placeholder);
+
+                    if (rule.lookup_tab && rule.lookup_column) {
+                        try {
+                            const lookupSnap = await db.ref(`masters/${rule.lookup_tab}`).once('value');
+                            const lookupData = lookupSnap.val();
+                            if (lookupData) {
+                                const choices = Object.values(lookupData).map(row => row[rule.lookup_column]).filter(v => v);
+                                [...new Set(choices)].forEach(choice => {
+                                    const opt = document.createElement('option');
+                                    opt.value = choice; opt.text = choice;
+                                    input.appendChild(opt);
+                                });
+                            }
+                        } catch (e) { console.error("Lookup Error", e); }
+                    }
+                } else {
+                    input = document.createElement('input');
+                    const fieldLower = fieldId.toLowerCase();
+                    input.type = fieldLower.includes('date') ? 'date' : (fieldLower.includes('time') ? 'time' : 'text');
+                    input.className = 'form-control';
+                    input.id = inputId;
+                }
+
+                // --- ATTRIBUTES & LISTENERS ---
+                input.dataset.mandatory = isMandatory;                  
+                if (mersTempData[inputId]) input.value = mersTempData[inputId];
+
+                input.onchange = function() {
+                    handleFieldChange(this, rule);
+                };
+
+                input.oninput = function() {
+                    updateButtonState(); 
+                };
+
+                fieldWrapper.appendChild(input);
+                container.appendChild(fieldWrapper);
             }
         }
 
-        // --- NAVIGATION LOGIC (Restored for all sections) ---
+        // --- NAVIGATION LOGIC ---
         actionBtn.onclick = function() {
-            // Validate visible mandatory fields
-            const visibleInputs = container.querySelectorAll('[data-mandatory="true"]');
-            for (let i of visibleInputs) {
-                if (!i.value && i.parentElement.style.display !== 'none') {
-                    alert("Please fill in all required fields.");
-                    i.style.border = "2px solid red";
-                    return;
-                }
-                i.style.border = "1px solid #ced4da";
-            }
-
             if (targetSectionNumber === "Section2") {
                 buildExtraSections('Section3');
             } else {
@@ -1241,9 +1228,15 @@ actionBtn.style.cursor = "not-allowed";
         }
 
         actionBtn.innerText = (targetSectionNumber === "Section2") ? "PROCEED TO TRAVEL DETAILS" : "CONFIRM & REGISTER";
+
+        // --- THE SECTION 2 SPECIAL KICK ---
+        // We wait 800ms to allow VLOOKUP/Firebase data to populate 
+        // before checking if the button should be unlocked.
+        setTimeout(() => {
+            updateButtonState();
+        }, 800);
     }
 }
-
 function handleFieldChange(inputElement, rule) {
     const val = inputElement.value;
     updateButtonState(); // Always check the button first
