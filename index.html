@@ -1409,22 +1409,18 @@ function translateToISO(val) {
  * Scans the current section and unlocks the button only if all visible fields are filled.
  */
 
-
-  function updateButtonState() {
+function updateButtonState() {
     const actionBtn = document.getElementById('btn-next-action');
     if (!actionBtn) return;
 
-    // Scans the entire page for mandatory fields that are NOT hidden
-    const mandatoryInputs = Array.from(document.querySelectorAll('[data-mandatory="true"]'))
-        .filter(input => {
-            // This check ensures the input is actually visible to the user right now
-            return !!(input.offsetWidth || input.offsetHeight || input.getClientRects().length);
-        });
+    // This looks for all visible mandatory inputs in the dynamic area
+    const container = document.getElementById('dynamic-sections-content');
+    const inputs = Array.from(container.querySelectorAll('[data-mandatory="true"]'))
+        .filter(i => i.offsetParent !== null); // Only count what is visible
 
-    // Button unlocks only if every VISIBLE mandatory field is filled
-    const allFilled = mandatoryInputs.every(input => input.value.trim() !== "");
+    const allFilled = inputs.length > 0 && inputs.every(i => i.value.trim() !== "");
 
-    if (allFilled && mandatoryInputs.length > 0) {
+    if (allFilled) {
         actionBtn.disabled = false;
         actionBtn.style.opacity = "1";
         actionBtn.style.cursor = "pointer";
@@ -1434,6 +1430,8 @@ function translateToISO(val) {
         actionBtn.style.cursor = "not-allowed";
     }
 }
+
+
 
   
 </script>
