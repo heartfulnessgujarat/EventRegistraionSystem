@@ -1118,6 +1118,12 @@ async function buildExtraSections(targetSectionNumber) {
 
     container.innerHTML = ""; 
 
+// Add this near the top of buildExtraSections
+actionBtn.disabled = true;
+actionBtn.style.opacity = "0.5";
+actionBtn.style.cursor = "not-allowed";
+
+  
     // 2. Identify the Section (Section 2, Section 3, etc.)
     const sectionObj = moreSections.find(s => s.section_number === targetSectionNumber);
     
