@@ -1396,22 +1396,34 @@ document.getElementById('btn-back-to-profile').onclick = function() {
 
 // ... existing code (like init(); ) ...
 
-/**
- * SURGICAL ADDITION: DATE TRANSLATOR
- * Converts DD-MM-YYYY (Firebase/Sheet) to YYYY-MM-DD (HTML/ISO)
- * This allows the mathematical comparison (Date1 > Date2) to work.
+
+  /**
+ * MERS SMART TRANSLATOR
+ * Handles: 1-Mar-2026 (Firebase) and 2026-03-01 (HTML)
+ * Handles: 8:00 (Firebase) and 08:00 (HTML)
  */
-function translateToISO(dateStr) {
-    if (!dateStr || typeof dateStr !== 'string' || !dateStr.includes('-')) {
-        console.warn("MERS Translator: Invalid date string received:", dateStr);
-        return "";
+function translateToISO(val) {
+    if (!val) return "";
+    const months = { 'Jan':'01','Feb':'02','Mar':'03','Apr':'04','May':'05','Jun':'06','Jul':'07','Aug':'08','Sep':'09','Oct':'10','Nov':'11','Dec':'12' };
+
+    // Handle Date Logic
+    if (val.includes('-')) {
+        const parts = val.split('-'); 
+        if (parts.length === 3) {
+            let day = parts[0].padStart(2, '0');
+            let month = months[parts[1]] || parts[1].padStart(2, '0');
+            let year = parts[2];
+            return `${year}-${month}-${day}`; // Returns YYYY-MM-DD
+        }
     }
-    const parts = dateStr.split('-');
-    // Rearranges [DD, MM, YYYY] to YYYY-MM-DD
-    if (parts.length === 3) {
-        return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    
+    // Handle Time Logic (Ensures 8:00 becomes 08:00)
+    if (val.includes(':')) {
+        const tParts = val.split(':');
+        return tParts[0].padStart(2, '0') + ":" + tParts[1].padStart(2, '0');
     }
-    return "";
+
+    return val;
 }
 
 
