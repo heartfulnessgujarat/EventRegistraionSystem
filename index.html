@@ -1409,28 +1409,39 @@ function translateToISO(val) {
  * Scans the current section and unlocks the button only if all visible fields are filled.
  */
 
-function updateButtonState() {
+  function updateButtonState() {
     const actionBtn = document.getElementById('btn-next-action');
     if (!actionBtn) return;
 
-    // This looks for all visible mandatory inputs in the dynamic area
+    // 1. Get ALL inputs in the dynamic area
     const container = document.getElementById('dynamic-sections-content');
-    const inputs = Array.from(container.querySelectorAll('[data-mandatory="true"]'))
-        .filter(i => i.offsetParent !== null); // Only count what is visible
+    if (!container) return;
 
-    const allFilled = inputs.length > 0 && inputs.every(i => i.value.trim() !== "");
+    const inputs = Array.from(container.querySelectorAll('input, select, textarea'));
+
+    // 2. Filter for ones that are BOTH mandatory AND visible
+    const visibleMandatory = inputs.filter(i => {
+        const isMandatory = i.getAttribute('data-mandatory') === 'true';
+        // Improved visibility check:
+        const isVisible = i.type !== 'hidden' && i.style.display !== 'none' && i.closest('.form-group')?.style.display !== 'none';
+        return isMandatory && isVisible;
+    });
+
+    // 3. Logic: If there are visible mandatory fields, are they all filled?
+    const allFilled = visibleMandatory.length > 0 && visibleMandatory.every(i => i.value.trim() !== "");
 
     if (allFilled) {
         actionBtn.disabled = false;
         actionBtn.style.opacity = "1";
         actionBtn.style.cursor = "pointer";
+        actionBtn.classList.add('btn-primary'); // Ensures it looks active
     } else {
         actionBtn.disabled = true;
         actionBtn.style.opacity = "0.5";
         actionBtn.style.cursor = "not-allowed";
+        actionBtn.classList.remove('btn-primary');
     }
 }
-
 
 
   
