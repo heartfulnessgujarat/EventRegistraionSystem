@@ -1131,7 +1131,22 @@ async function buildExtraSections(targetSectionNumber) {
                 const rule = fieldRules.find(r => r.field_id === fieldId);
                 
                 if (rule) {
+
+                  
                     const fieldWrapper = document.createElement('div');
+
+// --- SURGICAL ADDITION: INITIAL HIDING ---
+// We target the specific field IDs from your Firebase rules
+const fieldsToHide = ['arrival_time', 'departure_date', 'departure_time'];
+
+if (fieldsToHide.includes(fieldId)) {
+    fieldWrapper.style.display = 'none';
+}
+
+// We give the wrapper a specific ID so our "Key" can find this "Lock"
+fieldWrapper.id = 'wrapper_extra_' + fieldId;
+
+                  
                     fieldWrapper.className = 'form-group';
                     fieldWrapper.id = `wrapper_extra_${fieldId}`; // CRITICAL: Added Wrapper ID for Waterfall
                     fieldWrapper.style.marginBottom = "20px";
