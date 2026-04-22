@@ -743,69 +743,40 @@ function unlockField(id) {
     }
   }
 
-function validateField(id, value, rule) {
-    console.log("--- MERS DIAGNOSTIC START ---");
-    console.log("Field ID:", id);
-    console.log("Input Value:", value);
-    console.log("Rule Received:", rule);
-    console.log("EventConfig Data:", eventConfig);
-    
-    if (typeof translateToISO === "function") {
-        console.log("Testing translateToISO on Value:", translateToISO(value));
-    } else {
-        console.log("CRITICAL: translateToISO function not found!");
-    }
-    console.log("--- MERS DIAGNOSTIC END ---");
 
-    // --- STEP 1: ALIGNING SEARCH LOGIC (Fixing the Object vs Array issue) ---
-    // This ensures .find() works even if Firebase sends an Object
+
+function validateField(id, value, rule) {
     const rulesArray = Array.isArray(fieldRules) ? fieldRules : Object.values(fieldRules);
     const ruleObj = rulesArray.find(r => r.field_id === id);
-    
-    // 1. Basic Check (Preserving Section 1 & 2)
+    const errorMsg = ruleObj ? ruleObj.error_msg : "Invalid Entry";
+
     if (!rule || rule === 'NULL' || value.trim() === "") {
         return value.trim() !== "";
     }
-    
-    const val = value.trim();
-    
-    // Pull the perfect error message from your sheet data
-    const errorMsg = ruleObj ? ruleObj.error_msg : "Invalid Entry";
-
-    // --- SECTION 3: DATE & TIME INTERLOCKS ---
 
     // 1. Arrival Date (D SHOULD BE <= ESD)
-    if (rule && rule.includes("ESD")) {
-        const isoInput = translateToISO(value); 
+    if (rule.includes("ESD")) {
+        const isoInput = translateToISO(value);
         const isoConfig = translateToISO(eventConfig.event_start_date);
-        
         if (isoInput && isoConfig && isoInput > isoConfig) {
             alert("❌ " + errorMsg);
-            
-            // THE STOP LOGIC
-            const inputEl = document.getElementById(id);
-            if (inputEl) inputEl.value = ""; 
-            updateButtonState(); // Locks the Next button immediately
-            return false; 
+            if (document.getElementById(id)) document.getElementById(id).value = "";
+            updateButtonState();
+            return false;
         }
     }
 
     // 2. Arrival Time (T SHOULD BE < EST)
-    if (rule && rule.includes("EST")) {
-        const dateEl = document.getElementById('extra_arrival_date') || document.getElementById('arrival_date');
+    if (rule.includes("EST")) {
+        const dateEl = document.getElementById('arrival_date');
         const isoSelectedDate = translateToISO(dateEl ? dateEl.value : "");
         const isoEventStart = translateToISO(eventConfig.event_start_date);
-        
-        if (isoSelectedDate && isoEventStart && isoSelectedDate === isoEventStart) {
-            const isoInputTime = translateToISO(value); 
+        if (isoSelectedDate === isoEventStart) {
+            const isoInputTime = translateToISO(value);
             const isoConfigTime = translateToISO(eventConfig.event_start_time);
-            
-            if (isoInputTime && isoConfigTime && isoInputTime >= isoConfigTime) {
+            if (isoInputTime >= isoConfigTime) {
                 alert("❌ " + errorMsg);
-                
-                // THE STOP LOGIC
-                const inputEl = document.getElementById(id);
-                if (inputEl) inputEl.value = ""; 
+                if (document.getElementById(id)) document.getElementById(id).value = "";
                 updateButtonState();
                 return false;
             }
@@ -813,39 +784,38 @@ function validateField(id, value, rule) {
     }
 
     // 3. Departure Date (D SHOULD BE >= EED)
-    if (rule && rule.includes("EED")) {
+    if (rule.includes("EED")) {
         const isoInput = translateToISO(value);
         const isoConfig = translateToISO(eventConfig.event_end_date);
         if (isoInput && isoConfig && isoInput < isoConfig) {
             alert("❌ " + errorMsg);
-            const inputEl = document.getElementById(id);
-            if (inputEl) inputEl.value = "";
+            if (document.getElementById(id)) document.getElementById(id).value = "";
             updateButtonState();
             return false;
         }
     }
 
     // 4. Departure Time (T SHOULD BE > EET)
-    if (rule && rule.includes("EET")) {
-        const dateEl = document.getElementById('extra_depart_date') || document.getElementById('depart_date');
+    if (rule.includes("EET")) {
+        const dateEl = document.getElementById('depart_date');
         const isoSelectedDate = translateToISO(dateEl ? dateEl.value : "");
         const isoEventEnd = translateToISO(eventConfig.event_end_date);
-
-        if (isoSelectedDate && isoEventEnd && isoSelectedDate === isoEventEnd) {
+        if (isoSelectedDate === isoEventEnd) {
             const isoInputTime = translateToISO(value);
             const isoConfigTime = translateToISO(eventConfig.event_end_time);
-            if (isoInputTime && isoConfigTime && isoInputTime <= isoConfigTime) {
+            if (isoInputTime <= isoConfigTime) {
                 alert("❌ " + errorMsg);
-                const inputEl = document.getElementById(id);
-                if (inputEl) inputEl.value = "";
+                if (document.getElementById(id)) document.getElementById(id).value = "";
                 updateButtonState();
                 return false;
             }
         }
     }
 
-    return true; // If everything passes, return true
+    return true;
 }
+
+  
 
     // --- SECTIONS 1 & 2: PRESERVED (UNTOUCHED) ---
     if (rule === 'MOB') return /^[6-9]\d{9}$/.test(val);
@@ -1501,78 +1471,6 @@ function translateToISO(val) {
 
     return str;
 }
-
-function validateField(id, value, rule) {
-    const rulesArray = Array.isArray(fieldRules) ? fieldRules : Object.values(fieldRules);
-    const ruleObj = rulesArray.find(r => r.field_id === id);
-    const errorMsg = ruleObj ? ruleObj.error_msg : "Invalid Entry";
-
-    if (!rule || rule === 'NULL' || value.trim() === "") {
-        return value.trim() !== "";
-    }
-
-    // 1. Arrival Date (D SHOULD BE <= ESD)
-    if (rule.includes("ESD")) {
-        const isoInput = translateToISO(value);
-        const isoConfig = translateToISO(eventConfig.event_start_date);
-        if (isoInput && isoConfig && isoInput > isoConfig) {
-            alert("❌ " + errorMsg);
-            if (document.getElementById(id)) document.getElementById(id).value = "";
-            updateButtonState();
-            return false;
-        }
-    }
-
-    // 2. Arrival Time (T SHOULD BE < EST)
-    if (rule.includes("EST")) {
-        const dateEl = document.getElementById('arrival_date');
-        const isoSelectedDate = translateToISO(dateEl ? dateEl.value : "");
-        const isoEventStart = translateToISO(eventConfig.event_start_date);
-        if (isoSelectedDate === isoEventStart) {
-            const isoInputTime = translateToISO(value);
-            const isoConfigTime = translateToISO(eventConfig.event_start_time);
-            if (isoInputTime >= isoConfigTime) {
-                alert("❌ " + errorMsg);
-                if (document.getElementById(id)) document.getElementById(id).value = "";
-                updateButtonState();
-                return false;
-            }
-        }
-    }
-
-    // 3. Departure Date (D SHOULD BE >= EED)
-    if (rule.includes("EED")) {
-        const isoInput = translateToISO(value);
-        const isoConfig = translateToISO(eventConfig.event_end_date);
-        if (isoInput && isoConfig && isoInput < isoConfig) {
-            alert("❌ " + errorMsg);
-            if (document.getElementById(id)) document.getElementById(id).value = "";
-            updateButtonState();
-            return false;
-        }
-    }
-
-    // 4. Departure Time (T SHOULD BE > EET)
-    if (rule.includes("EET")) {
-        const dateEl = document.getElementById('depart_date');
-        const isoSelectedDate = translateToISO(dateEl ? dateEl.value : "");
-        const isoEventEnd = translateToISO(eventConfig.event_end_date);
-        if (isoSelectedDate === isoEventEnd) {
-            const isoInputTime = translateToISO(value);
-            const isoConfigTime = translateToISO(eventConfig.event_end_time);
-            if (isoInputTime <= isoConfigTime) {
-                alert("❌ " + errorMsg);
-                if (document.getElementById(id)) document.getElementById(id).value = "";
-                updateButtonState();
-                return false;
-            }
-        }
-    }
-
-    return true;
-}
-
-  
 
 /**
  * MERS BUTTON GUARD
