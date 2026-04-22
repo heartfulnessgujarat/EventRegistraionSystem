@@ -1286,56 +1286,28 @@ async function processFinalDeletion(regId) {
     }
 }
 
-function handleFieldChange(inputElement, rule) {
+async function handleFieldChange(inputElement, rule) {
     const val = inputElement.value;
-    const fId = rule.field_id; // This is 'arrival_date', 'arrival_time', etc.
-    
+    const fId = rule.field_id;
+    const section = rule.section_number; 
+
     updateButtonState(); 
     if (!val) return;
 
-    // 1. Prepare Data for Comparison
-    // We use your existing translateToISO which you confirmed is working
-    const isoVal = translateToISO(val);
-    const eventStart = translateToISO(eventConfig.event_start_date);
-    const eventEnd = translateToISO(eventConfig.event_end_date);
-
-    let isError = false;
-    let msg = "";
-
-    // 2. RESTORE ARRIVAL DATE VALIDATION
-    // Note: We check both versions of the ID just to be 100% safe
-    if (fId === 'arrival_date' || fId === 'arr_date') {
-        if (isoVal < eventStart || isoVal > eventEnd) {
-            isError = true;
-            msg = `Arrival must be between ${eventConfig.event_start_date} and ${eventConfig.event_end_date}`;
-        }
-    }
-
-    // 3. DEPARTURE DATE VALIDATION
-    if (fId === 'departure_date' || fId === 'dep_date') {
-        // Look for the arrival date value to compare
-        const arrivalInput = document.getElementById('extra_arrival_date') || document.getElementById('extra_arr_date');
-        const arrivalIso = translateToISO(arrivalInput?.value);
-
-        if (arrivalIso && isoVal < arrivalIso) {
-            isError = true;
-            msg = "Departure cannot be before Arrival.";
-        } else if (isoVal > eventEnd) {
-            isError = true;
-            msg = "Departure cannot be after Event End date.";
-        }
-    }
-
-    // 4. ERROR HANDLING
-    if (isError) {
-        alert("❌ " + msg);
-        inputElement.value = ""; // Clear the invalid entry
+    try {
+        // Run the validation
+        validateField(fId, val, rule.field_validation);
+    } catch (err) {
+        // If it fails (Section 3), alert and stop
+        alert("❌ " + err);
+        inputElement.value = ""; 
         updateButtonState();
-        return; // STOP the waterfall
+        return; 
     }
 
-    // 5. WATERFALL (Proceed to next question if valid)
-    const currentSectionQuestions = fieldRules.filter(r => r.section_number === rule.section_number);
+    // --- WATERFALL (Section 3 One-by-One) ---
+    // This finds the next question in the current section and reveals it
+    const currentSectionQuestions = fieldRules.filter(r => r.section_number === section);
     const currentIndex = currentSectionQuestions.findIndex(r => r.field_id === fId);
     const nextRule = currentSectionQuestions[currentIndex + 1];
 
@@ -1347,10 +1319,18 @@ function handleFieldChange(inputElement, rule) {
         }
     }
 
+    // --- SECTION 1 & 2 SPECIAL BEHAVIOR ---
+    if (rule.edit_behavior === 'Editable_Verify') {
+        // This keeps your Mobile/Email verification working as before
+        if (typeof handleVerification === "function") {
+            handleVerification(fId, val);
+        }
+    }
+
     updateButtonState();
 }
 
-
+  
 
   
 function showSuccessScreen() {
