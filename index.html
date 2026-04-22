@@ -745,6 +745,22 @@ function unlockField(id) {
 
 
   function validateField(id, value, rule) {
+
+    console.log("--- MERS DIAGNOSTIC START ---");
+    console.log("Field ID:", id);
+    console.log("Input Value:", value);
+    console.log("Rule Received:", rule);
+    console.log("EventConfig Data:", eventConfig);
+    
+    if (typeof translateToISO === "function") {
+        console.log("Testing translateToISO on Value:", translateToISO(value));
+    } else {
+        console.log("CRITICAL: translateToISO function not found!");
+    }
+    console.log("--- MERS DIAGNOSTIC END ---");
+
+
+    
     // 1. Basic Check (Preserving Section 1 & 2)
     if (!rule || rule === 'NULL' || value.trim() === "") {
         return value.trim() !== "";
