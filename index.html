@@ -745,31 +745,34 @@ function unlockField(id) {
 
 
   function validateField(id, value, rule) {
-    // 1. Basic Check
+    // 1. Basic Check (Preserving Section 1 & 2)
     if (!rule || rule === 'NULL' || value.trim() === "") {
         return value.trim() !== "";
     }
     
     const val = value.trim();
+    
+    // --- GET THE PERFECT ERROR MESSAGE FROM YOUR SHEET ---
+    // This ensures it shows your specific text instead of "Invalid Entry"
     const errorMsg = fieldRules[id]?.error_msg || "Invalid Entry";
 
-    // --- SECTION 3: DATE-AWARE VALIDATION ---
+    // --- SECTION 3: DATE & TIME LOGIC ---
 
     // 1. Arrival Date (D SHOULD BE <= ESD)
     if (rule.includes("ESD")) {
-        // String comparison works perfectly for YYYY-MM-DD
         if (val > eventConfig.event_start_date) throw errorMsg;
     }
 
     // 2. Arrival Time (T SHOULD BE < EST)
     if (rule.includes("EST")) {
-        // We look at the date they already selected
-        const arrivalDate = document.getElementById('extra_arrival_date')?.value;
-        // LOGIC: Only enforce time limit IF arriving ON the Event Start Date
-        if (arrivalDate === eventConfig.event_start_date) {
+        // Find the date field (Checks both potential ID patterns for safety)
+        const dateEl = document.getElementById('extra_arrival_date') || document.getElementById('arrival_date');
+        const selectedDate = dateEl ? dateEl.value : "";
+        
+        // Only enforce time limit IF they are arriving on the Event Start Date
+        if (selectedDate === eventConfig.event_start_date) {
             if (val >= eventConfig.event_start_time) throw errorMsg;
         }
-        // If arrivalDate < event_start_date, any time is valid (Logic Success)
     }
 
     // 3. Departure Date (D SHOULD BE >= EED)
@@ -779,23 +782,22 @@ function unlockField(id) {
 
     // 4. Departure Time (T SHOULD BE > EET)
     if (rule.includes("EET")) {
-        // We look at the date they already selected
-        const departDate = document.getElementById('extra_depart_date')?.value;
-        // LOGIC: Only enforce time limit IF departing ON the Event End Date
-        if (departDate === eventConfig.event_end_date) {
+        const dateEl = document.getElementById('extra_depart_date') || document.getElementById('depart_date');
+        const selectedDate = dateEl ? dateEl.value : "";
+
+        // Only enforce time limit IF they are departing on the Event End Date
+        if (selectedDate === eventConfig.event_end_date) {
             if (val <= eventConfig.event_end_time) throw errorMsg;
         }
-        // If departDate > event_end_date, any time is valid (Logic Success)
     }
 
-    // --- SECTIONS 1 & 2: PRESERVED LOGIC ---
+    // --- SECTIONS 1 & 2: PRESERVED (UNTOUCHED) ---
     if (rule === 'MOB') return /^[6-9]\d{9}$/.test(val);
     if (rule === 'PIN') return /^\d{6}$/.test(val);
     if (rule === 'EMAIL') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
 
     return true;
 }
-
 
 
   
