@@ -743,9 +743,7 @@ function unlockField(id) {
     }
   }
 
-
-  function validateField(id, value, rule) {
-
+function validateField(id, value, rule) {
     console.log("--- MERS DIAGNOSTIC START ---");
     console.log("Field ID:", id);
     console.log("Input Value:", value);
@@ -759,7 +757,10 @@ function unlockField(id) {
     }
     console.log("--- MERS DIAGNOSTIC END ---");
 
-
+    // --- STEP 1: ALIGNING SEARCH LOGIC (Fixing the Object vs Array issue) ---
+    // This ensures .find() works even if Firebase sends an Object
+    const rulesArray = Array.isArray(fieldRules) ? fieldRules : Object.values(fieldRules);
+    const ruleObj = rulesArray.find(r => r.field_id === id);
     
     // 1. Basic Check (Preserving Section 1 & 2)
     if (!rule || rule === 'NULL' || value.trim() === "") {
@@ -768,12 +769,10 @@ function unlockField(id) {
     
     const val = value.trim();
     
-    // --- GET THE PERFECT ERROR MESSAGE FROM YOUR SHEET ---
-    // This ensures it shows your specific text instead of "Invalid Entry"
-    const errorMsg = fieldRules[id]?.error_msg || "Invalid Entry";
+    // Pull the perfect error message from your sheet data
+    const errorMsg = ruleObj ? ruleObj.error_msg : "Invalid Entry";
 
-
-// --- SECTION 3: DATE & TIME INTERLOCKS ---
+    // --- SECTION 3: DATE & TIME INTERLOCKS ---
 
     // 1. Arrival Date (D SHOULD BE <= ESD)
     if (rule && rule.includes("ESD")) {
@@ -781,8 +780,6 @@ function unlockField(id) {
         const isoConfig = translateToISO(eventConfig.event_start_date);
         
         if (isoInput && isoConfig && isoInput > isoConfig) {
-            const ruleObj = fieldRules.find(r => r.field_id === id);
-            const errorMsg = ruleObj ? ruleObj.error_msg : "Invalid Date";
             alert("❌ " + errorMsg);
             
             // THE STOP LOGIC
@@ -799,13 +796,11 @@ function unlockField(id) {
         const isoSelectedDate = translateToISO(dateEl ? dateEl.value : "");
         const isoEventStart = translateToISO(eventConfig.event_start_date);
         
-        if (isoSelectedDate === isoEventStart) {
+        if (isoSelectedDate && isoEventStart && isoSelectedDate === isoEventStart) {
             const isoInputTime = translateToISO(value); 
             const isoConfigTime = translateToISO(eventConfig.event_start_time);
             
-            if (isoInputTime >= isoConfigTime) {
-                const ruleObj = fieldRules.find(r => r.field_id === id);
-                const errorMsg = ruleObj ? ruleObj.error_msg : "Invalid Time";
+            if (isoInputTime && isoConfigTime && isoInputTime >= isoConfigTime) {
                 alert("❌ " + errorMsg);
                 
                 // THE STOP LOGIC
@@ -822,8 +817,6 @@ function unlockField(id) {
         const isoInput = translateToISO(value);
         const isoConfig = translateToISO(eventConfig.event_end_date);
         if (isoInput && isoConfig && isoInput < isoConfig) {
-            const ruleObj = fieldRules.find(r => r.field_id === id);
-            const errorMsg = ruleObj ? ruleObj.error_msg : "Invalid Date";
             alert("❌ " + errorMsg);
             const inputEl = document.getElementById(id);
             if (inputEl) inputEl.value = "";
@@ -838,12 +831,10 @@ function unlockField(id) {
         const isoSelectedDate = translateToISO(dateEl ? dateEl.value : "");
         const isoEventEnd = translateToISO(eventConfig.event_end_date);
 
-        if (isoSelectedDate === isoEventEnd) {
+        if (isoSelectedDate && isoEventEnd && isoSelectedDate === isoEventEnd) {
             const isoInputTime = translateToISO(value);
             const isoConfigTime = translateToISO(eventConfig.event_end_time);
-            if (isoInputTime <= isoConfigTime) {
-                const ruleObj = fieldRules.find(r => r.field_id === id);
-                const errorMsg = ruleObj ? ruleObj.error_msg : "Invalid Time";
+            if (isoInputTime && isoConfigTime && isoInputTime <= isoConfigTime) {
                 alert("❌ " + errorMsg);
                 const inputEl = document.getElementById(id);
                 if (inputEl) inputEl.value = "";
@@ -853,8 +844,8 @@ function unlockField(id) {
         }
     }
 
-
-
+    return true; // If everything passes, return true
+}
 
     // --- SECTIONS 1 & 2: PRESERVED (UNTOUCHED) ---
     if (rule === 'MOB') return /^[6-9]\d{9}$/.test(val);
