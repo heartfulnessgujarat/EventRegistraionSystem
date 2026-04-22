@@ -1155,6 +1155,11 @@ async function processFinalDeletion(regId) {
                     placeholder.text = "-- Select --"; placeholder.value = "";
                     input.appendChild(placeholder);
 
+
+
+
+
+                  
                     if (rule.lookup_tab && rule.lookup_column) {
                         try {
                             const lookupSnap = await db.ref(`masters/${rule.lookup_tab}`).once('value');
@@ -1178,12 +1183,27 @@ async function processFinalDeletion(regId) {
                 }
 
                 // --- ATTRIBUTES & LISTENERS ---
+
+                
                 input.dataset.mandatory = isMandatory;                  
                 if (mersTempData[inputId]) input.value = mersTempData[inputId];
 
-                input.onchange = function() {
-                    handleFieldChange(this, rule);
-                };
+input.onchange = function() {
+    // Check validation first
+    if (validateField(this.id, this.value, rule.field_validation) === false) {
+        return; // This STOPS the code here if there is an error
+    }
+    // Only if date is OK, run the change logic
+    handleFieldChange(this, rule);
+};
+
+
+
+              
+
+              //  input.onchange = function() {
+              //      handleFieldChange(this, rule);
+            //    };
 
                 input.oninput = function() {
                     updateButtonState(); 
