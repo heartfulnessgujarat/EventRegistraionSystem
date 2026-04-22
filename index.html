@@ -745,89 +745,6 @@ function unlockField(id) {
 
 
 
-function validateField(id, value, rule) {
-    const rulesArray = Array.isArray(fieldRules) ? fieldRules : Object.values(fieldRules);
-    const ruleObj = rulesArray.find(r => r.field_id === id);
-    const errorMsg = ruleObj ? ruleObj.error_msg : "Invalid Entry";
-
-    if (!rule || rule === 'NULL' || value.trim() === "") {
-        return value.trim() !== "";
-    }
-
-    // 1. Arrival Date (D SHOULD BE <= ESD)
-    if (rule.includes("ESD")) {
-        const isoInput = translateToISO(value);
-        const isoConfig = translateToISO(eventConfig.event_start_date);
-        if (isoInput && isoConfig && isoInput > isoConfig) {
-            alert("❌ " + errorMsg);
-            if (document.getElementById(id)) document.getElementById(id).value = "";
-            updateButtonState();
-            return false;
-        }
-    }
-
-    // 2. Arrival Time (T SHOULD BE < EST)
-    if (rule.includes("EST")) {
-        const dateEl = document.getElementById('arrival_date');
-        const isoSelectedDate = translateToISO(dateEl ? dateEl.value : "");
-        const isoEventStart = translateToISO(eventConfig.event_start_date);
-        if (isoSelectedDate === isoEventStart) {
-            const isoInputTime = translateToISO(value);
-            const isoConfigTime = translateToISO(eventConfig.event_start_time);
-            if (isoInputTime >= isoConfigTime) {
-                alert("❌ " + errorMsg);
-                if (document.getElementById(id)) document.getElementById(id).value = "";
-                updateButtonState();
-                return false;
-            }
-        }
-    }
-
-    // 3. Departure Date (D SHOULD BE >= EED)
-    if (rule.includes("EED")) {
-        const isoInput = translateToISO(value);
-        const isoConfig = translateToISO(eventConfig.event_end_date);
-        if (isoInput && isoConfig && isoInput < isoConfig) {
-            alert("❌ " + errorMsg);
-            if (document.getElementById(id)) document.getElementById(id).value = "";
-            updateButtonState();
-            return false;
-        }
-    }
-
-    // 4. Departure Time (T SHOULD BE > EET)
-    if (rule.includes("EET")) {
-        const dateEl = document.getElementById('depart_date');
-        const isoSelectedDate = translateToISO(dateEl ? dateEl.value : "");
-        const isoEventEnd = translateToISO(eventConfig.event_end_date);
-        if (isoSelectedDate === isoEventEnd) {
-            const isoInputTime = translateToISO(value);
-            const isoConfigTime = translateToISO(eventConfig.event_end_time);
-            if (isoInputTime <= isoConfigTime) {
-                alert("❌ " + errorMsg);
-                if (document.getElementById(id)) document.getElementById(id).value = "";
-                updateButtonState();
-                return false;
-            }
-        }
-    }
-
-    return true;
-}
-
-  
-
-    // --- SECTIONS 1 & 2: PRESERVED (UNTOUCHED) ---
-    if (rule === 'MOB') return /^[6-9]\d{9}$/.test(val);
-    if (rule === 'PIN') return /^\d{6}$/.test(val);
-    if (rule === 'EMAIL') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
-
-    return true;
-}
-
- 
-  
-
 function checkAllValidations() {
     let allValid = true;
     fieldRules.forEach(r => {
@@ -1437,46 +1354,6 @@ document.getElementById('btn-back-to-profile').onclick = function() {
  * Handles: 8:00 (Firebase) and 08:00 (HTML)
  */
 
-
-function translateToISO(val) {
-    if (!val) return "";
-    const str = String(val).trim();
-
-    // 1. If it's already ISO (YYYY-MM-DD), return it as is
-    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
-
-    // 2. Handle Date Logic (D-MMM-YYYY or DD-MMM-YYYY)
-    if (str.includes('-')) {
-        const parts = str.split('-');
-        if (parts.length === 3) {
-            const day = parts[0].padStart(2, '0');
-            const monthStr = parts[1].toLowerCase().substring(0, 3);
-            const year = parts[2].length === 2 ? "20" + parts[2] : parts[2];
-
-            const monthsMap = {
-                jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
-                jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12'
-            };
-
-            const month = monthsMap[monthStr] || parts[1].padStart(2, '0');
-            return year + "-" + month + "-" + day;
-        }
-    }
-
-    // 3. Handle Time Logic
-    if (str.includes(':')) {
-        const tParts = str.split(':');
-        return tParts[0].padStart(2, '0') + ":" + tParts[1].padStart(2, '0');
-    }
-
-    return str;
-}
-
-/**
- * MERS BUTTON GUARD
- * Scans the current section and unlocks the button only if all visible fields are filled.
- */
-
   function updateButtonState() {
     const actionBtn = document.getElementById('btn-next-action');
     if (!actionBtn) return;
@@ -1525,6 +1402,107 @@ function translateToISO(val) {
     }
 }
 
+
+
+  function translateToISO(val) {
+    if (!val) return "";
+    const str = String(val).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+    if (str.includes('-')) {
+        const parts = str.split('-');
+        if (parts.length === 3) {
+            const day = parts[0].padStart(2, '0');
+            const monthStr = parts[1].toLowerCase().substring(0, 3);
+            const year = parts[2].length === 2 ? "20" + parts[2] : parts[2];
+            const monthsMap = {
+                jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+                jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12'
+            };
+            const month = monthsMap[monthStr] || parts[1].padStart(2, '0');
+            return year + "-" + month + "-" + day;
+        }
+    }
+    if (str.includes(':')) {
+        const tParts = str.split(':');
+        return tParts[0].padStart(2, '0') + ":" + tParts[1].padStart(2, '0');
+    }
+    return str;
+}
+
+function validateField(id, value, rule) {
+    const val = value ? value.trim() : "";
+    const rulesArray = Array.isArray(fieldRules) ? fieldRules : Object.values(fieldRules);
+    const ruleObj = rulesArray.find(r => r.field_id === id);
+    const errorMsg = ruleObj ? ruleObj.error_msg : "Invalid Entry";
+
+    if (!rule || rule === 'NULL' || val === "") {
+        return val !== "";
+    }
+
+    if (rule === 'MOB') return /^[6-9]\d{9}$/.test(val);
+    if (rule === 'PIN') return /^\d{6}$/.test(val);
+    if (rule === 'EMAIL') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+
+    if (rule.includes("ESD")) {
+        const isoInput = translateToISO(val);
+        const isoConfig = translateToISO(eventConfig.event_start_date);
+        if (isoInput && isoConfig && isoInput > isoConfig) {
+            alert("❌ " + errorMsg);
+            if (document.getElementById(id)) document.getElementById(id).value = "";
+            updateButtonState();
+            return false;
+        }
+    }
+    if (rule.includes("EST")) {
+        const dateEl = document.getElementById('arrival_date');
+        const isoSelectedDate = translateToISO(dateEl ? dateEl.value : "");
+        const isoEventStart = translateToISO(eventConfig.event_start_date);
+        if (isoSelectedDate === isoEventStart) {
+            const isoInputTime = translateToISO(val);
+            const isoConfigTime = translateToISO(eventConfig.event_start_time);
+            if (isoInputTime >= isoConfigTime) {
+                alert("❌ " + errorMsg);
+                if (document.getElementById(id)) document.getElementById(id).value = "";
+                updateButtonState();
+                return false;
+            }
+        }
+    }
+    if (rule.includes("EED")) {
+        const isoInput = translateToISO(val);
+        const isoConfig = translateToISO(eventConfig.event_end_date);
+        if (isoInput && isoConfig && isoInput < isoConfig) {
+            alert("❌ " + errorMsg);
+            if (document.getElementById(id)) document.getElementById(id).value = "";
+            updateButtonState();
+            return false;
+        }
+    }
+    if (rule.includes("EET")) {
+        const dateEl = document.getElementById('depart_date');
+        const isoSelectedDate = translateToISO(dateEl ? dateEl.value : "");
+        const isoEventEnd = translateToISO(eventConfig.event_end_date);
+        if (isoSelectedDate === isoEventEnd) {
+            const isoInputTime = translateToISO(val);
+            const isoConfigTime = translateToISO(eventConfig.event_end_time);
+            if (isoInputTime <= isoConfigTime) {
+                alert("❌ " + errorMsg);
+                if (document.getElementById(id)) document.getElementById(id).value = "";
+                updateButtonState();
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+window.onload = init;
+
+
+
+
+
+  
 
   
 </script>
