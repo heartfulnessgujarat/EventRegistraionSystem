@@ -411,7 +411,8 @@ console.log("%c MERS PING 1: Init sequence started. CurrentSection is: " + (type
     // --- MERS SURGERY END ---
 
     const div = document.createElement('div');
-    div.id = `container_${fieldId}`;
+       
+    div.id = `container_${r.field_id}`;
     div.className = 'field-container';
    // div.id = `cont-${r.field_id}`;
     div.style.display = (r.initial_state === 'Hidden') ? 'none' : 'block';
