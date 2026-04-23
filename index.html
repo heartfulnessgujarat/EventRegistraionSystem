@@ -1103,7 +1103,7 @@ async function processFinalDeletion(regId) {
     // 1. Save current progress
 
     const currentInputs = container.querySelectorAll('input, select');
-   // const currentInputs = document.querySelectorAll('[id^="extra_"]');
+   
     currentInputs.forEach(input => { if (input.value) mersTempData[input.id] = input.value; });
 
     container.innerHTML = ""; 
@@ -1131,7 +1131,7 @@ async function processFinalDeletion(regId) {
                 fieldWrapper.className = 'form-group';
 
               
-            //    fieldWrapper.id = `wrapper_extra_${fieldId}`; 
+            
 
               fieldWrapper.id = `wrapper_${fieldId}`;
                 fieldWrapper.style.marginBottom = "20px";
@@ -1155,7 +1155,7 @@ async function processFinalDeletion(regId) {
                 const inputId = fieldId;
 
               
-            //    const inputId = `extra_${fieldId}`;
+            
 
                 // --- INPUT GENERATION ---
                 if (rule.edit_behavior === 'Editable_lookup_Dropdown') {
@@ -1228,7 +1228,7 @@ async function processFinalDeletion(regId) {
             if (targetSectionNumber === "Section2") {
                 buildExtraSections('Section3');
             } else {
-           //     const finalInputs = document.querySelectorAll('[id^="extra_"]');
+           
 
               const finalInputs = container.querySelectorAll('input, select');
                 finalInputs.forEach(input => { mersTempData[input.id] = input.value; });
@@ -1281,13 +1281,13 @@ async function handleFieldChange(inputElement, rule) {
     const currentIndex = currentSectionQuestions.findIndex(r => r.field_id === fId);
     const nextRule = currentSectionQuestions[currentIndex + 1];
 
-    if (nextRule) {
-        const nextWrapper = document.getElementById(`wrapper_extra_${nextRule.field_id}`);
-        if (nextWrapper) {
-            nextWrapper.style.display = 'block';
-            nextWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
+  if (nextRule) {
+    const nextWrapper = document.getElementById(`wrapper_${nextRule.field_id}`);
+    if (nextWrapper) {
+        nextWrapper.style.display = 'block';
+        nextWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
+}
 
     // --- SECTION 1 & 2 SPECIAL BEHAVIOR ---
     if (rule.edit_behavior === 'Editable_Verify') {
