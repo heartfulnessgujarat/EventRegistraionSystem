@@ -1448,7 +1448,6 @@ document.getElementById('btn-back-to-profile').onclick = function() {
     return str;
 }
 
-  
 function validateField(id, value, rule) {
     const val = value ? value.trim() : "";
     const rulesArray = Array.isArray(fieldRules) ? fieldRules : Object.values(fieldRules);
@@ -1463,59 +1462,72 @@ function validateField(id, value, rule) {
     if (rule === 'PIN') return /^\d{6}$/.test(val);
     if (rule === 'EMAIL') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
 
+    // --- ARRIVAL DATE (ESD) - UNTOUCHED ---
     if (rule.includes("ESD")) {
         const isoInput = translateToISO(val);
         const isoConfig = translateToISO(eventConfig.event_start_date);
         if (isoInput && isoConfig && isoInput > isoConfig) {
             alert("❌ " + errorMsg);
-            let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); if (targetBox) targetBox.value = "";
+            let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
+            if (targetBox) targetBox.value = "";
             updateButtonState();
             return false;
         }
     }
-    if (rule.includes("EST")) {
-        const dateEl = document.getElementById('arrival_date');
-        const isoSelectedDate = translateToISO(dateEl ? dateEl.value : "");
-        const isoEventStart = translateToISO(eventConfig.event_start_date);
-        if (isoSelectedDate === isoEventStart) {
+
+    // --- SMART ARRIVAL TIME (T SHOULD BE <EST) ---
+    if (rule.includes("T SHOULD BE <EST")) {
+        const dateEl = document.getElementById('arrival_date') || document.getElementById('extra_arrival_date');
+        const userArrivalDate = dateEl ? dateEl.value : "";
+        
+        if (userArrivalDate === eventConfig.event_start_date) {
             const isoInputTime = translateToISO(val);
             const isoConfigTime = translateToISO(eventConfig.event_start_time);
-            if (isoInputTime >= isoConfigTime) {
+            
+            if (isoInputTime < isoConfigTime) {
                 alert("❌ " + errorMsg);
-                let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); if (targetBox) targetBox.value = "";
+                let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
+                if (targetBox) targetBox.value = "";
                 updateButtonState();
                 return false;
             }
         }
     }
+
+    // --- DEPARTURE DATE (EED) - UNTOUCHED ---
     if (rule.includes("EED")) {
         const isoInput = translateToISO(val);
         const isoConfig = translateToISO(eventConfig.event_end_date);
         if (isoInput && isoConfig && isoInput < isoConfig) {
             alert("❌ " + errorMsg);
-            let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); if (targetBox) targetBox.value = "";
+            let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
+            if (targetBox) targetBox.value = "";
             updateButtonState();
             return false;
         }
     }
-    if (rule.includes("EET")) {
-        const dateEl = document.getElementById('depart_date');
-        const isoSelectedDate = translateToISO(dateEl ? dateEl.value : "");
-        const isoEventEnd = translateToISO(eventConfig.event_end_date);
-        if (isoSelectedDate === isoEventEnd) {
+
+    // --- SMART DEPARTURE TIME (T SHOULD BE >EET) ---
+    if (rule.includes("T SHOULD BE >EET")) {
+        const dateEl = document.getElementById('depart_date') || document.getElementById('extra_depart_date');
+        const userDepartDate = dateEl ? dateEl.value : "";
+
+        if (userDepartDate === eventConfig.event_end_date) {
             const isoInputTime = translateToISO(val);
             const isoConfigTime = translateToISO(eventConfig.event_end_time);
-            if (isoInputTime <= isoConfigTime) {
+
+            if (isoInputTime > isoConfigTime) {
                 alert("❌ " + errorMsg);
-                let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); if (targetBox) targetBox.value = "";
+                let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
+                if (targetBox) targetBox.value = "";
                 updateButtonState();
                 return false;
             }
         }
     }
+
     return true;
 }
-
 window.onload = init;
 
 
