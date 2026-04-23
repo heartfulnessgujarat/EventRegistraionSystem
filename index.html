@@ -1189,18 +1189,13 @@ async function processFinalDeletion(regId) {
                 if (mersTempData[inputId]) input.value = mersTempData[inputId];
 
 input.onchange = function() {
-    // 1. Clean the ID so it matches the Firebase Control Unit (FieldRules)
-    const cleanId = this.id.replace('extra_', ''); 
-
-    // 2. Use that Clean ID to fetch the correct error message from your sheet
-    if (validateField(cleanId, this.value, rule.field_validation) === false) {
-        return; // Stops the jump if validation fails
+    // Check validation first
+    if (validateField(this.id, this.value, rule.field_validation) === false) {
+        return; // This STOPS the code here if there is an error
     }
-
-    // 3. If valid, proceed with the system logic
+    // Only if date is OK, run the change logic
     handleFieldChange(this, rule);
 };
-
 
               
 
