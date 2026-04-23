@@ -1101,7 +1101,9 @@ async function processFinalDeletion(regId) {
     const backBtn = document.getElementById('btn-back-to-profile');
 
     // 1. Save current progress
-    const currentInputs = document.querySelectorAll('[id^="extra_"]');
+
+    const currentInputs = container.querySelectorAll('input, select');
+   // const currentInputs = document.querySelectorAll('[id^="extra_"]');
     currentInputs.forEach(input => { if (input.value) mersTempData[input.id] = input.value; });
 
     container.innerHTML = ""; 
@@ -1127,7 +1129,11 @@ async function processFinalDeletion(regId) {
             if (rule) {
                 const fieldWrapper = document.createElement('div');
                 fieldWrapper.className = 'form-group';
-                fieldWrapper.id = `wrapper_extra_${fieldId}`; 
+
+              
+            //    fieldWrapper.id = `wrapper_extra_${fieldId}`; 
+
+              fieldWrapper.id = `wrapper_${fieldId}`;
                 fieldWrapper.style.marginBottom = "20px";
                 fieldWrapper.style.textAlign = "left";
 
@@ -1222,7 +1228,9 @@ async function processFinalDeletion(regId) {
             if (targetSectionNumber === "Section2") {
                 buildExtraSections('Section3');
             } else {
-                const finalInputs = document.querySelectorAll('[id^="extra_"]');
+           //     const finalInputs = document.querySelectorAll('[id^="extra_"]');
+
+              const finalInputs = container.querySelectorAll('input, select');
                 finalInputs.forEach(input => { mersTempData[input.id] = input.value; });
                 submitData();
             }
