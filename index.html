@@ -411,9 +411,8 @@ console.log("%c MERS PING 1: Init sequence started. CurrentSection is: " + (type
     // --- MERS SURGERY END ---
 
     const div = document.createElement('div');
-    div.id = `container_${fieldId}`;
     div.className = 'field-container';
-   // div.id = `cont-${r.field_id}`;
+    div.id = `cont-${r.field_id}`;
     div.style.display = (r.initial_state === 'Hidden') ? 'none' : 'block';
     const needsEditLink = ['Editable', 'Editable_Verify', 'Editable_Lookup'].includes(r.edit_behavior);
     
@@ -1101,9 +1100,7 @@ async function processFinalDeletion(regId) {
     const backBtn = document.getElementById('btn-back-to-profile');
 
     // 1. Save current progress
-
-    const currentInputs = container.querySelectorAll('input, select');
-   
+    const currentInputs = document.querySelectorAll('[id^="extra_"]');
     currentInputs.forEach(input => { if (input.value) mersTempData[input.id] = input.value; });
 
     container.innerHTML = ""; 
@@ -1129,11 +1126,7 @@ async function processFinalDeletion(regId) {
             if (rule) {
                 const fieldWrapper = document.createElement('div');
                 fieldWrapper.className = 'form-group';
-
-              
-            
-
-              fieldWrapper.id = `wrapper_${fieldId}`;
+                fieldWrapper.id = `wrapper_extra_${fieldId}`; 
                 fieldWrapper.style.marginBottom = "20px";
                 fieldWrapper.style.textAlign = "left";
 
@@ -1151,11 +1144,7 @@ async function processFinalDeletion(regId) {
                 fieldWrapper.appendChild(label);
 
                 let input;
-
-                const inputId = fieldId;
-
-              
-            
+                const inputId = `extra_${fieldId}`;
 
                 // --- INPUT GENERATION ---
                 if (rule.edit_behavior === 'Editable_lookup_Dropdown') {
@@ -1199,14 +1188,15 @@ async function processFinalDeletion(regId) {
                 input.dataset.mandatory = isMandatory;                  
                 if (mersTempData[inputId]) input.value = mersTempData[inputId];
 
-  input.onchange = function() {
-    // Validation now uses the clean ID directly
-    if (validateField(this.id, this.value, rule.field_validation) === false) {
-        return; // This STOPS the code and prevents jumping
-    }
-    // Only if valid, record the data and move to the next question
-    handleFieldChange(this, rule);
-};
+   
+input.onchange = function() {
+                    // Check validation using a cleaned ID (no 'extra_') to match Firebase
+                    if (validateField(this.id.replace('extra_', ''), this.value, rule.field_validation) === false) {
+                        return; // This STOPS the code and prevents jumping
+                    }
+                    // Only if valid, record the data and move to the next question
+                    handleFieldChange(this, rule);
+                };
 
               
 
@@ -1228,9 +1218,7 @@ async function processFinalDeletion(regId) {
             if (targetSectionNumber === "Section2") {
                 buildExtraSections('Section3');
             } else {
-           
-
-              const finalInputs = container.querySelectorAll('input, select');
+                const finalInputs = document.querySelectorAll('[id^="extra_"]');
                 finalInputs.forEach(input => { mersTempData[input.id] = input.value; });
                 submitData();
             }
@@ -1281,13 +1269,13 @@ async function handleFieldChange(inputElement, rule) {
     const currentIndex = currentSectionQuestions.findIndex(r => r.field_id === fId);
     const nextRule = currentSectionQuestions[currentIndex + 1];
 
-  if (nextRule) {
-    const nextWrapper = document.getElementById(`wrapper_${nextRule.field_id}`);
-    if (nextWrapper) {
-        nextWrapper.style.display = 'block';
-        nextWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (nextRule) {
+        const nextWrapper = document.getElementById(`wrapper_extra_${nextRule.field_id}`);
+        if (nextWrapper) {
+            nextWrapper.style.display = 'block';
+            nextWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
     }
-}
 
     // --- SECTION 1 & 2 SPECIAL BEHAVIOR ---
     if (rule.edit_behavior === 'Editable_Verify') {
@@ -1474,74 +1462,69 @@ function validateField(id, value, rule) {
     if (rule === 'PIN') return /^\d{6}$/.test(val);
     if (rule === 'EMAIL') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
 
-  if (rule.includes("ESD")) {
-    const isoInput = translateToISO(val);
-    const isoConfig = translateToISO(eventConfig.event_start_date);
-    if (isoInput && isoConfig && isoInput > isoConfig) {
-        alert("❌ " + errorMsg);
-        let targetBox = document.getElementById(id); 
-        if (targetBox) targetBox.value = "";
-        updateButtonState();
-        return false;
+    // --- ARRIVAL DATE (ESD) - UNTOUCHED ---
+    if (rule.includes("ESD")) {
+        const isoInput = translateToISO(val);
+        const isoConfig = translateToISO(eventConfig.event_start_date);
+        if (isoInput && isoConfig && isoInput > isoConfig) {
+            alert("❌ " + errorMsg);
+            let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
+            if (targetBox) targetBox.value = "";
+            updateButtonState();
+            return false;
+        }
     }
-}
 
-  // --- SMART ARRIVAL TIME (T SHOULD BE <EST) ---
-if (rule.includes("T SHOULD BE <EST")) {
-    // We now look ONLY for the clean ID 'arrival_date'
-    const dateEl = document.getElementById('arrival_date');
-    const userArrivalDate = dateEl ? dateEl.value : "";
-    
-    if (userArrivalDate === eventConfig.event_start_date) {
-        const isoInputTime = translateToISO(val);
-        const isoConfigTime = translateToISO(eventConfig.event_start_time);
+    // --- SMART ARRIVAL TIME (T SHOULD BE <EST) ---
+    if (rule.includes("T SHOULD BE <EST")) {
+        const dateEl = document.getElementById('arrival_date') || document.getElementById('extra_arrival_date');
+        const userArrivalDate = dateEl ? dateEl.value : "";
         
-        if (isoInputTime < isoConfigTime) {
+        if (userArrivalDate === eventConfig.event_start_date) {
+            const isoInputTime = translateToISO(val);
+            const isoConfigTime = translateToISO(eventConfig.event_start_time);
+            
+            if (isoInputTime < isoConfigTime) {
+                alert("❌ " + errorMsg);
+                let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
+                if (targetBox) targetBox.value = "";
+                updateButtonState();
+                return false;
+            }
+        }
+    }
+
+    // --- DEPARTURE DATE (EED) - UNTOUCHED ---
+    if (rule.includes("EED")) {
+        const isoInput = translateToISO(val);
+        const isoConfig = translateToISO(eventConfig.event_end_date);
+        if (isoInput && isoConfig && isoInput < isoConfig) {
             alert("❌ " + errorMsg);
-            // We now look ONLY for the clean ID
-            let targetBox = document.getElementById(id); 
+            let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
             if (targetBox) targetBox.value = "";
             updateButtonState();
             return false;
         }
     }
-}
 
-  // --- DEPARTURE DATE (EED) - UNTOUCHED ---
-if (rule.includes("EED")) {
-    const isoInput = translateToISO(val);
-    const isoConfig = translateToISO(eventConfig.event_end_date);
-    if (isoInput && isoConfig && isoInput < isoConfig) {
-        alert("❌ " + errorMsg);
-        // Cleaned: looking only for the direct ID
-        let targetBox = document.getElementById(id); 
-        if (targetBox) targetBox.value = "";
-        updateButtonState();
-        return false;
-    }
-}
+    // --- SMART DEPARTURE TIME (T SHOULD BE >EET) ---
+    if (rule.includes("T SHOULD BE >EET")) {
+        const dateEl = document.getElementById('depart_date') || document.getElementById('extra_depart_date');
+        const userDepartDate = dateEl ? dateEl.value : "";
 
+        if (userDepartDate === eventConfig.event_end_date) {
+            const isoInputTime = translateToISO(val);
+            const isoConfigTime = translateToISO(eventConfig.event_end_time);
 
-  // --- SMART DEPARTURE TIME (T SHOULD BE >EET) ---
-if (rule.includes("T SHOULD BE >EET")) {
-    // Looking only for the clean ID 'depart_date'
-    const dateEl = document.getElementById('depart_date');
-    const userDepartDate = dateEl ? dateEl.value : "";
-
-    if (userDepartDate === eventConfig.event_end_date) {
-        const isoInputTime = translateToISO(val);
-        const isoConfigTime = translateToISO(eventConfig.event_end_time);
-
-        if (isoInputTime > isoConfigTime) {
-            alert("❌ " + errorMsg);
-            // Looking only for the clean ID
-            let targetBox = document.getElementById(id); 
-            if (targetBox) targetBox.value = "";
-            updateButtonState();
-            return false;
+            if (isoInputTime > isoConfigTime) {
+                alert("❌ " + errorMsg);
+                let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
+                if (targetBox) targetBox.value = "";
+                updateButtonState();
+                return false;
+            }
         }
     }
-}
 
     return true;
 }
