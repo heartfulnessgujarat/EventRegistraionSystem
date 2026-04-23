@@ -1521,24 +1521,27 @@ if (rule.includes("EED")) {
     }
 }
 
-    // --- SMART DEPARTURE TIME (T SHOULD BE >EET) ---
-    if (rule.includes("T SHOULD BE >EET")) {
-        const dateEl = document.getElementById('depart_date') || document.getElementById('extra_depart_date');
-        const userDepartDate = dateEl ? dateEl.value : "";
 
-        if (userDepartDate === eventConfig.event_end_date) {
-            const isoInputTime = translateToISO(val);
-            const isoConfigTime = translateToISO(eventConfig.event_end_time);
+  // --- SMART DEPARTURE TIME (T SHOULD BE >EET) ---
+if (rule.includes("T SHOULD BE >EET")) {
+    // Looking only for the clean ID 'depart_date'
+    const dateEl = document.getElementById('depart_date');
+    const userDepartDate = dateEl ? dateEl.value : "";
 
-            if (isoInputTime > isoConfigTime) {
-                alert("❌ " + errorMsg);
-                let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
-                if (targetBox) targetBox.value = "";
-                updateButtonState();
-                return false;
-            }
+    if (userDepartDate === eventConfig.event_end_date) {
+        const isoInputTime = translateToISO(val);
+        const isoConfigTime = translateToISO(eventConfig.event_end_time);
+
+        if (isoInputTime > isoConfigTime) {
+            alert("❌ " + errorMsg);
+            // Looking only for the clean ID
+            let targetBox = document.getElementById(id); 
+            if (targetBox) targetBox.value = "";
+            updateButtonState();
+            return false;
         }
     }
+}
 
     return true;
 }
