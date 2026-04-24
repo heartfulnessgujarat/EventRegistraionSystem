@@ -890,12 +890,17 @@ async function handleSectionNavigation() {
             }
         });
 
-  
-  
+    
         // --- THE MERS MERGE ---
-        const formData = {
+
+
+      const formData = {
             ...originalData,
+            ...updatedProfileData, // <--- Add this line here
             ...mersTempData,
+      
+      
+          
             registration_id: finalRegId,
             timestamp: finalTimestamp,
             registration_status: statusMsg,
