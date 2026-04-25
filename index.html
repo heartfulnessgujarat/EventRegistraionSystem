@@ -839,6 +839,11 @@ async function handleSectionNavigation() {
 
 
   async function submitData() {
+
+const snapShotVal = originalData ? encodeURIComponent(JSON.stringify(originalData)) : "";
+
+
+    
     console.log("%c [DIAGNOSTIC] submitData started! ", "background: #222; color: #bada55; font-size: 14px;");
 
     // --- THE SACRED ENGINE ---
@@ -917,23 +922,8 @@ async function handleSectionNavigation() {
      //   const snapShotVal = snapshotInput ? encodeURIComponent(snapshotInput.value) : "";
 
 // Pull directly from memory (originalData) instead of the hidden HTML field
-      
-const snapShotVal = originalData ? encodeURIComponent(JSON.stringify(originalData)) : "";
 
-// --- INSERTED BLOCK START ---
 
-// --- FINAL SURGICAL CAPTURE (PROVEN LOGIC) ---
-if (originalData) {
-    Object.keys(originalData).forEach(key => {
-        const inputEl = document.getElementById(`inp-${key}`);
-        if (inputEl) {
-            // We now know this ID exists! 
-            // We grab the REAL value from the screen and trim any spaces.
-            const newValue = inputEl.value ? inputEl.value.trim() : "";
-            originalData[key] = newValue;
-        }
-    });
-}
 // --- END FINAL CAPTURE ---
 
 
