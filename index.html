@@ -237,7 +237,9 @@ function formatFirebaseDate(fbDate) {
 
   
   let fieldRules = [], masterData = [], eventConfig = {}, moreSections = [];
- 
+
+let profileSnapshotForScript = ""; // <--- ADD THIS LINE
+  
   let originalData = {}; 
   let verificationStates = { email: false, mobile: false };
 
@@ -1070,6 +1072,18 @@ async function loadExistingData(regId, mode) {
         }
 
         originalData = data;
+
+// --- ADD THIS HERE ---
+// This freezes the OLD data before the user ever types a single number.
+profileSnapshotForScript = encodeURIComponent(JSON.stringify(data));
+
+    // ... rest of your code
+
+
+
+
+
+      
 
         if (mode === 'edit') {
             renderForm(); 
