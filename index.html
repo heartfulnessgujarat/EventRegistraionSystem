@@ -1009,7 +1009,26 @@ async function loadExistingData(regId, mode) {
         const snap = await db.ref('registrations/' + regId).once('value');
         const data = snap.val();
 
+
+
+        // --- ADD THE SURGICAL SNAPSHOT HERE ---
+        if (data) {
+            const snapshotData = {
+                "mobile": data.mobile || "",
+                "email": data.email || "",
+                "pincode": data.pincode || "",
+                "zone": data.zone || "",
+                "district": data.district || "",
+                "centre": data.centre || ""
+            };
+            document.getElementById('userSnapshot').value = JSON.stringify(snapshotData);
+            console.log("MERS: Surgical Snapshot Captured.");
+        }
+        // --- END SNAPSHOT ---
+
         if (!data) {
+            // ... rest of your existing code ...
+
             alert("Registration not found. It may have been deleted already.");
             location.href = window.location.pathname + "?id=" + eventId;
             return;
@@ -1247,8 +1266,9 @@ input.onchange = function() {
                 ? () => buildExtraSections('Section2') 
                 : () => { 
                     document.getElementById('Section2').style.display = 'none'; 
+                  
                     document.getElementById('Section1').style.display = 'block'; 
-                };
+                   };
         }
 
         actionBtn.innerText = (targetSectionNumber === "Section2") ? "PROCEED TO TRAVEL DETAILS" : "CONFIRM & REGISTER";
