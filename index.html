@@ -917,8 +917,29 @@ async function handleSectionNavigation() {
      //   const snapShotVal = snapshotInput ? encodeURIComponent(snapshotInput.value) : "";
 
 // Pull directly from memory (originalData) instead of the hidden HTML field
+      
 const snapShotVal = originalData ? encodeURIComponent(JSON.stringify(originalData)) : "";
 
+// --- INSERTED BLOCK START ---
+if (originalData) {
+    Object.keys(originalData).forEach(key => {
+        const inputEl = document.getElementById(`inp-${key}`);
+        if (inputEl) {
+            // This captures what is ON THE SCREEN right now (e.g., 396445)
+            originalData[key] = inputEl.value; 
+        }
+    });
+}
+// --- INSERTED BLOCK END ---
+
+
+
+
+
+
+
+
+      
       
 // --- ADD THE LINE BELOW ---
         console.log("FINAL SNAPSHOT CHECK:", decodeURIComponent(snapShotVal));
