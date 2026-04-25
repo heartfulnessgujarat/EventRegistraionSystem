@@ -1179,9 +1179,28 @@ async function processFinalDeletion(regId) {
     const actionBtn = document.getElementById('btn-next-action'); 
     const backBtn = document.getElementById('btn-back-to-profile');
 
-    // 1. Save current progress
+
+// --- 1. SAVE CURRENT PROGRESS (ENHANCED) ---
+    
+    // A. Capture Section 1 Profile Data (The Pincode fix)
+    // Only do this when we are transitioning FROM Section 1 TO Section 2
+    if (targetSectionNumber === "Section2") {
+        console.log("MERS: Transitioning 1 -> 2. Capturing Profile Edits...");
+        if (originalData) {
+            Object.keys(originalData).forEach(key => {
+                const inputEl = document.getElementById(`inp-${key}`);
+                if (inputEl) {
+                    // This captures 396445 into the originalData variable
+                    originalData[key] = inputEl.value;
+                }
+            });
+        }
+    }
+
+    // B. Capture Section 2/3 Registration Data (Existing Logic)
     const currentInputs = document.querySelectorAll('[id^="extra_"]');
     currentInputs.forEach(input => { if (input.value) mersTempData[input.id] = input.value; });
+
 
     container.innerHTML = ""; 
 
