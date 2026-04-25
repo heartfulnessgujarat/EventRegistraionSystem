@@ -913,7 +913,13 @@ async function handleSectionNavigation() {
         // We pull the snapshot from the hidden field and encode it for the URL
         const snapshotInput = document.getElementById('userSnapshot');
         const snapShotVal = snapshotInput ? encodeURIComponent(snapshotInput.value) : "";
-        
+
+
+// --- ADD THE LINE BELOW ---
+        console.log("FINAL SNAPSHOT CHECK:", decodeURIComponent(snapShotVal));
+        // --- ADD THE LINE ABOVE ---
+
+      
         fetch(`${scriptUrl}?action=sendEmail&regId=${finalRegId}&eventId=${eventId}&snapshot=${snapShotVal}`)
             .then(() => console.log("[DIAGNOSTIC] Email trigger & Surgical Snapshot sent."))
             .catch(err => console.error("[DIAGNOSTIC] Surgical update failed:", err));
