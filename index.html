@@ -904,17 +904,22 @@ async function handleSectionNavigation() {
         await db.ref('registrations/' + finalRegId).set(formData);
         console.log("[DIAGNOSTIC] Firebase Save successful. ID: " + finalRegId);
 
-   
-     // https://script.google.com/macros/s/AKfycbzZG8boBJ_iPK85KXjGIsJeloml5oaeZJ8s3-fvSrHWkjbpCU13_4sIBm_DXJ3nJhy-fw/exec
-     
+       
           const scriptUrl = "https://script.google.com/macros/s/AKfycbzZG8boBJ_iPK85KXjGIsJeloml5oaeZJ8s3-fvSrHWkjbpCU13_4sIBm_DXJ3nJhy-fw/exec"; 
 
+                     
+      
         // --- MERS SURGICAL BRIDGE ---
         // We pull the snapshot from the hidden field and encode it for the URL
-        const snapshotInput = document.getElementById('userSnapshot');
-        const snapShotVal = snapshotInput ? encodeURIComponent(snapshotInput.value) : "";
 
+      
+      //  const snapshotInput = document.getElementById('userSnapshot');
+     //   const snapShotVal = snapshotInput ? encodeURIComponent(snapshotInput.value) : "";
 
+// Pull directly from memory (originalData) instead of the hidden HTML field
+const snapShotVal = originalData ? encodeURIComponent(JSON.stringify(originalData)) : "";
+
+      
 // --- ADD THE LINE BELOW ---
         console.log("FINAL SNAPSHOT CHECK:", decodeURIComponent(snapShotVal));
         // --- ADD THE LINE ABOVE ---
