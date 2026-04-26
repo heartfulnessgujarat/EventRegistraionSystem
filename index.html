@@ -911,6 +911,38 @@ const snapShotVal = originalData ? encodeURIComponent(JSON.stringify(originalDat
 
         // SAVE & EMAIL
         await db.ref('registrations/' + finalRegId).set(formData);
+
+
+
+// --- PREPARE DATA FOR MASTER UPDATE ---
+        const masterUpdateData = {
+            full_name: formData.full_name,
+            mobile: formData.mobile,
+            email: formData.email,
+            pincode: formData.pincode,
+            zone: formData.zone,
+            district: formData.district,
+            centre: formData.centre,
+            state: formData.state,
+            country: formData.country,
+            last_updated: new Date().toISOString()
+        };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      
         console.log("[DIAGNOSTIC] Firebase Save successful. ID: " + finalRegId);
 
        
