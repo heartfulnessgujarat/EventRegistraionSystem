@@ -917,15 +917,15 @@ const snapShotVal = originalData ? encodeURIComponent(JSON.stringify(originalDat
 // --- PREPARE DATA FOR MASTER UPDATE ---
 
 // --- PREPARE THE MASTER UPDATE DATA ---
-        const masterUpdateData = {
-            pincode: formData.pincode,
-            email: formData.email,
-            mobile: formData.mobile,
-            organization: formData.organization,
-            designation: formData.designation,
-            full_address: formData.full_address
-        };
 
+const masterUpdateData = {
+            pincode: formData.pincode || "",
+            email: formData.email || "",
+            mobile: formData.mobile || "",
+            organization: formData.organization || "",
+            designation: formData.designation || "",
+            full_address: formData.full_address || ""
+        };
 
 
 
