@@ -915,37 +915,38 @@ const snapShotVal = originalData ? encodeURIComponent(JSON.stringify(originalDat
 
 
 // --- PREPARE DATA FOR MASTER UPDATE ---
+
+// --- PREPARE THE MASTER UPDATE DATA ---
         const masterUpdateData = {
-            full_name: formData.full_name,
-            mobile: formData.mobile,
-            email: formData.email,
             pincode: formData.pincode,
-            zone: formData.zone,
-            district: formData.district,
-            centre: formData.centre,
-            state: formData.state,
-            country: formData.country,
-            last_updated: new Date().toISOString()
+            email: formData.email,
+            mobile: formData.mobile,
+            organization: formData.organization,
+            designation: formData.designation,
+            full_address: formData.full_address
         };
-
-
-
-// --- THE DIRECT PUSH TO MASTER ---
-        await db.ref('masters/' + formData.mobile).update(masterUpdateData);
-        
-        console.log("[DIAGNOSTIC] Master Firebase Direct Update Successful!");
-
-
-
-
-
-
-
 
 
 
 
       
+      // --- SURGICAL SEARCH & UPDATE ---
+        const masterRef = db.ref('masters/Master_Internal_DB');
+        
+        // Find the user where "full_name" matches
+        const masterSearch = await masterRef.orderByChild('full_name').equalTo(formData.full_name).once('value');
+        
+        if (masterSearch.exists()) {
+            const userKey = Object.keys(masterSearch.val())[0]; // Finds the 'u' number
+            await masterRef.child(userKey).update(masterUpdateData);
+            console.log("[DIAGNOSTIC] Master Database updated at: " + userKey);
+        }
+      
+     
+      
+        console.log("[DIAGNOSTIC] Master Firebase Direct Update Successful!");
+
+    
         console.log("[DIAGNOSTIC] Firebase Save successful. ID: " + finalRegId);
 
        
