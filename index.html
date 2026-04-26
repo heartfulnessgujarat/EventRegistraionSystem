@@ -954,7 +954,7 @@ const masterUpdateData = {
        
       //    const scriptUrl = "https://script.google.com/macros/s/AKfycbzZG8boBJ_iPK85KXjGIsJeloml5oaeZJ8s3-fvSrHWkjbpCU13_4sIBm_DXJ3nJhy-fw/exec"; 
 
-                     const scriptUrl = SCRIPT_URL;
+                 //    const scriptUrl = SCRIPT_URL;
       
         // --- MERS SURGICAL BRIDGE ---
         // We pull the snapshot from the hidden field and encode it for the URL
@@ -982,14 +982,21 @@ const masterUpdateData = {
       
       
 // --- ADD THE LINE BELOW ---
-        console.log("FINAL SNAPSHOT CHECK:", decodeURIComponent(snapShotVal));
+   //     console.log("FINAL SNAPSHOT CHECK:", decodeURIComponent(snapShotVal));
         // --- ADD THE LINE ABOVE ---
 
-      
-        fetch(`${scriptUrl}?action=sendEmail&regId=${finalRegId}&eventId=${eventId}&snapshot=${snapShotVal}`)
-            .then(() => console.log("[DIAGNOSTIC] Email trigger & Surgical Snapshot sent."))
-            .catch(err => console.error("[DIAGNOSTIC] Surgical update failed:", err));
      
+    //    fetch(`${scriptUrl}?action=sendEmail&regId=${finalRegId}&eventId=${eventId}&snapshot=${snapShotVal}`)
+      //      .then(() => console.log("[DIAGNOSTIC] Email trigger & Surgical Snapshot sent."))
+       //     .catch(err => console.error("[DIAGNOSTIC] Surgical update failed:", err));
+
+
+fetch(`${scriptUrl}?action=sendEmail&regId=${finalRegId}&eventId=${eventId}`)
+    .then(() => console.log("[DIAGNOSTIC] Email trigger sent successfully."))
+    .catch(err => console.error("[DIAGNOSTIC] Email trigger failed:", err));
+
+
+      
 
         // --- FINAL UI SWAP (The Clean Sweep) ---
         console.log("[DIAGNOSTIC] Starting Final UI Swap...");
