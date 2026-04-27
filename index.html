@@ -1528,6 +1528,7 @@ document.getElementById('btn-back-to-profile').onclick = function() {
  * Handles: 8:00 (Firebase) and 08:00 (HTML)
  */
 
+
 function updateButtonState() {
     const actionBtn = document.getElementById('btn-next-action');
     if (!actionBtn) return;
@@ -1535,29 +1536,46 @@ function updateButtonState() {
     const currentSection = document.querySelector('.form-section:not([style*="display: none"])');
     if (!currentSection) return;
 
-    const sectionId = currentSection.id; // e.g., 'section-1', 'section-2', 'section-3'
+    const sectionId = currentSection.id;
     const sectionNum = sectionId.split('-')[1];
 
-    // 1. Get the list of rules for the CURRENT section only from our config
+    // 1. Get rules for this section
     const rulesArray = Array.isArray(fieldRules) ? fieldRules : Object.values(fieldRules);
-    const sectionRules = rulesArray.filter(r => r.section_id.toString() === sectionNum);
+    const sectionRules = rulesArray.filter(r => r.section_number.toString().toLowerCase().includes(sectionNum));
 
-    // 2. Count how many of these configured fields are actually visible and valid
-    let validCount = 0;
+    // 2. Identify the "Target" (Visible fields) and "Filled" fields
+    let totalVisibleRequired = 0;
+    let totalFilled = 0;
+
     sectionRules.forEach(rule => {
         const el = document.getElementById(rule.field_id) || document.getElementById('extra_' + rule.field_id);
         if (el) {
-            // Check if the field is visible and has a value
-            const isVisible = el.closest('.input-group') && el.closest('.input-group').style.display !== 'none';
-            if (isVisible && el.value.trim() !== "") {
-                validCount++;
+            const group = el.closest('.input-group');
+            const isVisible = group && group.style.display !== 'none';
+
+            if (isVisible) {
+                totalVisibleRequired++;
+                if (el.value.trim() !== "") {
+                    totalFilled++;
+                }
             }
         }
     });
 
-    // 3. Logic Gate: Compare valid inputs against total rules for this section
-    // This removes the "Emergency Bypass" and forces real validation
-    if (validCount === sectionRules.length) {
+    // 3. Determine Button Text & State
+    // If it's Section 3, we only show "Confirm" if the LAST rule of the section is visible and filled
+    const lastRule = sectionRules[sectionRules.length - 1];
+    const lastEl = document.getElementById(lastRule.field_id) || document.getElementById('extra_' + lastRule.field_id);
+    const isLastFieldVisible = lastEl && lastEl.closest('.input-group') && lastEl.closest('.input-group').style.display !== 'none';
+
+    if (sectionNum === "3" && isLastFieldVisible) {
+        actionBtn.innerText = "CONFIRM & REGISTER";
+    } else if (sectionNum === "3") {
+        actionBtn.innerText = "PROCEED"; // Keep as proceed until the waterfall finishes
+    }
+
+    // 4. Unlock logic: All visible fields must be filled
+    if (totalVisibleRequired > 0 && totalFilled === totalVisibleRequired) {
         actionBtn.disabled = false;
         actionBtn.style.opacity = "1";
         actionBtn.style.cursor = "pointer";
@@ -1567,6 +1585,7 @@ function updateButtonState() {
         actionBtn.style.cursor = "not-allowed";
     }
 }
+
 
 /**
  * NEW FUNCTION: call this inside your 'Next' navigation logic
