@@ -1591,7 +1591,33 @@ function updateButtonState() {
  * NEW FUNCTION: call this inside your 'Next' navigation logic
  * This ensures Section 3 questions "Reflow" if data already exists.
  */
+
 function reflowSectionSequence(sectionNum) {
+    const rulesArray = Array.isArray(fieldRules) ? fieldRules : Object.values(fieldRules);
+    const sectionRules = rulesArray.filter(r => r.section_number.toString().toLowerCase().includes(sectionNum));
+
+    sectionRules.forEach((rule, index) => {
+        const currentEl = document.getElementById(rule.field_id) || document.getElementById('extra_' + rule.field_id);
+        
+        // If current field has a value, we must ensure the NEXT field is shown
+        if (currentEl && currentEl.value.trim() !== "") {
+            const nextRule = sectionRules[index + 1];
+            if (nextRule && nextRule.edit_behavior.includes("after previous input")) {
+                const nextGroup = (document.getElementById(nextRule.field_id) || 
+                                   document.getElementById('extra_' + nextRule.field_id)).closest('.input-group');
+                if (nextGroup) {
+                    nextGroup.style.display = 'block';
+                }
+            }
+        }
+    });
+    // Re-check button state after revealing fields
+    updateButtonState();
+}
+
+
+  
+function oldreflowSectionSequence(sectionNum) {
     const rulesArray = Array.isArray(fieldRules) ? fieldRules : Object.values(fieldRules);
     const sectionRules = rulesArray.filter(r => r.section_id.toString() === sectionNum.toString());
 
