@@ -1510,50 +1510,38 @@ document.getElementById('btn-back-to-profile').onclick = function() {
  * Handles: 8:00 (Firebase) and 08:00 (HTML)
  */
 
+
+
 function updateButtonState() {
     console.log("%c MERS DIAG: updateButtonState triggered ", "background: #222; color: #bada55");
     const actionBtn = document.getElementById('btn-next-action');
     if (!actionBtn) return;
 
-    // 1. IMPROVED SCAN: Find the ACTUAL active section container
-    const activeSection = document.querySelector('.form-section:not([style*="display: none"])');
-    if (!activeSection) {
-        console.warn("DIAG: No visible section container found.");
-        return;
-    }
-
-    // Only get inputs INSIDE this specific active section
-    const visibleInputs = activeSection.querySelectorAll('input, select, textarea');
+    // 1. MASTER TRUTH: Use the current section number from your global state
+    const currentNum = window.currentSection || 1;
+    const activeSection = document.getElementById('section-' + currentNum);
     
-    // Filter out any hidden ones or standard profile fields if they aren't part of the rules
-    const activeInputs = Array.from(visibleInputs).filter(el => {
-        const group = el.closest('.input-group');
-        return group && group.style.display !== 'none';
-    });
-
-    if (activeInputs.length === 0) {
-        console.warn("DIAG: No visible inputs found in this section.");
+    if (!activeSection) {
+        console.warn("DIAG: Container 'section-" + currentNum + "' not found in DOM yet.");
         return;
     }
 
-    // 2. FETCH THE SECTION CONTEXT
-    // We search through the active inputs to find one that exists in our fieldRules
+    // 2. FETCH SECTION NAME FROM RULES (Zero Hard-Coding)
+    // We look for any "extra_" field inside this container to identify the Section Name
+    const extraFields = activeSection.querySelectorAll('[id^="extra_"]');
     const rulesArray = Array.isArray(fieldRules) ? fieldRules : Object.values(fieldRules);
-    let sampleRule = null;
+    
     let dynamicSectionName = "";
-
-    for (let input of activeInputs) {
-        const cleanId = input.id.replace('extra_', '');
-        sampleRule = rulesArray.find(r => r.field_id === cleanId);
-        if (sampleRule) {
-            dynamicSectionName = sampleRule.section_number;
-            break; 
-        }
+    if (extraFields.length > 0) {
+        const sampleId = extraFields[0].id.replace('extra_', '');
+        const sampleRule = rulesArray.find(r => r.field_id === sampleId);
+        if (sampleRule) dynamicSectionName = sampleRule.section_number;
     }
 
+    // Fallback: If no extra fields, it's Section 1 (Profile)
     if (!dynamicSectionName) {
-        console.error("DIAG: Could not determine Section Name from visible fields.");
-        return;
+        console.log("DIAG: No extra rules found. Assuming Profile/Section 1 context.");
+        dynamicSectionName = "Section1"; 
     }
 
     // 3. FILTER & VALIDATE
@@ -1564,20 +1552,24 @@ function updateButtonState() {
 
     sectionRules.forEach(rule => {
         const el = document.getElementById(rule.field_id) || document.getElementById('extra_' + rule.field_id);
-        const group = el ? el.closest('.input-group') : null;
-        const isVisible = group && group.style.display !== 'none';
-        const val = el ? el.value.trim() : "";
+        if (el) {
+            const group = el.closest('.input-group');
+            // Field is "Required" if its group isn't hidden by your waterfall logic
+            const isVisible = group && group.style.display !== 'none';
 
-        if (isVisible) {
-            totalVisibleRequired++;
-            if (val !== "") totalFilled++;
+            if (isVisible) {
+                totalVisibleRequired++;
+                if (el.value.trim() !== "") {
+                    totalFilled++;
+                }
+            }
+
+            diagData.push({
+                FieldID: rule.field_id,
+                Visible: isVisible,
+                Value: el.value.trim()
+            });
         }
-
-        diagData.push({
-            FieldID: rule.field_id,
-            IsVisible: isVisible,
-            Value: val
-        });
     });
 
     console.log(`--- MERS X-RAY: [${dynamicSectionName}] ---`);
@@ -1585,26 +1577,29 @@ function updateButtonState() {
 
     // 4. DYNAMIC BUTTON TEXT
     const lastRule = sectionRules[sectionRules.length - 1];
-    const lastEl = document.getElementById(lastRule.field_id) || document.getElementById('extra_' + lastRule.field_id);
-    const isLastVisible = lastEl && lastEl.closest('.input-group') && lastEl.closest('.input-group').style.display !== 'none';
+    const isLastVisible = lastRule && (document.getElementById('extra_' + lastRule.field_id)?.closest('.input-group')?.style.display !== 'none');
 
     if (dynamicSectionName.toLowerCase().includes("3") && isLastVisible) {
         actionBtn.innerText = "CONFIRM & REGISTER";
-    } else if (dynamicSectionName.toLowerCase().includes("1")) {
-        actionBtn.innerText = "PROCEED TO SELECTION";
     } else if (dynamicSectionName.toLowerCase().includes("2")) {
         actionBtn.innerText = "PROCEED TO TRAVEL DETAILS";
     } else {
-        actionBtn.innerText = "PROCEED";
+        actionBtn.innerText = "PROCEED TO SELECTION";
     }
 
-    // 5. UNLOCK
+    // 5. THE UNLOCK
     if (totalVisibleRequired > 0 && totalFilled === totalVisibleRequired) {
+        actionBtn.disabled = false;
+        actionBtn.style.opacity = "1";
+        actionBtn.style.cursor = "pointer";
+    } else if (totalVisibleRequired === 0 && currentNum === 1) {
+        // Safe unlock for Section 1 if no extra rules exist yet
         actionBtn.disabled = false;
         actionBtn.style.opacity = "1";
     } else {
         actionBtn.disabled = true;
         actionBtn.style.opacity = "0.5";
+        actionBtn.style.cursor = "not-allowed";
     }
 }
 
