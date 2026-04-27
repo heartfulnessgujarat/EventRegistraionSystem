@@ -1536,22 +1536,30 @@ document.getElementById('btn-back-to-profile').onclick = function() {
  * Handles: 8:00 (Firebase) and 08:00 (HTML)
  */
 
-
 function updateButtonState() {
     const actionBtn = document.getElementById('btn-next-action');
     if (!actionBtn) return;
 
-    const currentSection = document.querySelector('.form-section:not([style*="display: none"])');
-    if (!currentSection) return;
+    // 1. Get all fields currently visible in the active form area
+    const currentSectionEl = document.querySelector('.form-section:not([style*="display: none"])');
+    if (!currentSectionEl) return;
+    
+    // Get all input/select elements in this section
+    const visibleInputs = currentSectionEl.querySelectorAll('input, select, textarea');
+    if (visibleInputs.length === 0) return;
 
-    const sectionId = currentSection.id;
-    const sectionNum = sectionId.split('-')[1];
-
-    // 1. Get rules for this section
+    // 2. FETCH THE SECTION NAME DYNAMICALLY
+    // We look at the first field we see and ask Firebase: "What section do you say this belongs to?"
+    const firstFieldId = visibleInputs[0].id.replace('extra_', '');
     const rulesArray = Array.isArray(fieldRules) ? fieldRules : Object.values(fieldRules);
-    const sectionRules = rulesArray.filter(r => r.section_number.toString().toLowerCase().includes(sectionNum));
+    const sampleRule = rulesArray.find(r => r.field_id === firstFieldId);
+    
+    if (!sampleRule) return;
+    const dynamicSectionName = sampleRule.section_number; // This picks up "Section2", "SectionA", etc.
 
-    // 2. Identify the "Target" (Visible fields) and "Filled" fields
+    // 3. Filter all rules that match this exact Section Name
+    const sectionRules = rulesArray.filter(r => r.section_number === dynamicSectionName);
+
     let totalVisibleRequired = 0;
     let totalFilled = 0;
 
@@ -1559,6 +1567,7 @@ function updateButtonState() {
         const el = document.getElementById(rule.field_id) || document.getElementById('extra_' + rule.field_id);
         if (el) {
             const group = el.closest('.input-group');
+            // We only care about fields that are currently visible to the user
             const isVisible = group && group.style.display !== 'none';
 
             if (isVisible) {
@@ -1570,19 +1579,23 @@ function updateButtonState() {
         }
     });
 
-    // 3. Determine Button Text & State
-    // If it's Section 3, we only show "Confirm" if the LAST rule of the section is visible and filled
+    // 4. Update Button Text & Identity
+    // Check if the very last rule of this dynamic section is visible and filled
     const lastRule = sectionRules[sectionRules.length - 1];
     const lastEl = document.getElementById(lastRule.field_id) || document.getElementById('extra_' + lastRule.field_id);
-    const isLastFieldVisible = lastEl && lastEl.closest('.input-group') && lastEl.closest('.input-group').style.display !== 'none';
+    const isLastVisible = lastEl && lastEl.closest('.input-group') && lastEl.closest('.input-group').style.display !== 'none';
 
-    if (sectionNum === "3" && isLastFieldVisible) {
+    // If we are in the final section (Part 3) and at the last question
+    if (dynamicSectionName.includes("3") && isLastVisible) {
         actionBtn.innerText = "CONFIRM & REGISTER";
-    } else if (sectionNum === "3") {
-        actionBtn.innerText = "PROCEED"; // Keep as proceed until the waterfall finishes
+    } else {
+        // Dynamic labels based on your section names
+        if (dynamicSectionName.includes("1")) actionBtn.innerText = "PROCEED TO SELECTION";
+        else if (dynamicSectionName.includes("2")) actionBtn.innerText = "PROCEED TO TRAVEL DETAILS";
+        else actionBtn.innerText = "PROCEED";
     }
 
-    // 4. Unlock logic: All visible fields must be filled
+    // 5. Enable/Disable Logic
     if (totalVisibleRequired > 0 && totalFilled === totalVisibleRequired) {
         actionBtn.disabled = false;
         actionBtn.style.opacity = "1";
@@ -1594,110 +1607,50 @@ function updateButtonState() {
     }
 }
 
-
 /**
- * NEW FUNCTION: call this inside your 'Next' navigation logic
- * This ensures Section 3 questions "Reflow" if data already exists.
+ * REVISED: Dynamic Waterfall Reflow
+ * This function follows the EXACT spelling in your Firebase/Google Sheet.
+ * @param {string} sectionName - Pass the exact value from your Sheet (e.g., "Section3")
  */
-
-function reflowSectionSequence(sectionNum) {
+function reflowSectionSequence(sectionName) {
+    console.log("MERS: Reflowing sequence for section: " + sectionName);
+    
     const rulesArray = Array.isArray(fieldRules) ? fieldRules : Object.values(fieldRules);
-    const sectionRules = rulesArray.filter(r => r.section_number.toString().toLowerCase().includes(sectionNum));
+    
+    // Filter using exact match to your "section_number" column
+    const sectionRules = rulesArray.filter(r => r.section_number === sectionName);
 
     sectionRules.forEach((rule, index) => {
         const currentEl = document.getElementById(rule.field_id) || document.getElementById('extra_' + rule.field_id);
         
-        // If current field has a value, we must ensure the NEXT field is shown
+        // If current field exists and has a value...
         if (currentEl && currentEl.value.trim() !== "") {
+            
+            // Look for the next rule in this specific section's sequence
             const nextRule = sectionRules[index + 1];
-            if (nextRule && nextRule.edit_behavior.includes("after previous input")) {
-                const nextGroup = (document.getElementById(nextRule.field_id) || 
-                                   document.getElementById('extra_' + nextRule.field_id)).closest('.input-group');
-                if (nextGroup) {
-                    nextGroup.style.display = 'block';
+            
+            // If the next rule exists and is meant to be shown sequentially...
+            if (nextRule && nextRule.edit_behavior && nextRule.edit_behavior.includes("after previous input")) {
+                const nextFieldId = nextRule.field_id;
+                const nextEl = document.getElementById(nextFieldId) || document.getElementById('extra_' + nextFieldId);
+                
+                if (nextEl) {
+                    const nextGroup = nextEl.closest('.input-group');
+                    if (nextGroup) {
+                        // Reveal the field
+                        nextGroup.style.display = 'block';
+                    }
                 }
             }
         }
     });
-    // Re-check button state after revealing fields
-    updateButtonState();
-}
 
-
-  
-function oldreflowSectionSequence(sectionNum) {
-    const rulesArray = Array.isArray(fieldRules) ? fieldRules : Object.values(fieldRules);
-    const sectionRules = rulesArray.filter(r => r.section_id.toString() === sectionNum.toString());
-
-    sectionRules.forEach((rule, index) => {
-        const currentEl = document.getElementById(rule.field_id) || document.getElementById('extra_' + rule.field_id);
-        if (currentEl && currentEl.value.trim() !== "") {
-            // If this field has data, show the NEXT field in the sequence
-            const nextRule = sectionRules[index + 1];
-            if (nextRule) {
-                const nextGroup = (document.getElementById(nextRule.field_id) || 
-                                   document.getElementById('extra_' + nextRule.field_id)).closest('.input-group');
-                if (nextGroup) nextGroup.style.display = 'block';
-            }
-        }
-    });
+    // Final Step: Tell the button to re-evaluate now that fields are visible
     updateButtonState();
 }
 
 
 
-
-
-
-
-  
-  function oldupdateButtonState() {
-    const actionBtn = document.getElementById('btn-next-action');
-    if (!actionBtn) return;
-
-// --- EMERGENCY BYPASS START ---
-    // If the button text says "PROCEED", unlock it automatically so we can test Section 3
-    if (actionBtn.innerText.includes("PROCEED")) {
-        actionBtn.disabled = false;
-        actionBtn.style.opacity = "1";
-        actionBtn.style.cursor = "pointer";
-        return; // Exit the function here so it doesn't try to lock it again
-    }
-    // --- EMERGENCY BYPASS END ---
-
-
-
-
-    
-    // 1. Get ALL inputs in the dynamic area
-    const container = document.getElementById('dynamic-sections-content');
-    if (!container) return;
-
-    const inputs = Array.from(container.querySelectorAll('input, select, textarea'));
-
-    // 2. Filter for ones that are BOTH mandatory AND visible
-    const visibleMandatory = inputs.filter(i => {
-        const isMandatory = i.getAttribute('data-mandatory') === 'true';
-        // Improved visibility check:
-        const isVisible = i.type !== 'hidden' && i.style.display !== 'none' && i.closest('.form-group')?.style.display !== 'none';
-        return isMandatory && isVisible;
-    });
-
-    // 3. Logic: If there are visible mandatory fields, are they all filled?
-    const allFilled = visibleMandatory.length > 0 && visibleMandatory.every(i => i.value.trim() !== "");
-
-    if (allFilled) {
-        actionBtn.disabled = false;
-        actionBtn.style.opacity = "1";
-        actionBtn.style.cursor = "pointer";
-        actionBtn.classList.add('btn-primary'); // Ensures it looks active
-    } else {
-        actionBtn.disabled = true;
-        actionBtn.style.opacity = "0.5";
-        actionBtn.style.cursor = "not-allowed";
-        actionBtn.classList.remove('btn-primary');
-    }
-}
 
 
 
