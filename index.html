@@ -1510,47 +1510,58 @@ document.getElementById('btn-back-to-profile').onclick = function() {
  * Handles: 8:00 (Firebase) and 08:00 (HTML)
  */
 
-
-
-
- 
 function updateButtonState() {
     console.log("%c MERS DIAG: updateButtonState triggered ", "background: #222; color: #bada55");
     const actionBtn = document.getElementById('btn-next-action');
-    if (!actionBtn) { console.error("DIAG: actionBtn not found"); return; }
+    if (!actionBtn) return;
 
-    // 1. DYNAMIC SCAN: Find every input on the page that is actually visible to the user
-    const allInputs = document.querySelectorAll('input, select, textarea');
-    let activeInputs = Array.from(allInputs).filter(el => {
-        const group = el.closest('.input-group') || el.parentElement;
-        return group && group.style.display !== 'none';
-    });
-
-    if (activeInputs.length === 0) { 
-        console.warn("DIAG: No visible inputs found on the entire page yet."); 
-        return; 
-    }
-
-    // 2. FETCH THE SECTION CONTEXT FROM THE DATA
-    // We look at the first visible field and ask the rules: "What section is this?"
-    const firstFieldId = activeInputs[0].id.replace('extra_', '');
-    const rulesArray = Array.isArray(fieldRules) ? fieldRules : Object.values(fieldRules);
-    const sampleRule = rulesArray.find(r => r.field_id === firstFieldId);
-    
-    if (!sampleRule) {
-        console.error("DIAG: No Firebase rule found for visible field: " + firstFieldId);
+    // 1. IMPROVED SCAN: Find the ACTUAL active section container
+    const activeSection = document.querySelector('.form-section:not([style*="display: none"])');
+    if (!activeSection) {
+        console.warn("DIAG: No visible section container found.");
         return;
     }
 
-    // This is the exact text from your "section_number" column (e.g., "Section1", "SectionA")
-    const dynamicSectionName = sampleRule.section_number; 
-    const sectionRules = rulesArray.filter(r => r.section_number === dynamicSectionName);
+    // Only get inputs INSIDE this specific active section
+    const visibleInputs = activeSection.querySelectorAll('input, select, textarea');
+    
+    // Filter out any hidden ones or standard profile fields if they aren't part of the rules
+    const activeInputs = Array.from(visibleInputs).filter(el => {
+        const group = el.closest('.input-group');
+        return group && group.style.display !== 'none';
+    });
 
+    if (activeInputs.length === 0) {
+        console.warn("DIAG: No visible inputs found in this section.");
+        return;
+    }
+
+    // 2. FETCH THE SECTION CONTEXT
+    // We search through the active inputs to find one that exists in our fieldRules
+    const rulesArray = Array.isArray(fieldRules) ? fieldRules : Object.values(fieldRules);
+    let sampleRule = null;
+    let dynamicSectionName = "";
+
+    for (let input of activeInputs) {
+        const cleanId = input.id.replace('extra_', '');
+        sampleRule = rulesArray.find(r => r.field_id === cleanId);
+        if (sampleRule) {
+            dynamicSectionName = sampleRule.section_number;
+            break; 
+        }
+    }
+
+    if (!dynamicSectionName) {
+        console.error("DIAG: Could not determine Section Name from visible fields.");
+        return;
+    }
+
+    // 3. FILTER & VALIDATE
+    const sectionRules = rulesArray.filter(r => r.section_number === dynamicSectionName);
     let diagData = []; 
     let totalVisibleRequired = 0;
     let totalFilled = 0;
 
-    // 3. VALIDATE BASED ON THE DYNAMIC SECTION RULES
     sectionRules.forEach(rule => {
         const el = document.getElementById(rule.field_id) || document.getElementById('extra_' + rule.field_id);
         const group = el ? el.closest('.input-group') : null;
@@ -1565,22 +1576,18 @@ function updateButtonState() {
         diagData.push({
             FieldID: rule.field_id,
             IsVisible: isVisible,
-            Value: val,
-            Required: isVisible ? "YES" : "NO"
+            Value: val
         });
     });
 
-    // X-RAY REPORT
-    console.log(`--- MERS X-RAY REPORT: [${dynamicSectionName}] ---`);
+    console.log(`--- MERS X-RAY: [${dynamicSectionName}] ---`);
     console.table(diagData);
-    console.log(`Summary for ${dynamicSectionName}: Need ${totalVisibleRequired} | Have ${totalFilled}`);
 
     // 4. DYNAMIC BUTTON TEXT
     const lastRule = sectionRules[sectionRules.length - 1];
     const lastEl = document.getElementById(lastRule.field_id) || document.getElementById('extra_' + lastRule.field_id);
     const isLastVisible = lastEl && lastEl.closest('.input-group') && lastEl.closest('.input-group').style.display !== 'none';
 
-    // Button label logic based on the text found in your configuration
     if (dynamicSectionName.toLowerCase().includes("3") && isLastVisible) {
         actionBtn.innerText = "CONFIRM & REGISTER";
     } else if (dynamicSectionName.toLowerCase().includes("1")) {
@@ -1591,17 +1598,17 @@ function updateButtonState() {
         actionBtn.innerText = "PROCEED";
     }
 
-    // 5. UNLOCK LOGIC
+    // 5. UNLOCK
     if (totalVisibleRequired > 0 && totalFilled === totalVisibleRequired) {
         actionBtn.disabled = false;
         actionBtn.style.opacity = "1";
-        actionBtn.style.cursor = "pointer";
     } else {
         actionBtn.disabled = true;
         actionBtn.style.opacity = "0.5";
-        actionBtn.style.cursor = "not-allowed";
     }
 }
+
+
 
 /**
  * REVISED: Dynamic Waterfall Reflow
