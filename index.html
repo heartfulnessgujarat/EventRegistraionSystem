@@ -1591,16 +1591,29 @@ function validateField(id, value, rule) {
         }
     }
 
-    // --- SMART ARRIVAL TIME (T SHOULD BE <EST) ---
+
+
+// --- SMART ARRIVAL TIME (T SHOULD BE <EST) ---
     if (rule.includes("T SHOULD BE <EST")) {
         const dateEl = document.getElementById('arrival_date') || document.getElementById('extra_arrival_date');
         const userArrivalDate = dateEl ? dateEl.value : "";
-        
-        if (userArrivalDate === eventConfig.event_start_date) {
-            const isoInputTime = translateToISO(val);
-            const isoConfigTime = translateToISO(eventConfig.event_start_time);
-            
-            if (isoInputTime < isoConfigTime) {
+
+        // Normalize Dates to ISO (YYYY-MM-DD) for accurate comparison
+        const userDateISO = translateToISO(userArrivalDate);
+        const eventDateISO = translateToISO(eventConfig.event_start_date);
+
+        // SCENARIO B: If Arrival Date is earlier than Event Start Date, it is ALWAYS VALID.
+        if (userDateISO < eventDateISO) {
+            return true; 
+        }
+
+        // SCENARIO A: If Arrival Date is the SAME as Event Start Date, check the Time.
+        if (userDateISO === eventDateISO) {
+            const isoInputTime = translateToISO(val); // User entered time
+            const isoConfigTime = translateToISO(eventConfig.event_start_time); // Config start time
+
+            // Trigger error only if Arrival Time is NOT earlier than Start Time
+            if (isoInputTime >= isoConfigTime) {
                 alert("❌ " + errorMsg);
                 let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
                 if (targetBox) targetBox.value = "";
@@ -1610,6 +1623,12 @@ function validateField(id, value, rule) {
         }
     }
 
+
+
+
+
+  
+    
     // --- DEPARTURE DATE (EED) - UNTOUCHED ---
     if (rule.includes("EED")) {
         const isoInput = translateToISO(val);
