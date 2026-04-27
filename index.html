@@ -1511,91 +1511,91 @@ document.getElementById('btn-back-to-profile').onclick = function() {
  */
 
 
-
-  function updateButtonState() {
+function updateButtonState() {
     console.log("%c MERS DIAG: updateButtonState triggered ", "background: #222; color: #bada55");
     const actionBtn = document.getElementById('btn-next-action');
     if (!actionBtn) return;
 
-    // 1. SCAN ALL INPUTS (No Section Class Required)
     const allInputs = document.querySelectorAll('input, select, textarea');
     const rulesArray = Array.isArray(fieldRules) ? fieldRules : Object.values(fieldRules);
     
     let dynamicSectionName = "";
-    let activeInputsInRules = [];
-
-    // Identify which section we are currently dealing with based on visible fields
-    allInputs.forEach(input => {
-        const group = input.closest('.input-group');
-        if (group && group.style.display !== 'none') {
-            const cleanId = input.id.replace('extra_', '');
-            const rule = rulesArray.find(r => r.field_id === cleanId);
-            if (rule) {
-                activeInputsInRules.push({ element: input, rule: rule });
-                if (!dynamicSectionName) dynamicSectionName = rule.section_number;
-            }
-        }
-    });
-
-    if (!dynamicSectionName) {
-        // Fallback for Section 1 (Profile) which has no extra rules
-        console.log("DIAG: No dynamic rules found on screen. Checking Section 1.");
-        const currentNum = window.currentSection || 1;
-        if (currentNum === 1) {
-            actionBtn.disabled = false;
-            actionBtn.style.opacity = "1";
-            actionBtn.innerText = "PROCEED TO SELECTION";
-            return;
-        }
-    }
-
-    // 2. VALIDATE ONLY THE RULES FOR THE DETECTED SECTION
-    const sectionRules = rulesArray.filter(r => r.section_number === dynamicSectionName);
     let totalVisibleRequired = 0;
     let totalFilled = 0;
     let diagData = [];
 
-    sectionRules.forEach(rule => {
-        const el = document.getElementById(rule.field_id) || document.getElementById('extra_' + rule.field_id);
-        if (el) {
-            const group = el.closest('.input-group');
-            const isVisible = group && group.style.display !== 'none';
+    // 1. Identify the current section using the "Hybrid Bridge"
+    for (let input of allInputs) {
+        const group = input.closest('.form-group') || input.closest('.input-group');
+        const isVisible = group && group.style.display !== 'none';
+        
+        if (isVisible) {
+            // BRIDGE: Remove 'extra_' or 'inp-' just to find the rule match
+            const cleanId = input.id.replace('extra_', '').replace('inp-', '');
+            const rule = rulesArray.find(r => r.field_id === cleanId);
             
-            if (isVisible) {
-                totalVisibleRequired++;
-                if (el.value.trim() !== "") totalFilled++;
+            if (rule) {
+                // Once we find one rule, we know which section we are validating
+                if (!dynamicSectionName) dynamicSectionName = rule.section_number;
+                
+                // Only validate fields for the ACTIVE section
+                if (rule.section_number === dynamicSectionName) {
+                    totalVisibleRequired++;
+                    const val = input.value.trim();
+                    if (val !== "" && val !== "-- Select --") {
+                        totalFilled++;
+                    }
+                    diagData.push({ 
+                        ID: input.id, 
+                        RuleMatch: rule.field_id, 
+                        Value: val 
+                    });
+                }
             }
-            diagData.push({ Field: rule.field_id, Visible: isVisible, Value: el.value.trim() });
         }
-    });
+    }
 
-    console.log(`--- MERS X-RAY: [${dynamicSectionName}] ---`);
-    console.table(diagData);
+    // 2. Log the "X-RAY" for debugging
+    if (diagData.length > 0) {
+        console.log(`--- MERS X-RAY: [${dynamicSectionName}] ---`);
+        console.table(diagData);
+    }
 
-    // 3. DYNAMIC BUTTON TEXT & UNLOCK
-    const isSection3 = dynamicSectionName && dynamicSectionName.toLowerCase().includes("3");
-    const lastRule = sectionRules[sectionRules.length - 1];
-    const lastEl = lastRule ? (document.getElementById(lastRule.field_id) || document.getElementById('extra_' + lastRule.field_id)) : null;
-    const isLastVisible = lastEl && lastEl.closest('.input-group')?.style.display !== 'none';
-
-    if (isSection3 && isLastVisible) {
+    // 3. Button Text Update
+    const currentNum = window.currentSection || 1;
+    if (dynamicSectionName === "Section3" || currentNum === 3) {
         actionBtn.innerText = "CONFIRM & REGISTER";
-    } else if (dynamicSectionName.toLowerCase().includes("2")) {
+    } else if (dynamicSectionName === "Section2" || currentNum === 2) {
         actionBtn.innerText = "PROCEED TO TRAVEL DETAILS";
     } else {
-        actionBtn.innerText = "PROCEED";
+        actionBtn.innerText = "PROCEED TO SELECTION";
     }
 
-    if (totalVisibleRequired > 0 && totalFilled === totalVisibleRequired) {
-        actionBtn.disabled = false;
-        actionBtn.style.opacity = "1";
-        actionBtn.style.cursor = "pointer";
+    // 4. THE UNLOCK LOGIC
+    // If we are in a section with dynamic rules (Sect 2 or 3)
+    if (totalVisibleRequired > 0) {
+        if (totalFilled === totalVisibleRequired) {
+            actionBtn.disabled = false;
+            actionBtn.style.opacity = "1";
+            actionBtn.style.cursor = "pointer";
+        } else {
+            actionBtn.disabled = true;
+            actionBtn.style.opacity = "0.5";
+            actionBtn.style.cursor = "not-allowed";
+        }
     } else {
-        actionBtn.disabled = true;
-        actionBtn.style.opacity = "0.5";
-        actionBtn.style.cursor = "not-allowed";
+        // Fallback for Section 1 (Profile)
+        if (currentNum === 1) {
+            actionBtn.disabled = false;
+            actionBtn.style.opacity = "1";
+        } else {
+            // Safety lock if we are lost between sections
+            actionBtn.disabled = true;
+            actionBtn.style.opacity = "0.5";
+        }
     }
 }
+
 
 
 /**
