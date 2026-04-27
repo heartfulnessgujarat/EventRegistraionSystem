@@ -1489,7 +1489,77 @@ document.getElementById('btn-back-to-profile').onclick = function() {
  * Handles: 8:00 (Firebase) and 08:00 (HTML)
  */
 
-  function updateButtonState() {
+function updateButtonState() {
+    const actionBtn = document.getElementById('btn-next-action');
+    if (!actionBtn) return;
+
+    const currentSection = document.querySelector('.form-section:not([style*="display: none"])');
+    if (!currentSection) return;
+
+    const sectionId = currentSection.id; // e.g., 'section-1', 'section-2', 'section-3'
+    const sectionNum = sectionId.split('-')[1];
+
+    // 1. Get the list of rules for the CURRENT section only from our config
+    const rulesArray = Array.isArray(fieldRules) ? fieldRules : Object.values(fieldRules);
+    const sectionRules = rulesArray.filter(r => r.section_id.toString() === sectionNum);
+
+    // 2. Count how many of these configured fields are actually visible and valid
+    let validCount = 0;
+    sectionRules.forEach(rule => {
+        const el = document.getElementById(rule.field_id) || document.getElementById('extra_' + rule.field_id);
+        if (el) {
+            // Check if the field is visible and has a value
+            const isVisible = el.closest('.input-group') && el.closest('.input-group').style.display !== 'none';
+            if (isVisible && el.value.trim() !== "") {
+                validCount++;
+            }
+        }
+    });
+
+    // 3. Logic Gate: Compare valid inputs against total rules for this section
+    // This removes the "Emergency Bypass" and forces real validation
+    if (validCount === sectionRules.length) {
+        actionBtn.disabled = false;
+        actionBtn.style.opacity = "1";
+        actionBtn.style.cursor = "pointer";
+    } else {
+        actionBtn.disabled = true;
+        actionBtn.style.opacity = "0.5";
+        actionBtn.style.cursor = "not-allowed";
+    }
+}
+
+/**
+ * NEW FUNCTION: call this inside your 'Next' navigation logic
+ * This ensures Section 3 questions "Reflow" if data already exists.
+ */
+function reflowSectionSequence(sectionNum) {
+    const rulesArray = Array.isArray(fieldRules) ? fieldRules : Object.values(fieldRules);
+    const sectionRules = rulesArray.filter(r => r.section_id.toString() === sectionNum.toString());
+
+    sectionRules.forEach((rule, index) => {
+        const currentEl = document.getElementById(rule.field_id) || document.getElementById('extra_' + rule.field_id);
+        if (currentEl && currentEl.value.trim() !== "") {
+            // If this field has data, show the NEXT field in the sequence
+            const nextRule = sectionRules[index + 1];
+            if (nextRule) {
+                const nextGroup = (document.getElementById(nextRule.field_id) || 
+                                   document.getElementById('extra_' + nextRule.field_id)).closest('.input-group');
+                if (nextGroup) nextGroup.style.display = 'block';
+            }
+        }
+    });
+    updateButtonState();
+}
+
+
+
+
+
+
+
+  
+  function oldupdateButtonState() {
     const actionBtn = document.getElementById('btn-next-action');
     if (!actionBtn) return;
 
