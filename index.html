@@ -1510,32 +1510,31 @@ document.getElementById('btn-back-to-profile').onclick = function() {
  * Handles: 8:00 (Firebase) and 08:00 (HTML)
  */
 
+
 function updateButtonState() {
+    console.log("%c MERS DIAG: updateButtonState triggered ", "background: #222; color: #bada55");
     const actionBtn = document.getElementById('btn-next-action');
-    if (!actionBtn) return;
+    if (!actionBtn) { console.error("DIAG: actionBtn not found"); return; }
 
     const currentSectionEl = document.querySelector('.form-section:not([style*="display: none"])');
-    if (!currentSectionEl) return;
+    if (!currentSectionEl) { console.warn("DIAG: No visible form section found"); return; }
     
     const visibleInputs = currentSectionEl.querySelectorAll('input, select, textarea');
-    if (visibleInputs.length === 0) {
-        console.warn("MERS DIAG: No inputs found in current section HTML.");
-        return;
-    }
+    if (visibleInputs.length === 0) { console.warn("DIAG: No inputs in HTML"); return; }
 
     const firstFieldId = visibleInputs[0].id.replace('extra_', '');
     const rulesArray = Array.isArray(fieldRules) ? fieldRules : Object.values(fieldRules);
     const sampleRule = rulesArray.find(r => r.field_id === firstFieldId);
     
     if (!sampleRule) {
-        console.error("MERS DIAG: Could not find Firebase rule for field: " + firstFieldId);
+        console.error("DIAG: No Firebase rule found for field ID: " + firstFieldId);
         return;
     }
 
-    const dynamicSectionName = sampleRule.section_number;
+    const dynamicSectionName = sampleRule.section_number; 
     const sectionRules = rulesArray.filter(r => r.section_number === dynamicSectionName);
 
-    let diagData = []; // For the X-Ray table
+    let diagData = []; 
     let totalVisibleRequired = 0;
     let totalFilled = 0;
 
@@ -1543,28 +1542,27 @@ function updateButtonState() {
         const el = document.getElementById(rule.field_id) || document.getElementById('extra_' + rule.field_id);
         const group = el ? el.closest('.input-group') : null;
         const isVisible = group && group.style.display !== 'none';
-        const val = el ? el.value.trim() : "N/A";
+        const val = el ? el.value.trim() : "NOT_FOUND";
 
         if (isVisible) {
             totalVisibleRequired++;
             if (val !== "") totalFilled++;
         }
 
-        // Add to our diagnostic report
         diagData.push({
-            Field: rule.field_id,
-            Visible: isVisible,
+            FieldID: rule.field_id,
+            IsVisible: isVisible,
             Value: val,
             Required: isVisible ? "YES" : "NO"
         });
     });
 
-    // PRINT THE X-RAY REPORT
-    console.log(`--- MERS X-RAY: ${dynamicSectionName} ---`);
+    // THIS TABLE IS THE KEY: Look for it in your console (F12)
+    console.log(`--- MERS X-RAY REPORT: ${dynamicSectionName} ---`);
     console.table(diagData);
-    console.log(`Summary: Visible Required (${totalVisibleRequired}) | Total Filled (${totalFilled})`);
+    console.log(`Summary: Need ${totalVisibleRequired} | Have ${totalFilled}`);
 
-    // --- Button Text Logic ---
+    // Update Text
     const lastRule = sectionRules[sectionRules.length - 1];
     const lastEl = document.getElementById(lastRule.field_id) || document.getElementById('extra_' + lastRule.field_id);
     const isLastVisible = lastEl && lastEl.closest('.input-group') && lastEl.closest('.input-group').style.display !== 'none';
@@ -1577,7 +1575,6 @@ function updateButtonState() {
         else actionBtn.innerText = "PROCEED";
     }
 
-    // Unlock logic
     if (totalVisibleRequired > 0 && totalFilled === totalVisibleRequired) {
         actionBtn.disabled = false;
         actionBtn.style.opacity = "1";
@@ -1586,6 +1583,7 @@ function updateButtonState() {
         actionBtn.style.opacity = "0.5";
     }
 }
+
 
 
 
