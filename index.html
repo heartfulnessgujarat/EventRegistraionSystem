@@ -1517,32 +1517,42 @@ function updateButtonState() {
 
     // 1. DYNAMIC SCAN: Find all section containers
     const allSections = document.querySelectorAll('.form-section');
-    const currentIdx = (window.currentSection || 1) - 1; // 0-based index
-    const activeSection = allSections[currentIdx];
+    const currentIdx = (window.currentSection || 1) - 1; 
+    
+    // Use 'let' so we can re-assign if the first attempt fails (fixes the crash)
+    let activeSection = allSections[currentIdx];
 
     if (!activeSection) {
-        console.warn("DIAG: Could not find .form-section at index: " + currentIdx);
-        // Fallback: Just look for the first one that isn't hidden
+        console.warn("DIAG: Index-based scan failed. Trying visibility-based fallback...");
         activeSection = document.querySelector('.form-section:not([style*="display: none"])');
     }
 
     if (!activeSection) {
-        console.error("DIAG: No active section found. Check your HTML class names.");
+        console.error("DIAG: No active section found. The logic cannot proceed.");
         return;
     }
 
-    // 2. FETCH SECTION NAME FROM THE FIRST INPUT IN THIS CONTAINER
+    // 2. FETCH SECTION NAME FROM THE DATA (No Hard-Coding)
     const rulesArray = Array.isArray(fieldRules) ? fieldRules : Object.values(fieldRules);
-    const firstInput = activeSection.querySelector('input, select, textarea');
     
+    // Find the first field in this section that exists in our rulebook
+    const visibleInputs = activeSection.querySelectorAll('input, select, textarea');
     let dynamicSectionName = "";
-    if (firstInput) {
-        const cleanId = firstInput.id.replace('extra_', '');
+    
+    for (let input of visibleInputs) {
+        const cleanId = input.id.replace('extra_', '');
         const rule = rulesArray.find(r => r.field_id === cleanId);
-        if (rule) dynamicSectionName = rule.section_number;
+        if (rule) {
+            dynamicSectionName = rule.section_number;
+            break; 
+        }
     }
 
-    // 3. VALIDATE RULES
+    if (!dynamicSectionName) {
+        console.warn("DIAG: Section name not found. Defaulting check.");
+    }
+
+    // 3. VALIDATE RULES FOR THIS SECTION
     const sectionRules = rulesArray.filter(r => r.section_number === dynamicSectionName);
     let totalVisibleRequired = 0;
     let totalFilled = 0;
@@ -1553,26 +1563,34 @@ function updateButtonState() {
         if (el) {
             const group = el.closest('.input-group');
             const isVisible = group && group.style.display !== 'none';
+            
             if (isVisible) {
                 totalVisibleRequired++;
-                if (el.value.trim() !== "") totalFilled++;
+                if (el.value.trim() !== "") {
+                    totalFilled++;
+                }
             }
-            diagData.push({ Field: rule.field_id, Visible: isVisible, Value: el.value.trim() });
+            diagData.push({ 
+                Field: rule.field_id, 
+                Visible: isVisible, 
+                Value: el.value.trim() 
+            });
         }
     });
 
+    // PRINT THE X-RAY TABLE
     console.log(`--- MERS X-RAY: [${dynamicSectionName}] ---`);
     console.table(diagData);
 
-    // 4. BUTTON TEXT (No hard-coding section names)
+    // 4. DYNAMIC BUTTON TEXT
     const isSection3 = dynamicSectionName && dynamicSectionName.toLowerCase().includes("3");
     const lastRule = sectionRules[sectionRules.length - 1];
-    const isLastVisible = lastRule && (document.getElementById('extra_' + lastRule.field_id)?.closest('.input-group')?.style.display !== 'none');
+    const lastEl = lastRule ? (document.getElementById(lastRule.field_id) || document.getElementById('extra_' + lastRule.field_id)) : null;
+    const isLastVisible = lastEl && lastEl.closest('.input-group') && lastEl.closest('.input-group').style.display !== 'none';
 
     if (isSection3 && isLastVisible) {
         actionBtn.innerText = "CONFIRM & REGISTER";
     } else {
-        // Fallback to the standard transition labels
         const currentNum = window.currentSection || 1;
         if (currentNum === 1) actionBtn.innerText = "PROCEED TO SELECTION";
         else if (currentNum === 2) actionBtn.innerText = "PROCEED TO TRAVEL DETAILS";
@@ -1583,14 +1601,19 @@ function updateButtonState() {
     if (totalVisibleRequired > 0 && totalFilled === totalVisibleRequired) {
         actionBtn.disabled = false;
         actionBtn.style.opacity = "1";
+        actionBtn.style.cursor = "pointer";
     } else if (totalVisibleRequired === 0 && (window.currentSection || 1) === 1) {
+        // Special case for Profile Section
         actionBtn.disabled = false;
         actionBtn.style.opacity = "1";
     } else {
         actionBtn.disabled = true;
         actionBtn.style.opacity = "0.5";
+        actionBtn.style.cursor = "not-allowed";
     }
 }
+
+
 
 
 
