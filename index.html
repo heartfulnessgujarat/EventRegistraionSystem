@@ -808,7 +808,7 @@ function checkAllValidations() {
     if (regBtn) regBtn.disabled = !allValid;
   }
 
-// 1. THE PAGE TURNER: Moves between Section 1, 2, and 3
+  // 1. THE PAGE TURNER: Moves between Section 1, 2, and 3
 async function handleSectionNavigation() {
     console.log("%c MERS PING 3: handleSectionNavigation() was just called!", "color: blue; font-weight: bold;");
     try {
@@ -822,8 +822,13 @@ async function handleSectionNavigation() {
             // Move to Section 2
             window.currentSection = 2;
             await buildExtraSections(2);
-            // Ensure button state is calculated based on Section 2 visibility
-            updateButtonState(); 
+            
+            // Reflow Section 2 based on exact Field_Rule naming
+            if (typeof reflowSectionSequence === "function") {
+                reflowSectionSequence("Section2"); 
+            } else {
+                updateButtonState();
+            }
 
         } else if (window.currentSection === 2) {
             // Move to Section 3
@@ -832,8 +837,9 @@ async function handleSectionNavigation() {
             
             // --- WATERFALL REFLOW TRIGGER ---
             // Recovers visibility of previously answered questions in Section 3
+            // Using exact spelling "Section3" from your Field_Rule configuration
             if (typeof reflowSectionSequence === "function") {
-                reflowSectionSequence(3);
+                reflowSectionSequence("Section3"); 
             } else {
                 updateButtonState();
             }
@@ -852,39 +858,7 @@ async function handleSectionNavigation() {
         document.getElementById('app').style.display = 'block';
     }
 }
-
-
   
-
-// 1. THE PAGE TURNER: Moves between Section 1, 2, and 3
-async function oldhandleSectionNavigation() {
-
-  console.log("%c MERS PING 3: handleSectionNavigation() was just called!", "color: blue; font-weight: bold;");
-    try {
-        if (typeof currentSection === 'undefined') window.currentSection = 1;
-        
-        document.getElementById('app').style.display = 'none';
-        document.getElementById('processing-overlay').style.display = 'block';
-
-        if (window.currentSection === 1) {
-            window.currentSection = 2;
-            await buildExtraSections(2); 
-        } else if (window.currentSection === 2) {
-            window.currentSection = 3;
-            await buildExtraSections(3);
-        }
-
-        document.getElementById('processing-overlay').style.display = 'none';
-        document.getElementById('app').style.display = 'block';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-
-    } catch (error) {
-        console.error("MERS Navigation Error:", error);
-        document.getElementById('processing-overlay').style.display = 'none';
-        document.getElementById('app').style.display = 'block';
-    }
-}
-
 // 2. THE SACRED ENGINE: The April 10th logic, now firing at the very end
 
 
