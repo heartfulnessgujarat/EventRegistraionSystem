@@ -1641,17 +1641,28 @@ function validateField(id, value, rule) {
             return false;
         }
     }
-
-    // --- SMART DEPARTURE TIME (T SHOULD BE >EET) ---
+// --- SMART DEPARTURE TIME (T SHOULD BE >EET) ---
     if (rule.includes("T SHOULD BE >EET")) {
         const dateEl = document.getElementById('depart_date') || document.getElementById('extra_depart_date');
         const userDepartDate = dateEl ? dateEl.value : "";
 
-        if (userDepartDate === eventConfig.event_end_date) {
-            const isoInputTime = translateToISO(val);
-            const isoConfigTime = translateToISO(eventConfig.event_end_time);
+        // Normalize Dates for comparison
+        const userDateISO = translateToISO(userDepartDate);
+        const eventEndDateISO = translateToISO(eventConfig.event_end_date);
 
-            if (isoInputTime > isoConfigTime) {
+        // SCENARIO B: If Departure Date is LATER than Event End Date, it is ALWAYS VALID.
+        if (userDateISO > eventEndDateISO) {
+            return true;
+        }
+
+        // SCENARIO A: If Departure Date is the SAME as Event End Date, check the Time.
+        if (userDateISO === eventEndDateISO) {
+            const isoInputTime = translateToISO(val); // User entered departure time
+            const isoConfigTime = translateToISO(eventConfig.event_end_time); // Config end time
+
+            // Trigger error if Departure Time is NOT later than Event End Time
+            // (i.e., if they try to leave before or exactly at the end time)
+            if (isoInputTime <= isoConfigTime) {
                 alert("❌ " + errorMsg);
                 let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
                 if (targetBox) targetBox.value = "";
@@ -1661,6 +1672,9 @@ function validateField(id, value, rule) {
         }
     }
 
+
+
+  
     return true;
 }
 
