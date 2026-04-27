@@ -1511,26 +1511,38 @@ document.getElementById('btn-back-to-profile').onclick = function() {
  */
 
 
+
+
+ 
 function updateButtonState() {
     console.log("%c MERS DIAG: updateButtonState triggered ", "background: #222; color: #bada55");
     const actionBtn = document.getElementById('btn-next-action');
     if (!actionBtn) { console.error("DIAG: actionBtn not found"); return; }
 
-    const currentSectionEl = document.querySelector('.form-section:not([style*="display: none"])');
-    if (!currentSectionEl) { console.warn("DIAG: No visible form section found"); return; }
-    
-    const visibleInputs = currentSectionEl.querySelectorAll('input, select, textarea');
-    if (visibleInputs.length === 0) { console.warn("DIAG: No inputs in HTML"); return; }
+    // 1. DYNAMIC SCAN: Find every input on the page that is actually visible to the user
+    const allInputs = document.querySelectorAll('input, select, textarea');
+    let activeInputs = Array.from(allInputs).filter(el => {
+        const group = el.closest('.input-group') || el.parentElement;
+        return group && group.style.display !== 'none';
+    });
 
-    const firstFieldId = visibleInputs[0].id.replace('extra_', '');
+    if (activeInputs.length === 0) { 
+        console.warn("DIAG: No visible inputs found on the entire page yet."); 
+        return; 
+    }
+
+    // 2. FETCH THE SECTION CONTEXT FROM THE DATA
+    // We look at the first visible field and ask the rules: "What section is this?"
+    const firstFieldId = activeInputs[0].id.replace('extra_', '');
     const rulesArray = Array.isArray(fieldRules) ? fieldRules : Object.values(fieldRules);
     const sampleRule = rulesArray.find(r => r.field_id === firstFieldId);
     
     if (!sampleRule) {
-        console.error("DIAG: No Firebase rule found for field ID: " + firstFieldId);
+        console.error("DIAG: No Firebase rule found for visible field: " + firstFieldId);
         return;
     }
 
+    // This is the exact text from your "section_number" column (e.g., "Section1", "SectionA")
     const dynamicSectionName = sampleRule.section_number; 
     const sectionRules = rulesArray.filter(r => r.section_number === dynamicSectionName);
 
@@ -1538,11 +1550,12 @@ function updateButtonState() {
     let totalVisibleRequired = 0;
     let totalFilled = 0;
 
+    // 3. VALIDATE BASED ON THE DYNAMIC SECTION RULES
     sectionRules.forEach(rule => {
         const el = document.getElementById(rule.field_id) || document.getElementById('extra_' + rule.field_id);
         const group = el ? el.closest('.input-group') : null;
         const isVisible = group && group.style.display !== 'none';
-        const val = el ? el.value.trim() : "NOT_FOUND";
+        const val = el ? el.value.trim() : "";
 
         if (isVisible) {
             totalVisibleRequired++;
@@ -1557,36 +1570,38 @@ function updateButtonState() {
         });
     });
 
-    // THIS TABLE IS THE KEY: Look for it in your console (F12)
-    console.log(`--- MERS X-RAY REPORT: ${dynamicSectionName} ---`);
+    // X-RAY REPORT
+    console.log(`--- MERS X-RAY REPORT: [${dynamicSectionName}] ---`);
     console.table(diagData);
-    console.log(`Summary: Need ${totalVisibleRequired} | Have ${totalFilled}`);
+    console.log(`Summary for ${dynamicSectionName}: Need ${totalVisibleRequired} | Have ${totalFilled}`);
 
-    // Update Text
+    // 4. DYNAMIC BUTTON TEXT
     const lastRule = sectionRules[sectionRules.length - 1];
     const lastEl = document.getElementById(lastRule.field_id) || document.getElementById('extra_' + lastRule.field_id);
     const isLastVisible = lastEl && lastEl.closest('.input-group') && lastEl.closest('.input-group').style.display !== 'none';
 
-    if (dynamicSectionName.includes("3") && isLastVisible) {
+    // Button label logic based on the text found in your configuration
+    if (dynamicSectionName.toLowerCase().includes("3") && isLastVisible) {
         actionBtn.innerText = "CONFIRM & REGISTER";
+    } else if (dynamicSectionName.toLowerCase().includes("1")) {
+        actionBtn.innerText = "PROCEED TO SELECTION";
+    } else if (dynamicSectionName.toLowerCase().includes("2")) {
+        actionBtn.innerText = "PROCEED TO TRAVEL DETAILS";
     } else {
-        if (dynamicSectionName.includes("1")) actionBtn.innerText = "PROCEED TO SELECTION";
-        else if (dynamicSectionName.includes("2")) actionBtn.innerText = "PROCEED TO TRAVEL DETAILS";
-        else actionBtn.innerText = "PROCEED";
+        actionBtn.innerText = "PROCEED";
     }
 
+    // 5. UNLOCK LOGIC
     if (totalVisibleRequired > 0 && totalFilled === totalVisibleRequired) {
         actionBtn.disabled = false;
         actionBtn.style.opacity = "1";
+        actionBtn.style.cursor = "pointer";
     } else {
         actionBtn.disabled = true;
         actionBtn.style.opacity = "0.5";
+        actionBtn.style.cursor = "not-allowed";
     }
 }
-
-
-
-
 
 /**
  * REVISED: Dynamic Waterfall Reflow
