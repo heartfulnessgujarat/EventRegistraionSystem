@@ -1064,69 +1064,72 @@ function manualFormatCheck() {
   }
 }
 
-
   async function loadExistingData(regId, mode) {
+    console.log("--- MERS DIAGNOSTIC START ---");
     try {
-        console.log("MERS: Fetching data for " + regId);
+        // 1. Check Database Connection
+        console.log("DIAG 1: Fetching Firebase path: registrations/" + regId);
         const snap = await db.ref('registrations/' + regId).once('value');
         const data = snap.val();
 
         if (!data) {
+            console.error("DIAG ERROR: No data found in Firebase for this ID!");
             alert("Registration not found.");
             return;
         }
+        console.log("DIAG 2: Data received from Firebase:", data);
 
         originalData = data;
         profileSnapshotForScript = encodeURIComponent(JSON.stringify(data));
 
         if (mode === 'edit') {
-            // 1. Draw the Section 1 HTML first
+            // 2. Check Form Rendering
+            console.log("DIAG 3: Calling renderForm()...");
             renderForm(); 
+            
+            const testField = document.querySelector('input[id^="inp-"]');
+            console.log("DIAG 4: First Profile Field found in HTML:", testField ? testField.id : "NONE FOUND");
 
-            // 2. FILL THE DATA (Surgical approach for Section 1)
-            // We use the 'inp-' prefix because that is what renderForm creates
+            // 3. Check Data Injection
+            console.log("DIAG 5: Starting Field Loop...");
             fieldRules.forEach(r => {
                 const el = document.getElementById(`inp-${r.field_id}`);
-                if (el && data[r.field_id]) {
-                    el.value = data[r.field_id];
-                    console.log("MERS: Loaded value into " + r.field_id);
-                    
-                    // Lock Name and Email for security
-                    if (r.field_id === 'full_name' || r.field_id === 'email') {
-                        el.disabled = true;
+                if (el) {
+                    console.log(`DIAG 6: Target [${r.field_id}] exists. Setting value to: ${data[r.field_id]}`);
+                    el.value = data[r.field_id] || "";
+                    if (r.field_id === 'full_name') el.disabled = true;
+                } else {
+                    // This tells us if Section 1 fields are missing or named differently
+                    if (['full_name', 'mobile', 'email'].includes(r.field_id)) {
+                        console.warn(`DIAG WARNING: Core field [${r.field_id}] NOT FOUND in HTML.`);
                     }
                 }
             });
 
-            // 3. SHOW THE SCREEN
-            document.getElementById('loading-init').style.display = 'none';
-            document.getElementById('form-content').style.display = 'block';
-
-            // 4. SHOW THE NAVIGATION BUTTONS
+            // 4. Check Navigation Buttons
             const startBtns = document.getElementById('btns-start');
-            if (startBtns) {
-                startBtns.style.display = 'flex';
-            }
-
+            console.log("DIAG 7: Button Container 'btns-start' found:", !!startBtns);
+            
+            if (startBtns) startBtns.style.display = 'flex';
+            
             const regBtn = document.getElementById('btn-register');
             if (regBtn) {
                 regBtn.disabled = false;
-                regBtn.style.opacity = "1";
                 regBtn.innerText = "DETAILS ARE OKAY, CLICK HERE TO PROCEED FURTHER";
             }
 
-            // 5. Set the mode
+            document.getElementById('loading-init').style.display = 'none';
+            document.getElementById('form-content').style.display = 'block';
+            
+            console.log("DIAG 8: Screen unlocked.");
             if (typeof enableEditMode === "function") enableEditMode();
 
         }
     } catch (e) {
-        console.error("MERS Load Error:", e);
-        document.getElementById('loading-init').style.display = 'none';
+        console.error("DIAG CRITICAL CRASH:", e);
     }
+    console.log("--- MERS DIAGNOSTIC END ---");
 }
-
-
-
 
   
 
