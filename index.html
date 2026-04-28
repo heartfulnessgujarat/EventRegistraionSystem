@@ -1064,74 +1064,69 @@ function manualFormatCheck() {
   }
 }
 
+
 async function loadExistingData(regId, mode) {
     console.log(`[DIAGNOSTIC] loadExistingData started for ID: ${regId}`);
     try {
-        // Updated path to match your Master Internal DB structure
-        const snap = await db.ref('masters/Master_Internal_DB/' + regId).once('value');
-        const data = snap.val();
+        // PATH A: Check the Master Internal DB first
+        let snap = await db.ref('masters/Master_Internal_DB/' + regId).once('value');
+        let data = snap.val();
+
+        // PATH B: If not found, check the root 'registrations' folder
+        if (!data) {
+            console.log("MERS: Not found in Master_Internal_DB, checking root registrations...");
+            snap = await db.ref('registrations/' + regId).once('value');
+            data = snap.val();
+        }
 
         if (!data) {
-            console.error("MERS: Registration not found for ID: " + regId);
-            alert("Registration not found.");
+            console.error("MERS: Registration REALLY not found for ID: " + regId);
+            alert("Registration not found. Please ensure the ID is correct.");
             return;
         }
 
-        // GLOBAL STORAGE: This is the 'Memory' for the Parallel Path
-        // This allows Section 2 to pull the previous answers
+        // --- SUCCESS: DATA FOUND ---
         originalData = data;
         profileSnapshotForScript = encodeURIComponent(JSON.stringify(data));
 
         if (mode === 'edit') {
-            console.log("MERS: Entering Edit Mode UI Setup...");
-            
-            // 1. Draw Section 1
             renderForm(); 
 
-            // 2. FILL DATA & LOCK
             fieldRules.forEach(r => {
                 const el = document.getElementById(`inp-${r.field_id}`);
                 if (el && data[r.field_id] !== undefined) {
                     el.value = data[r.field_id];
-                    
-                    // Lockdown critical identity fields initially
-                    if (r.field_id === 'full_name' || r.field_id === 'mobile' || r.field_id === 'email') {
-                        el.disabled = true; 
+                    if (['full_name', 'mobile', 'email'].includes(r.field_id)) {
+                        el.disabled = true;
                         el.style.background = "#f9f9f9";
                     }
                 }
             });
 
-            // 3. UI OVERRIDE: Show Form Content
             document.getElementById('loading-init').style.display = 'none';
             document.getElementById('form-content').style.display = 'block';
 
-            // Show the container that has the "DETAILS ARE OKAY" button
             const startBtnsContainer = document.getElementById('btns-start');
-            if (startBtnsContainer) {
-                startBtnsContainer.style.display = 'flex';
-            }
+            if (startBtnsContainer) startBtnsContainer.style.display = 'flex';
 
-            // 4. UNLOCK THE "PROCEED" BUTTON IMMEDIATELY
             const regBtn = document.getElementById('btn-register');
             if (regBtn) {
                 regBtn.disabled = false;
                 regBtn.style.opacity = "1";
-                regBtn.style.cursor = "pointer";
                 regBtn.innerText = "DETAILS ARE OKAY, CLICK HERE TO PROCEED FURTHER";
             }
-
-            // Final Step: Force a state check so the system realizes the form is "Valid"
-            if (typeof updateButtonState === 'function') {
-                updateButtonState();
-            }
+            
+            if (typeof updateButtonState === 'function') updateButtonState();
         }
     } catch (e) {
         console.error("MERS Entry Error:", e);
-        alert("Error loading registration data.");
     }
 }
-function cancelDeletionAction() {
+
+
+
+  
+  function cancelDeletionAction() {
     document.getElementById('delete-confirmation-card').style.display = 'none';
     document.getElementById('success-content').innerHTML = `
         <div style="text-align:center;">
