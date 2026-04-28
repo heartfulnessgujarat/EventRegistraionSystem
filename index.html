@@ -1245,6 +1245,9 @@ function buildExtraSections(sectionId) {
     if(typeof updateButtonState === 'function') updateButtonState();
 }
 
+
+
+
 async function buildExtraSections(targetSectionNumber) {
     if (!targetSectionNumber) targetSectionNumber = "Section2";
 
@@ -1267,7 +1270,6 @@ async function buildExtraSections(targetSectionNumber) {
     currentInputs.forEach(input => { if (input.value) mersTempData[input.id] = input.value; });
 
     container.innerHTML = ""; 
-
     actionBtn.disabled = true;
     actionBtn.style.opacity = "0.5";
 
@@ -1276,22 +1278,24 @@ async function buildExtraSections(targetSectionNumber) {
     if (sectionObj) {
         titleHeader.innerText = sectionObj.section_name || "Details";
 
-        // --- ENHANCED QUESTION KEY DETECTION & SORTING ---
-        // This ensures question10 doesn't jump ahead of question2
-        const questionKeys = Object.keys(sectionObj)
-            .filter(key => key.startsWith('question') && sectionObj[key])
-            .sort((a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
+        // --- THE "GREEDY" DETECTION ---
+        // We look for 'question', 'field', 'q', or anything that isn't a system key
+        const systemKeys = ['section_name', 'section_number', 'section_id', 'id'];
+        const fieldKeys = Object.keys(sectionObj).filter(key => 
+            !systemKeys.includes(key) && 
+            sectionObj[key] && 
+            typeof sectionObj[key] === 'string'
+        ).sort((a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
         
-        console.log(`MERS: Building ${targetSectionNumber} with ${questionKeys.length} fields.`);
+        console.log(`MERS: Found ${fieldKeys.length} potential fields in ${targetSectionNumber}`);
 
-        for (const key of questionKeys) {
+        for (const key of fieldKeys) {
             const fieldId = sectionObj[key];
             const rule = fieldRules.find(r => r.field_id === fieldId);
             
             if (rule) {
                 const fieldWrapper = document.createElement('div');
                 fieldWrapper.className = 'form-group';
-                fieldWrapper.id = `wrapper_extra_${fieldId}`; 
                 fieldWrapper.style.marginBottom = "20px";
                 fieldWrapper.style.textAlign = "left";
                 fieldWrapper.style.display = (rule.initial_state === "Hidden") ? 'none' : 'block';
@@ -1302,7 +1306,7 @@ async function buildExtraSections(targetSectionNumber) {
                 fieldWrapper.appendChild(label);
 
                 let input;
-                const inputId = `extra_${fieldId}`; 
+                const inputId = `extra_${fieldId}`;
 
                 if (rule.edit_behavior === 'Editable_lookup_Dropdown') {
                     input = document.createElement('select');
@@ -1334,28 +1338,21 @@ async function buildExtraSections(targetSectionNumber) {
                     input.id = inputId;
                 }
 
-                // --- SMART PRE-FILL BRIDGE ---
+                // --- BRIDGE ---
                 if (originalData) {
-                    if (originalData[fieldId] !== undefined) {
-                        input.value = originalData[fieldId];
-                        console.log(`[PRE-FILL] Found ${fieldId} in originalData`);
-                    } else if (originalData[inputId] !== undefined) {
-                        input.value = originalData[inputId];
-                        console.log(`[PRE-FILL] Found ${inputId} in originalData`);
-                    }
+                    if (originalData[fieldId] !== undefined) input.value = originalData[fieldId];
+                    else if (originalData[inputId] !== undefined) input.value = originalData[inputId];
                 } else if (mersTempData[inputId]) {
                     input.value = mersTempData[inputId];
                 }
 
                 input.dataset.mandatory = isMandatory;                  
-                
                 input.onchange = function() {
                     if (typeof validateField === 'function') {
                         if (validateField(this.id.replace('extra_', ''), this.value, rule.field_validation) === false) return;
                     }
                     handleFieldChange(this, rule);
                 };
-
                 input.oninput = function() { updateButtonState(); };
 
                 fieldWrapper.appendChild(input);
@@ -1364,13 +1361,8 @@ async function buildExtraSections(targetSectionNumber) {
         }
 
         actionBtn.onclick = function() {
-            if (targetSectionNumber === "Section2") {
-                buildExtraSections('Section3');
-            } else {
-                const finalInputs = document.querySelectorAll('[id^="extra_"]');
-                finalInputs.forEach(input => { mersTempData[input.id] = input.value; });
-                submitData();
-            }
+            if (targetSectionNumber === "Section2") buildExtraSections('Section3');
+            else submitData();
         };
 
         if (backBtn) {
@@ -1386,6 +1378,11 @@ async function buildExtraSections(targetSectionNumber) {
         setTimeout(() => { updateButtonState(); }, 800);
     }
 }
+
+
+
+
+
 
 
   
