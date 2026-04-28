@@ -1176,7 +1176,70 @@ async function processFinalDeletion(regId) {
     }
 }
 
-  async function buildExtraSections(targetSectionNumber) {
+
+  function buildExtraSections(sectionId) {
+    const sectionData = moreSections.find(s => s.section_id === sectionId);
+    if (!sectionData) return;
+
+    const container = document.getElementById('dynamic-sections-content');
+    container.innerHTML = ""; // Clear previous
+    
+    // Set Title
+    document.getElementById('title-Section2').innerText = sectionData.section_title || "Additional Details";
+
+    sectionData.fields.forEach(fieldId => {
+        const rule = fieldRules.find(r => r.field_id === fieldId);
+        if (!rule) return;
+
+        const fieldWrapper = document.createElement('div');
+        fieldWrapper.className = "input-group";
+        
+        // Create Label
+        const label = document.createElement('label');
+        label.innerText = rule.display_name;
+        fieldWrapper.appendChild(label);
+
+        // Create Select/Input
+        let input;
+        if (rule.field_type === "dropdown") {
+            input = document.createElement('select');
+            const options = rule.validation_rule.split(',');
+            options.forEach(opt => {
+                const o = document.createElement('option');
+                o.value = opt.trim();
+                o.text = opt.trim();
+                input.appendChild(o);
+            });
+        } else {
+            input = document.createElement('input');
+            input.type = "text";
+        }
+
+        input.id = `extra_${fieldId}`;
+        input.className = "mers-input";
+
+        // --- THE SURGICAL FIX START ---
+        // Check if we are in Edit Mode and have an existing answer
+        if (originalData && originalData[fieldId]) {
+            input.value = originalData[fieldId];
+            console.log(`MERS: Restored Section 2 value for [${fieldId}]: ${originalData[fieldId]}`);
+        }
+        // --- THE SURGICAL FIX END ---
+
+        input.onchange = () => updateButtonState();
+        fieldWrapper.appendChild(input);
+        container.appendChild(fieldWrapper);
+    });
+
+    // Show Section 2, Hide Section 1
+    document.getElementById('Section1').style.display = 'none';
+    document.getElementById('Section2').style.display = 'block';
+    
+    // Ensure button state is evaluated for the new fields
+    updateButtonState();
+}
+  
+  async function oldbuildExtraSections(targetSectionNumber) {
     if (!targetSectionNumber) targetSectionNumber = "Section2";
 
     const container = document.getElementById('dynamic-sections-content');
