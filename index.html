@@ -1166,7 +1166,6 @@ async function processFinalDeletion(regId) {
     }
 }
 
-  
 function buildExtraSections(sectionId) {
     console.log("MERS: Safety Build for: " + sectionId);
     
@@ -1205,6 +1204,12 @@ function buildExtraSections(sectionId) {
         let input;
         if (rule.field_type === "dropdown") {
             input = document.createElement('select');
+            // Adding a blank option at the top for fresh registrations
+            const firstOption = document.createElement('option');
+            firstOption.text = "-- Select --";
+            firstOption.value = "";
+            input.appendChild(firstOption);
+
             const options = rule.validation_rule ? rule.validation_rule.split(',') : [];
             options.forEach(opt => {
                 const o = document.createElement('option');
@@ -1220,9 +1225,11 @@ function buildExtraSections(sectionId) {
         input.id = `extra_${fieldId}`;
         input.className = "mers-input";
 
-        // RESTORE OLD VALUE (Only if it exists)
-        if (originalData && originalData[fieldId]) {
+        // --- THE PRE-FILL MEMORY LOGIC ---
+        // We check if originalData exists and has a value for this field
+        if (typeof originalData !== 'undefined' && originalData && originalData[fieldId] !== undefined) {
             input.value = originalData[fieldId];
+            console.log(`MERS: Restored ${fieldId} -> ${originalData[fieldId]}`);
         }
 
         input.onchange = () => { if(typeof updateButtonState === 'function') updateButtonState(); };
@@ -1230,13 +1237,13 @@ function buildExtraSections(sectionId) {
         container.appendChild(fieldWrapper);
     });
 
-    // 3. SHOW SCREEN
+    // 3. SHOW SCREEN & RE-EVALUATE BUTTONS
     document.getElementById('Section1').style.display = 'none';
     document.getElementById('Section2').style.display = 'block';
+    
+    // This is vital: it checks if all pre-filled fields are valid so the PROCEED button turns blue immediately
     if(typeof updateButtonState === 'function') updateButtonState();
 }
-
-
 function buildExtraSectionsForEdit(sectionId) {
     console.log("MERS: Parallel Edit Path active for: " + sectionId);
     
@@ -1310,79 +1317,6 @@ function buildExtraSectionsForEdit(sectionId) {
     if (typeof updateButtonState === 'function') updateButtonState(); 
 }
   
-
-function oldbuildExtraSectionsForEdit(sectionId) {
-    console.log("MERS: Parallel Edit Path active for: " + sectionId);
-    
-    // 1. Find the section data from your moreSections array
-    const sectionData = moreSections.find(s => s.section_id === sectionId);
-    if (!sectionData || !sectionData.fields) {
-        console.error("MERS: Section data not found for " + sectionId);
-        return;
-    }
-
-    const container = document.getElementById('dynamic-sections-content');
-    if (!container) return;
-    container.innerHTML = ""; 
-
-    // Set the Section Title
-    const titleEl = document.getElementById('title-Section2');
-    if (titleEl) titleEl.innerText = sectionData.section_title || "";
-
-    // 2. Loop through fields and build them
-    sectionData.fields.forEach(fieldId => {
-        const rule = fieldRules.find(r => r.field_id === fieldId);
-        if (!rule) return;
-
-        const fieldWrapper = document.createElement('div');
-        fieldWrapper.className = "input-group";
-        
-        const label = document.createElement('label');
-        label.innerText = rule.display_name;
-        fieldWrapper.appendChild(label);
-
-        let input;
-        if (rule.field_type === "dropdown") {
-            input = document.createElement('select');
-            const options = rule.validation_rule ? rule.validation_rule.split(',') : [];
-            options.forEach(opt => {
-                const o = document.createElement('option');
-                o.value = opt.trim();
-                o.text = opt.trim();
-                input.appendChild(o);
-            });
-        } else {
-            input = document.createElement('input');
-            input.type = "text";
-        }
-
-        input.id = `extra_${fieldId}`;
-        input.className = "mers-input";
-
-        // --- THE PARALLEL RESTORATION ---
-        // If we have data for this specific field from originalData (Firebase), inject it
-        if (typeof originalData !== 'undefined' && originalData && originalData[fieldId] !== undefined) {
-            input.value = originalData[fieldId];
-            console.log(`MERS: Restored [${fieldId}] with value: ${originalData[fieldId]}`);
-        }
-
-        input.onchange = () => { if(typeof updateButtonState === 'function') updateButtonState(); };
-        fieldWrapper.appendChild(input);
-        container.appendChild(fieldWrapper);
-    });
-
-    // 3. Switch View
-    document.getElementById('Section1').style.display = 'none';
-    document.getElementById('Section2').style.display = 'block';
-
-    // 4. Force the button to evaluate its state
-    if (typeof updateButtonState === 'function') updateButtonState(); 
-}
-
-
-
-
-
 
 
  
