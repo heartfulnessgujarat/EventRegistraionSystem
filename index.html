@@ -1237,6 +1237,7 @@ async function processFinalDeletion(regId) {
     }
 }
 
+  
 function buildExtraSections(sectionId) {
     console.log("MERS: Safety Build for: " + sectionId);
     
@@ -1307,7 +1308,65 @@ function buildExtraSections(sectionId) {
 }
 
 
-  
+  function buildExtraSectionsForEdit(sectionId) {
+    console.log("MERS: Parallel Edit Path active for: " + sectionId);
+    
+    const sectionData = moreSections.find(s => s.section_id === sectionId);
+    if (!sectionData || !sectionData.fields) return;
+
+    const container = document.getElementById('dynamic-sections-content');
+    container.innerHTML = ""; 
+
+    document.getElementById('title-Section2').innerText = sectionData.section_title || "";
+
+    sectionData.fields.forEach(fieldId => {
+        const rule = fieldRules.find(r => r.field_id === fieldId);
+        if (!rule) return;
+
+        const fieldWrapper = document.createElement('div');
+        fieldWrapper.className = "input-group";
+        
+        const label = document.createElement('label');
+        label.innerText = rule.display_name;
+        fieldWrapper.appendChild(label);
+
+        let input;
+        if (rule.field_type === "dropdown") {
+            input = document.createElement('select');
+            const options = rule.validation_rule ? rule.validation_rule.split(',') : [];
+            options.forEach(opt => {
+                const o = document.createElement('option');
+                o.value = opt.trim();
+                o.text = opt.trim();
+                input.appendChild(o);
+            });
+        } else {
+            input = document.createElement('input');
+            input.type = "text";
+        }
+
+        input.id = `extra_${fieldId}`;
+        input.className = "mers-input";
+
+        // --- THE PARALLEL RESTORATION ---
+        // If we have data for this specific field from Firebase, inject it now
+        if (originalData && originalData[fieldId] !== undefined) {
+            input.value = originalData[fieldId];
+            console.log(`MERS: Restored [${fieldId}] with value: ${originalData[fieldId]}`);
+        }
+
+        input.onchange = () => updateButtonState();
+        fieldWrapper.appendChild(input);
+        container.appendChild(fieldWrapper);
+    });
+
+    document.getElementById('Section1').style.display = 'none';
+    document.getElementById('Section2').style.display = 'block';
+
+    // FORCE BUTTON TO BE CLICKABLE
+    // Since we pre-filled the data, the 'Next' button should be ready immediately
+    updateButtonState(); 
+}
 
  
   
