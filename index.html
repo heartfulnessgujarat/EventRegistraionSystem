@@ -1245,7 +1245,6 @@ function buildExtraSections(sectionId) {
     if(typeof updateButtonState === 'function') updateButtonState();
 }
 
-
 async function buildExtraSections(targetSectionNumber) {
     if (!targetSectionNumber) targetSectionNumber = "Section2";
 
@@ -1276,8 +1275,15 @@ async function buildExtraSections(targetSectionNumber) {
     
     if (sectionObj) {
         titleHeader.innerText = sectionObj.section_name || "Details";
-        const questionKeys = Object.keys(sectionObj).filter(key => key.startsWith('question') && sectionObj[key]);
+
+        // --- ENHANCED QUESTION KEY DETECTION & SORTING ---
+        // This ensures question10 doesn't jump ahead of question2
+        const questionKeys = Object.keys(sectionObj)
+            .filter(key => key.startsWith('question') && sectionObj[key])
+            .sort((a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
         
+        console.log(`MERS: Building ${targetSectionNumber} with ${questionKeys.length} fields.`);
+
         for (const key of questionKeys) {
             const fieldId = sectionObj[key];
             const rule = fieldRules.find(r => r.field_id === fieldId);
@@ -1296,7 +1302,7 @@ async function buildExtraSections(targetSectionNumber) {
                 fieldWrapper.appendChild(label);
 
                 let input;
-                const inputId = `extra_${fieldId}`; // Keeping your mandatory prefix
+                const inputId = `extra_${fieldId}`; 
 
                 if (rule.edit_behavior === 'Editable_lookup_Dropdown') {
                     input = document.createElement('select');
@@ -1329,12 +1335,13 @@ async function buildExtraSections(targetSectionNumber) {
                 }
 
                 // --- SMART PRE-FILL BRIDGE ---
-                // This checks the database for "gender" OR "extra_gender"
                 if (originalData) {
                     if (originalData[fieldId] !== undefined) {
                         input.value = originalData[fieldId];
+                        console.log(`[PRE-FILL] Found ${fieldId} in originalData`);
                     } else if (originalData[inputId] !== undefined) {
                         input.value = originalData[inputId];
+                        console.log(`[PRE-FILL] Found ${inputId} in originalData`);
                     }
                 } else if (mersTempData[inputId]) {
                     input.value = mersTempData[inputId];
@@ -1343,7 +1350,9 @@ async function buildExtraSections(targetSectionNumber) {
                 input.dataset.mandatory = isMandatory;                  
                 
                 input.onchange = function() {
-                    if (validateField(this.id.replace('extra_', ''), this.value, rule.field_validation) === false) return;
+                    if (typeof validateField === 'function') {
+                        if (validateField(this.id.replace('extra_', ''), this.value, rule.field_validation) === false) return;
+                    }
                     handleFieldChange(this, rule);
                 };
 
@@ -1377,7 +1386,10 @@ async function buildExtraSections(targetSectionNumber) {
         setTimeout(() => { updateButtonState(); }, 800);
     }
 }
- 
+
+
+  
+
   
 async function handleFieldChange(inputElement, rule) {
     const val = inputElement.value;
