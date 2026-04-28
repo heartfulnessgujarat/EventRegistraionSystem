@@ -1066,7 +1066,6 @@ function manualFormatCheck() {
 
 /** --- NEW: EDIT & DELETE LOGIC ENGINE --- **/
 
-
 async function loadExistingData(regId, mode) {
     try {
         console.log("MERS: Fetching data for RegID: " + regId);
@@ -1113,7 +1112,6 @@ async function loadExistingData(regId, mode) {
                            document.getElementById(r.field_id);
 
                 if (el) {
-                    // Only set value if the element exists on screen
                     if (data[r.field_id]) {
                         el.value = data[r.field_id];
                         console.log(`MERS: Filled ${r.field_id} (Value: ${data[r.field_id]})`);
@@ -1124,7 +1122,6 @@ async function loadExistingData(regId, mode) {
                         el.disabled = true; 
                     }
                 } else {
-                    // This prevents the null-value crash by skipping fields not yet built (Sect 2/3)
                     console.log(`MERS: Field [${r.field_id}] not on screen yet. Will fill during transition.`);
                 }
             });
@@ -1136,11 +1133,24 @@ async function loadExistingData(regId, mode) {
             if (loadingEl) loadingEl.style.display = 'none';
             if (formContent) formContent.style.display = 'block';
 
-            // D. Enable Edit Mode
+            // --- D. THE VISUAL UPDATE (STEP 2) ---
+            const actionBtn = document.getElementById('btn-next-action');
+            if (actionBtn) {
+                // Set text to the "Verified" state from your screenshot
+                actionBtn.innerText = "DETAILS ARE OKAY, CLICK HERE TO PROCEED";
+                actionBtn.disabled = false;
+                actionBtn.style.opacity = "1";
+                actionBtn.style.cursor = "pointer";
+                
+                // Ensure clicking it moves to the next questions
+                actionBtn.onclick = function() {
+                    buildExtraSections('Section2');
+                };
+            }
+
             enableEditMode(); 
 
         } else if (mode === 'delete') {
-            // Delete logic remains untouched as it was working
             const loadingEl = document.getElementById('loading-init');
             if (loadingEl) loadingEl.style.display = 'none';
 
@@ -1172,13 +1182,10 @@ async function loadExistingData(regId, mode) {
         }
     } catch (e) {
         console.error("MERS Load Error:", e);
-        // Ensure screen is cleared even on error so user isn't stuck
         const loadingEl = document.getElementById('loading-init');
         if (loadingEl) loadingEl.style.display = 'none';
     }
 }
-
-
   
 
 
