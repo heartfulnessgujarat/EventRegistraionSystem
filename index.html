@@ -1240,6 +1240,80 @@ function buildExtraSections(sectionId) {
 function buildExtraSectionsForEdit(sectionId) {
     console.log("MERS: Parallel Edit Path active for: " + sectionId);
     
+    // SAFETY CHECK: If moreSections or fieldRules haven't loaded yet, wait 300ms and try again
+    if (!moreSections || moreSections.length === 0 || fieldRules.length === 0) {
+        console.warn("MERS: Data not ready, retrying build in 300ms...");
+        setTimeout(() => buildExtraSectionsForEdit(sectionId), 300);
+        return;
+    }
+
+    const sectionData = moreSections.find(s => s.section_id === sectionId);
+    if (!sectionData || !sectionData.fields) {
+        console.error("MERS: Section data not found for " + sectionId);
+        return;
+    }
+
+    const container = document.getElementById('dynamic-sections-content');
+    if (!container) return;
+    container.innerHTML = ""; 
+
+    // FORCE TITLE DISPLAY
+    const titleEl = document.getElementById('title-Section2');
+    if (titleEl) {
+        titleEl.innerText = sectionData.section_title || "Additional Details";
+        titleEl.style.display = "block"; // Ensure it isn't hidden
+    }
+
+    sectionData.fields.forEach(fieldId => {
+        const rule = fieldRules.find(r => r.field_id === fieldId);
+        if (!rule) return;
+
+        const fieldWrapper = document.createElement('div');
+        fieldWrapper.className = "input-group";
+        
+        const label = document.createElement('label');
+        label.innerText = rule.display_name;
+        fieldWrapper.appendChild(label);
+
+        let input;
+        if (rule.field_type === "dropdown") {
+            input = document.createElement('select');
+            const options = rule.validation_rule ? rule.validation_rule.split(',') : [];
+            options.forEach(opt => {
+                const o = document.createElement('option');
+                o.value = opt.trim();
+                o.text = opt.trim();
+                input.appendChild(o);
+            });
+        } else {
+            input = document.createElement('input');
+            input.type = "text";
+        }
+
+        input.id = `extra_${fieldId}`;
+        input.className = "mers-input";
+
+        // RESTORE VALUE FROM MEMORY
+        if (typeof originalData !== 'undefined' && originalData && originalData[fieldId] !== undefined) {
+            input.value = originalData[fieldId];
+        }
+
+        input.onchange = () => { if(typeof updateButtonState === 'function') updateButtonState(); };
+        fieldWrapper.appendChild(input);
+        container.appendChild(fieldWrapper);
+    });
+
+    // Final UI Check
+    document.getElementById('Section1').style.display = 'none';
+    document.getElementById('Section2').style.display = 'block';
+    
+    if (typeof updateButtonState === 'function') updateButtonState(); 
+}
+  
+
+function oldbuildExtraSectionsForEdit(sectionId) {
+    console.log("MERS: Parallel Edit Path active for: " + sectionId);
+    
     // 1. Find the section data from your moreSections array
     const sectionData = moreSections.find(s => s.section_id === sectionId);
     if (!sectionData || !sectionData.fields) {
