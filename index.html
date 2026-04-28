@@ -1639,32 +1639,20 @@ function showSuccessScreen() {
   
   // MERS: Transition from Section 1 (Profile) to Section 2 (Logistics)
 
-  function proceedToLogistics() {
+function proceedToLogistics() {
     console.log("MERS: Transitioning to Section 2...");
 
-    // 1. Hide the entire Section1 Room
     const s1 = document.getElementById('Section1');
     if (s1) s1.style.display = 'none';
 
-    // 2. Show the entire Section2 Room
     const s2 = document.getElementById('Section2');
     if (s2) s2.style.display = 'block';
 
-    // 3. Smooth scroll to the top
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // 4. TRIGGER THE PARALLEL PATH LOGIC
-    const urlParams = new URLSearchParams(window.location.search);
-    const isEditMode = urlParams.get('mode') === 'edit';
-
-    if (isEditMode && typeof buildExtraSectionsForEdit === "function") {
-        console.log("MERS: Mode is EDIT - Calling Parallel Builder");
-        buildExtraSectionsForEdit('Section2');
-    } else if (typeof buildExtraSections === "function") {
-        console.log("MERS: Mode is FRESH - Calling Standard Builder");
+    // Back to the original single-path builder
+    if (typeof buildExtraSections === "function") {
         buildExtraSections('Section2');
-    } else {
-        console.warn("MERS: Builder function not found.");
     }
 }
 
