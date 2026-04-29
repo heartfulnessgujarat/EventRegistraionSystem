@@ -1065,15 +1065,14 @@ function manualFormatCheck() {
 }
 
 
-
 async function loadExistingData(regId, mode) {
-    console.log(`[DIAGNOSTIC] loadExistingData started for ID: ${regId} | Mode: ${mode}`);
+    console.log(`[DIAGNOSTIC] Delete Mode Engagement: ${regId}`);
     try {
+        // 1. Fetch Data
         let snap = await db.ref('masters/Master_Internal_DB/' + regId).once('value');
         let data = snap.val();
 
         if (!data) {
-            console.log("MERS: Checking root registrations...");
             snap = await db.ref('registrations/' + regId).once('value');
             data = snap.val();
         }
@@ -1083,10 +1082,51 @@ async function loadExistingData(regId, mode) {
             return;
         }
 
-        originalData = data;
+        // --- BRANCH: DELETE MODE ---
+        if (mode === 'delete') {
+            // Stop the loading spinner
+            document.getElementById('loading-init').style.display = 'none';
+            
+            // Wipe the main container and build the STATIC confirmation window
+            const mainContainer = document.getElementById('form-content');
+            mainContainer.style.display = 'block';
+            mainContainer.innerHTML = `
+                <div style="max-width: 600px; margin: 40px auto; padding: 30px; border: 1px solid #ffccc7; background: #fff2f0; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); font-family: 'Segoe UI', Tahoma, sans-serif;">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <span style="font-size: 50px;">⚠️</span>
+                        <h2 style="color: #cf1322; margin: 10px 0;">Cancel Registration?</h2>
+                        <p style="color: #595959;">Please review the details below before confirming cancellation.</p>
+                    </div>
+                    
+                    <div style="background: white; padding: 20px; border-radius: 10px; border: 1px solid #f0f0f0; margin-bottom: 25px;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 15px;">
+                            <tr style="border-bottom: 1px solid #f5f5f5;"><td style="padding: 10px; font-weight: bold; color: #8c8c8c;">Name</td><td style="padding: 10px; color: #262626;">${data.full_name || data.name}</td></tr>
+                            <tr style="border-bottom: 1px solid #f5f5f5;"><td style="padding: 10px; font-weight: bold; color: #8c8c8c;">Event ID</td><td style="padding: 10px; color: #262626;">${data.event_id || 'EVT001'}</td></tr>
+                            <tr style="border-bottom: 1px solid #f5f5f5;"><td style="padding: 10px; font-weight: bold; color: #8c8c8c;">Reg ID</td><td style="padding: 10px; font-size: 13px; color: #262626;">${regId}</td></tr>
+                            <tr style="border-bottom: 1px solid #f5f5f5;"><td style="padding: 10px; font-weight: bold; color: #8c8c8c;">Status</td><td style="padding: 10px;"><span style="background: #fff7e6; color: #d46b08; border: 1px solid #ffd591; padding: 2px 8px; border-radius: 4px; font-size: 13px;">${data.registration_status || 'Active'}</span></td></tr>
+                            <tr><td style="padding: 10px; font-weight: bold; color: #8c8c8c;">Date</td><td style="padding: 10px; color: #262626;">${data.timestamp || 'N/A'}</td></tr>
+                        </table>
+                    </div>
 
-        // --- BRANCH 1: EDIT MODE ---
+                    <div style="display: flex; gap: 15px; justify-content: center;">
+                        <button onclick="executeSurgicalDeletion('${regId}')" 
+                                style="background: #ff4d4f; color: white; border: none; padding: 12px 25px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.3s;">
+                            Confirm Cancellation
+                        </button>
+                        <button onclick="window.location.href='about:blank'" 
+                                style="background: #d9d9d9; color: #595959; border: none; padding: 12px 25px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.3s;">
+                            Do not Cancel
+                        </button>
+                    </div>
+                </div>
+            `;
+            return; // Exit early so no other form logic triggers
+        }
+
+        // --- BRANCH: EDIT MODE (Unchanged) ---
         if (mode === 'edit') {
+            originalData = data;
+            profileSnapshotForScript = encodeURIComponent(JSON.stringify(data));
             renderForm(); 
             fieldRules.forEach(r => {
                 const el = document.getElementById(`inp-${r.field_id}`);
@@ -1102,43 +1142,6 @@ async function loadExistingData(regId, mode) {
             document.getElementById('form-content').style.display = 'block';
             if (document.getElementById('btns-start')) document.getElementById('btns-start').style.display = 'flex';
             if (typeof updateButtonState === 'function') updateButtonState();
-        } 
-        
-        // --- BRANCH 2: DELETE MODE (The Branded Version) ---
-        else if (mode === 'delete') {
-            renderForm(); // This brings back the event banner and titles
-            
-            document.getElementById('loading-init').style.display = 'none';
-            document.getElementById('form-content').style.display = 'block';
-            
-            // Create a nice summary of what is about to be deleted
-            const container = document.getElementById('dynamic-sections-content');
-            container.innerHTML = `
-                <div style="background: #fff1f0; border: 1px solid #ffa39e; padding: 20px; border-radius: 8px; text-align: left; margin-bottom: 20px;">
-                    <h3 style="color: #cf1322; margin-top: 0;">Confirm Cancellation</h3>
-                    <p>You are about to delete the following registration:</p>
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <tr><td style="padding: 5px; font-weight: bold;">Name:</td><td>${data.full_name || data.name}</td></tr>
-                        <tr><td style="padding: 5px; font-weight: bold;">Reg ID:</td><td>${regId}</td></tr>
-                        <tr><td style="padding: 5px; font-weight: bold;">Status:</td><td>${data.registration_status || 'Active'}</td></tr>
-                        <tr><td style="padding: 5px; font-weight: bold;">Timestamp:</td><td>${data.timestamp || 'N/A'}</td></tr>
-                    </table>
-                </div>
-            `;
-
-            // Hide the normal "Register" buttons so they don't confuse the user
-            if (document.getElementById('btns-start')) document.getElementById('btns-start').style.display = 'none';
-
-            // Show the "Are you sure" layer
-            setTimeout(() => {
-                const confirmDelete = confirm(`⚠️ FINAL CHECK:\n\nAre you sure you want to cancel the registration for ${data.full_name || data.name}?\n\nThis will remove all data from our records.`);
-                if (confirmDelete) {
-                    executeSurgicalDeletion(regId);
-                } else {
-                    alert("Deletion cancelled.");
-                    window.location.reload(); // Refresh to clear the red box
-                }
-            }, 500);
         }
 
     } catch (e) {
@@ -1147,6 +1150,9 @@ async function loadExistingData(regId, mode) {
 }
 
 function executeSurgicalDeletion(regId) {
+    // A quick browser-level "Last Chance"
+    if (!confirm("Are you absolutely sure? This cannot be undone.")) return;
+
     const updates = {};
     updates[`registrations/${regId}`] = null;
     updates[`masters/Master_Internal_DB/${regId}`] = null;
@@ -1154,21 +1160,15 @@ function executeSurgicalDeletion(regId) {
     db.ref().update(updates)
         .then(() => {
             document.body.innerHTML = `
-                <div style='text-align:center; padding:50px; font-family: sans-serif;'>
-                    <div style="font-size: 50px;">✅</div>
+                <div style='text-align:center; padding:100px 20px; font-family: sans-serif;'>
+                    <div style="font-size: 60px; margin-bottom: 20px;">✅</div>
                     <h2 style='color: #52c41a;'>Registration Deleted</h2>
-                    <p>The record <strong>${regId}</strong> has been removed from the system.</p>
-                    <p>You may now close this browser tab.</p>
+                    <p style="font-size: 18px; color: #595959;">The record <strong>${regId}</strong> has been removed.</p>
+                    <p style="color: #8c8c8c;">You may now close this tab.</p>
                 </div>`;
         })
-        .catch((error) => {
-            alert("Error: " + error.message);
-        });
+        .catch((error) => { alert("Error: " + error.message); });
 }
-
-
-
-
   
 
 async function oldloadExistingData(regId, mode) {
