@@ -1246,9 +1246,18 @@ function buildExtraSections(sectionId) {
 }
 
 
-
-
 async function buildExtraSections(targetSectionNumber) {
+    // --- DIAGNOSTIC START ---
+    console.log("--- MERS DIAGNOSTIC X-RAY [" + targetSectionNumber + "] ---");
+    console.log("1. OriginalData available:", !!originalData);
+    if (originalData) console.log("2. Keys in OriginalData:", Object.keys(originalData));
+    console.log("3. moreSections count:", moreSections ? moreSections.length : 0);
+    // --- DIAGNOSTIC END ---
+
+    
+    // ... rest of your function ...
+
+  
     if (!targetSectionNumber) targetSectionNumber = "Section2";
 
     const container = document.getElementById('dynamic-sections-content');
