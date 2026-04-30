@@ -1393,7 +1393,16 @@ function showSuccessScreen() {
 }
 
 
-// --- NEW UTILITY FUNCTION ---
+
+
+// ==========================================
+// 1. SECTION TRANSITION LOGIC (CONSOLIDATED)
+// ==========================================
+
+/**
+ * NEW: THE BRIDGE FUNCTION
+ * Captures Section 1 values from the screen and stores them in temporary memory
+ */
 function syncSection1Data() {
     console.log("MERS: Manually syncing Section 1 to Temporary State...");
     
@@ -1412,10 +1421,12 @@ function syncSection1Data() {
         full_address: getVal('full_address')
     };
 
+    // Update global temporary storage so submitData sees these changes
     if (typeof mersTempData !== 'undefined') {
         Object.assign(mersTempData, freshSection1);
     }
     
+    // Update originalData to ensure consistency across the session
     if (typeof originalData !== 'undefined') {
         Object.assign(originalData, freshSection1);
     }
@@ -1423,21 +1434,14 @@ function syncSection1Data() {
     console.log("MERS: Sync Complete:", freshSection1);
 }
 
-
-
-
-
-  
-
-// ==========================================
-// 1. SECTION TRANSITION LOGIC (CONSOLIDATED)
-// ==========================================
-
+/**
+ * Handles moving from Section 1 to Section 2
+ */
 function proceedToLogistics() {
     console.log("MERS: Transitioning to Section 2...");
 
     // === SYNC BLOCK ===
-    // Sync Section 1 data before moving to ensure dynamic builders have the latest values
+    // This will now find the function above and execute it successfully
     if (typeof syncSection1Data === "function") {
         syncSection1Data();
     } else {
@@ -1454,8 +1458,7 @@ function proceedToLogistics() {
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Trigger the STABLE builder
-    // Note: We use buildExtraSections here to ensure fresh registrations work 100%
+    // Trigger the STABLE builder for dynamic logistics
     if (typeof buildExtraSections === "function") {
         buildExtraSections('Section2');
     } else {
@@ -1463,15 +1466,18 @@ function proceedToLogistics() {
     }
 }
 
-// Back Button Logic (Only ONE definition needed)
+// Back Button Logic
 const backBtn = document.getElementById('btn-back-to-profile');
 if (backBtn) {
     backBtn.onclick = function() {
         console.log("MERS: Returning to Section 1...");
         
+        // Hide all logistics sections
+        const s3 = document.getElementById('Section3');
         const s2 = document.getElementById('Section2');
         const s1 = document.getElementById('Section1');
         
+        if (s3) s3.style.display = 'none';
         if (s2) s2.style.display = 'none';
         if (s1) s1.style.display = 'block';
         
@@ -1479,6 +1485,12 @@ if (backBtn) {
     };
 }
 
+
+
+
+
+
+  
 // ==========================================
 // 2. SYSTEM INITIALIZATION
 // ==========================================
