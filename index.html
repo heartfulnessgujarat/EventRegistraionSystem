@@ -891,7 +891,6 @@ async function handleSectionNavigation() {
     }
 }
 
-
 async function submitData() {
     console.log("%c [DIAGNOSTIC] submitData started! ", "background: #222; color: #bada55; font-size: 14px;");
 
@@ -899,19 +898,19 @@ async function submitData() {
         const urlParams = new URLSearchParams(window.location.search);
         const mode = (urlParams.get('mode') || 'new').toLowerCase();
         
-        // --- STEP 1: SMART CAPTURE (THE FIX) ---
-        // Checks screen, then temp storage, then original record to prevent 'missing name' errors
+        // --- STEP 1: SMART CAPTURE (SECTION 1 PREFIX AWARE) ---
+        // Specifically handles the 'inp-' prefix for Section 1 fields
         const getFreshVal = (id) => {
-            const el = document.getElementById(id);
-            // 1. Try to get value from the physical screen
+            // 1. Look for the physical screen element using the Section 1 prefix
+            const el = document.getElementById('inp-' + id) || document.getElementById(id);
             let val = (el && el.value) ? el.value.trim() : "";
             
-            // 2. If screen is empty (common when hidden), check mersTempData (synced during "Next")
+            // 2. If screen is empty/disabled, check temporary memory (mersTempData)
             if (!val && typeof mersTempData !== 'undefined' && mersTempData[id]) {
                 val = mersTempData[id];
             }
             
-            // 3. Fallback to original record data
+            // 3. Last resort: check original record data
             if (!val && typeof originalData !== 'undefined' && originalData[id]) {
                 val = originalData[id];
             }
@@ -1004,9 +1003,6 @@ async function submitData() {
         if (overlay) overlay.style.display = 'none';
     }
 }
-
-
-
 
   
 function manualFormatCheck() {
