@@ -1093,61 +1093,66 @@ async function loadExistingData(regId, mode) {
 
         // 2. Clear the loader immediately using your established ID
         if (document.getElementById('loading-init')) {
-            document.getElementById('loading-init').style.display = 'none';[cite: 1]
+            document.getElementById('loading-init').style.display = 'none';
         }
 
         // 3. Define the main container we verified
-        const mainContainer = document.getElementById('form-content');[cite: 1]
+        const mainContainer = document.getElementById('form-content');
 
         // PATH A: ARCHIVE (Handle deleted records)
         if (deletedData) {
-            mainContainer.style.display = 'block';[cite: 1]
-            mainContainer.innerHTML = `<div style="text-align:center; padding:40px;"><h2>Registration Deleted</h2><p>Deleted on: ${deletedData.deleted_at}</p></div>`;[cite: 1]
+            mainContainer.style.display = 'block';
+            mainContainer.innerHTML = `<div style="text-align:center; padding:40px;"><h2>Registration Deleted</h2><p>Deleted on: ${deletedData.deleted_at}</p></div>`;
             return;
         }
 
         // PATH B: DELETE (The logic we fixed together)
         if (mode === 'delete' && activeData) {
-            mainContainer.style.display = 'block';[cite: 1]
-            renderDeleteInterface(regId, activeData);[cite: 1]
+            mainContainer.style.display = 'block';
+            renderDeleteInterface(regId, activeData);
             return; 
         }
 
-        // PATH C: EDIT (The stable detail view)[cite: 1]
+        // PATH C: EDIT (The stable detail view)
         if (mode === 'edit' && activeData) {
             originalData = activeData;
-            renderForm();[cite: 1]
+            renderForm();
 
             fieldRules.forEach(r => {
-                const el = document.getElementById(`inp-${r.field_id}`);[cite: 1]
+                const el = document.getElementById(`inp-${r.field_id}`);
                 if (el && activeData[r.field_id] !== undefined) {
-                    el.value = activeData[r.field_id];[cite: 1]
+                    el.value = activeData[r.field_id];
                     if (['full_name', 'mobile', 'email'].includes(r.field_id)) {
-                        el.disabled = true;[cite: 1]
+                        el.disabled = true;
                     }
                 }
             });
 
-            mainContainer.style.display = 'block';[cite: 1]
+            mainContainer.style.display = 'block';
             
-            const regBtn = document.getElementById('btn-register');[cite: 1]
+            const regBtn = document.getElementById('btn-register');
             if (regBtn) {
-                regBtn.disabled = false;[cite: 1]
-                regBtn.innerText = "DETAILS ARE OKAY, CLICK HERE TO PROCEED FURTHER";[cite: 1]
+                regBtn.disabled = false;
+                regBtn.innerText = "DETAILS ARE OKAY, CLICK HERE TO PROCEED FURTHER";
             }
             return;
         }
 
-        // THE SAFETY NET: If no data is found, show this instead of a blank screen[cite: 1]
-        mainContainer.style.display = 'block';[cite: 1]
-        mainContainer.innerHTML = `<div style="text-align:center; padding:40px;"><h2>No Record Found</h2><p>ID: ${regId} does not exist.</p></div>`;[cite: 1]
+        // THE SAFETY NET: If no data is found, show this instead of a blank screen
+        if (mainContainer) {
+            mainContainer.style.display = 'block';
+            mainContainer.innerHTML = `<div style="text-align:center; padding:40px;"><h2>No Record Found</h2><p>ID: ${regId} does not exist.</p></div>`;
+        }
 
     } catch (e) { 
-        console.error("MERS Restore Error:", e);[cite: 1]
-        if (document.getElementById('loading-init')) document.getElementById('loading-init').style.display = 'none';[cite: 1]
+        console.error("MERS Restore Error:", e);
+        if (document.getElementById('loading-init')) {
+            document.getElementById('loading-init').style.display = 'none';
+        }
     }
 }
 
+  
   
 // THE INTEGRITY SAVE FUNCTION
 async function updateRegistrationWithIntegrity() {
