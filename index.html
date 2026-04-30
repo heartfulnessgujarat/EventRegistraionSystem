@@ -861,15 +861,10 @@ async function handleSectionNavigation() {
   
 // 2. THE SACRED ENGINE: The April 10th logic, now firing at the very end
 
+async function submitData() {
+    console.log("%c [DIAGNOSTIC] submitData started! ", "background: #222; color: #bada55; font-size: 14px;");
 
-  async function submitData() {
-
-console.log("%c [DIAGNOSTIC] submitData started! ", "background: #222; color: #bada55; font-size: 14px;");
-
-    
     // --- THE SACRED ENGINE ---
-    // We removed the 'Guard' because buildExtraSections() only calls this 
-    // function when the user is truly on the final step.
     try {
         const urlParams = new URLSearchParams(window.location.search);
         const mode = (urlParams.get('mode') || 'new').toLowerCase();
@@ -915,10 +910,23 @@ console.log("%c [DIAGNOSTIC] submitData started! ", "background: #222; color: #b
             statusMsg = "EDITED ON " + new Date().toLocaleString();
         }
 
+        // --- SECTION 1 REFRESH (Fix for Editing Section 1) ---
+        // We explicitly pull these from the UI to ensure edits are captured.
+        const updatedSection1 = {
+            full_name: document.getElementById('full_name').value,
+            email: document.getElementById('email').value,
+            mobile: document.getElementById('mobile').value,
+            organization: document.getElementById('organization').value,
+            designation: document.getElementById('designation').value,
+            pincode: document.getElementById('pincode').value,
+            full_address: document.getElementById('full_address').value
+        };
+
         // --- THE MERS MERGE ---
         const formData = {
-            ...originalData,
-            ...mersTempData,
+            ...originalData,      // 1. Start with database values
+            ...updatedSection1,   // 2. Overwrite with UI edits (Section 1)
+            ...mersTempData,      // 3. Overwrite with dynamic section edits (Sections 2 & 3)
             registration_id: finalRegId,
             timestamp: finalTimestamp,
             registration_status: statusMsg,
@@ -929,13 +937,8 @@ console.log("%c [DIAGNOSTIC] submitData started! ", "background: #222; color: #b
         // SAVE & EMAIL
         await db.ref('registrations/' + finalRegId).set(formData);
 
-
-
-// --- PREPARE DATA FOR MASTER UPDATE ---
-
-// --- PREPARE THE MASTER UPDATE DATA ---
-
-const masterUpdateData = {
+        // --- PREPARE THE MASTER UPDATE DATA ---
+        const masterUpdateData = {
             pincode: formData.pincode || "",
             email: formData.email || "",
             mobile: formData.mobile || "",
@@ -944,59 +947,37 @@ const masterUpdateData = {
             full_address: formData.full_address || ""
         };
 
-
-
-      
-      // --- SURGICAL SEARCH & UPDATE ---
+        // --- SURGICAL SEARCH & UPDATE ---
         const masterRef = db.ref('masters/Master_Internal_DB');
         
         // Find the user where "full_name" matches
         const masterSearch = await masterRef.orderByChild('full_name').equalTo(formData.full_name).once('value');
         
         if (masterSearch.exists()) {
-            const userKey = Object.keys(masterSearch.val())[0]; // Finds the 'u' number
+            const userKey = Object.keys(masterSearch.val())[0]; 
             await masterRef.child(userKey).update(masterUpdateData);
             console.log("[DIAGNOSTIC] Master Database updated at: " + userKey);
         }
       
-     
-      
-        console.log("[DIAGNOSTIC] Master Firebase Direct Update Successful!");
-
-    
         console.log("[DIAGNOSTIC] Firebase Save successful. ID: " + finalRegId);
 
-    
+        const scriptUrl = SCRIPT_URL;
 
-                     const scriptUrl = SCRIPT_URL;
-      
-       
-
-
-
-
-  
-
-fetch(`${scriptUrl}?action=sendEmail&regId=${finalRegId}&eventId=${eventId}`)
-    .then(() => console.log("[DIAGNOSTIC] Email trigger sent successfully."))
-    .catch(err => console.error("[DIAGNOSTIC] Email trigger failed:", err));
-
-
-      
+        fetch(`${scriptUrl}?action=sendEmail&regId=${finalRegId}&eventId=${eventId}`)
+            .then(() => console.log("[DIAGNOSTIC] Email trigger sent successfully."))
+            .catch(err => console.error("[DIAGNOSTIC] Email trigger failed:", err));
 
         // --- FINAL UI SWAP (The Clean Sweep) ---
         console.log("[DIAGNOSTIC] Starting Final UI Swap...");
 
-        // Hide dynamic content and standard sections
         const dynamicContent = document.getElementById('dynamic-sections-content');
         const s1 = document.getElementById('Section1');
         const s2 = document.getElementById('Section2');
         
-        if (dynamicContent) dynamicContent.innerHTML = ""; // Clear questions
+        if (dynamicContent) dynamicContent.innerHTML = ""; 
         if (s1) s1.style.display = 'none';
         if (s2) s2.style.display = 'none';
         
-        // Hide the banner/header/buttons to clear the stage
         const header = document.querySelector('.event-header');
         const actionBtn = document.getElementById('btn-next-action');
         const backBtn = document.getElementById('btn-back-to-profile');
@@ -1005,10 +986,8 @@ fetch(`${scriptUrl}?action=sendEmail&regId=${finalRegId}&eventId=${eventId}`)
         if (actionBtn) actionBtn.style.display = 'none';
         if (backBtn) backBtn.style.display = 'none';
 
-        // CRITICAL: Ensure main app wrapper is visible
         document.getElementById('app').style.display = 'block';
 
-        // Reveal Success Screen
         const successDiv = document.getElementById('success-screen');
         const contentDiv = document.getElementById('success-content');
         
@@ -1030,8 +1009,7 @@ fetch(`${scriptUrl}?action=sendEmail&regId=${finalRegId}&eventId=${eventId}`)
         document.getElementById('processing-overlay').style.display = 'none';
         document.getElementById('app').style.display = 'block';
     }
-}
-  
+}  
 function manualFormatCheck() {
   const emailInput = document.getElementById('inp-email');
   const emailVal = emailInput.value.trim(); 
