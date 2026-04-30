@@ -861,23 +861,21 @@ async function handleSectionNavigation() {
   
 // 2. THE SACRED ENGINE: The April 10th logic, now firing at the very end
 
+
 async function submitData() {
     console.log("%c [DIAGNOSTIC] submitData started! ", "background: #222; color: #bada55; font-size: 14px;");
 
-    // --- THE SACRED ENGINE ---
     try {
         const urlParams = new URLSearchParams(window.location.search);
         const mode = (urlParams.get('mode') || 'new').toLowerCase();
         const existingRegId = urlParams.get('regId');
 
-        // UI LOCK
         document.getElementById('processing-overlay').style.display = 'block';
 
         let finalRegId = existingRegId;
         let finalTimestamp = originalData.timestamp || "";
         let statusMsg = "CONFIRMED";
 
-        // --- ID & CAPACITY LOGIC ---
         if (mode === 'new') {
             const capacityLimit = parseInt(eventConfig.hall_capacity || "0");
             const counterRef = db.ref('counters/' + eventId);
@@ -910,23 +908,26 @@ async function submitData() {
             statusMsg = "EDITED ON " + new Date().toLocaleString();
         }
 
-        // --- SECTION 1 REFRESH (Fix for Editing Section 1) ---
-        // We explicitly pull these from the UI to ensure edits are captured.
-        const updatedSection1 = {
-            full_name: document.getElementById('full_name').value,
-            email: document.getElementById('email').value,
-            mobile: document.getElementById('mobile').value,
-            organization: document.getElementById('organization').value,
-            designation: document.getElementById('designation').value,
-            pincode: document.getElementById('pincode').value,
-            full_address: document.getElementById('full_address').value
+        // --- SAFE SECTION 1 REFRESH ---
+        const getVal = (id) => {
+            const el = document.getElementById(id);
+            return el ? el.value : (originalData[id] || ""); 
         };
 
-        // --- THE MERS MERGE ---
+        const updatedSection1 = {
+            full_name: getVal('full_name'),
+            email: getVal('email'),
+            mobile: getVal('mobile'),
+            organization: getVal('organization'),
+            designation: getVal('designation'),
+            pincode: getVal('pincode'),
+            full_address: getVal('full_address')
+        };
+
         const formData = {
-            ...originalData,      // 1. Start with database values
-            ...updatedSection1,   // 2. Overwrite with UI edits (Section 1)
-            ...mersTempData,      // 3. Overwrite with dynamic section edits (Sections 2 & 3)
+            ...originalData,
+            ...updatedSection1,
+            ...mersTempData,
             registration_id: finalRegId,
             timestamp: finalTimestamp,
             registration_status: statusMsg,
@@ -934,10 +935,8 @@ async function submitData() {
             event_id: eventId
         };
 
-        // SAVE & EMAIL
         await db.ref('registrations/' + finalRegId).set(formData);
 
-        // --- PREPARE THE MASTER UPDATE DATA ---
         const masterUpdateData = {
             pincode: formData.pincode || "",
             email: formData.email || "",
@@ -947,29 +946,19 @@ async function submitData() {
             full_address: formData.full_address || ""
         };
 
-        // --- SURGICAL SEARCH & UPDATE ---
         const masterRef = db.ref('masters/Master_Internal_DB');
-        
-        // Find the user where "full_name" matches
         const masterSearch = await masterRef.orderByChild('full_name').equalTo(formData.full_name).once('value');
         
         if (masterSearch.exists()) {
             const userKey = Object.keys(masterSearch.val())[0]; 
             await masterRef.child(userKey).update(masterUpdateData);
-            console.log("[DIAGNOSTIC] Master Database updated at: " + userKey);
         }
       
-        console.log("[DIAGNOSTIC] Firebase Save successful. ID: " + finalRegId);
-
         const scriptUrl = SCRIPT_URL;
-
         fetch(`${scriptUrl}?action=sendEmail&regId=${finalRegId}&eventId=${eventId}`)
-            .then(() => console.log("[DIAGNOSTIC] Email trigger sent successfully."))
-            .catch(err => console.error("[DIAGNOSTIC] Email trigger failed:", err));
+            .catch(err => console.error("Email trigger failed:", err));
 
-        // --- FINAL UI SWAP (The Clean Sweep) ---
-        console.log("[DIAGNOSTIC] Starting Final UI Swap...");
-
+        // --- FINAL UI SWAP ---
         const dynamicContent = document.getElementById('dynamic-sections-content');
         const s1 = document.getElementById('Section1');
         const s2 = document.getElementById('Section2');
@@ -978,38 +967,26 @@ async function submitData() {
         if (s1) s1.style.display = 'none';
         if (s2) s2.style.display = 'none';
         
-        const header = document.querySelector('.event-header');
-        const actionBtn = document.getElementById('btn-next-action');
-        const backBtn = document.getElementById('btn-back-to-profile');
-        
-        if (header) header.style.display = 'none';
-        if (actionBtn) actionBtn.style.display = 'none';
-        if (backBtn) backBtn.style.display = 'none';
-
+        document.querySelector('.event-header').style.display = 'none';
+        document.getElementById('btn-next-action').style.display = 'none';
+        document.getElementById('btn-back-to-profile').style.display = 'none';
         document.getElementById('app').style.display = 'block';
 
-        const successDiv = document.getElementById('success-screen');
         const contentDiv = document.getElementById('success-content');
-        
-        if (contentDiv) {
-            contentDiv.innerHTML = eventConfig.final_html || "<h2>Registration Successful!</h2>";
-        }
+        if (contentDiv) contentDiv.innerHTML = eventConfig.final_html || "<h2>Registration Successful!</h2>";
 
-        if (successDiv) {
-            successDiv.style.display = 'block';
-            console.log("[DIAGNOSTIC] Success screen displayed.");
-        }
-
+        document.getElementById('success-screen').style.display = 'block';
         document.getElementById('processing-overlay').style.display = 'none';
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        console.log("[DIAGNOSTIC] Finish line reached successfully.");
 
     } catch (error) {
         console.error("[DIAGNOSTIC CRASH]:", error);
         document.getElementById('processing-overlay').style.display = 'none';
-        document.getElementById('app').style.display = 'block';
     }
-}  
+}
+
+
+   
 function manualFormatCheck() {
   const emailInput = document.getElementById('inp-email');
   const emailVal = emailInput.value.trim(); 
