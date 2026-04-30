@@ -1117,12 +1117,19 @@ async function loadExistingData(regId, mode) {
             return; // EXIT: Code below will never run
         }
 
-        // --- PATH B: ACTIVE DELETE MODE ---
+       // --- PATH B: ACTIVE DELETE MODE ---
         // If mode is delete, we show the UI and STOP. We do NOT load form rules.
         if (mode === 'delete' && activeData) {
-            hideLoading();
-            renderDeleteInterface(regId, activeData); // Uses your working delete UI
-            return; // EXIT: Code below will never run
+            // Direct command to hide the "frustrating" loading message immediately
+            const loader = document.getElementById('loading-init');
+            if (loader) loader.style.display = 'none';
+            
+            // Turn on the lights: reveal the container so the delete UI is visible
+            const formContent = document.getElementById('form-content');
+            if (formContent) formContent.style.display = 'block'; 
+            
+            renderDeleteInterface(regId, activeData); 
+            return; // EXIT: This keeps the Edit logic below completely undisturbed
         }
 
         // --- PATH C: EDIT MODE (The Integrity Path) ---
