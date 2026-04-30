@@ -236,6 +236,8 @@ function formatFirebaseDate(fbDate) {
   
   let mersTempData = {};
 
+const urlParams = new URLSearchParams(window.location.search);
+currentMode = urlParams.get('mode') || 'register'; // Captures 'edit' or 'delete'[cite: 1, 2]
   
   let fieldRules = [], masterData = [], eventConfig = {}, moreSections = [];
 
