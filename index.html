@@ -916,31 +916,16 @@ console.log("%c [DIAGNOSTIC] submitData started! ", "background: #222; color: #b
         }
 
         // --- THE MERS MERGE ---
+        const formData = {
+            ...originalData,
+            ...mersTempData,
+            registration_id: finalRegId,
+            timestamp: finalTimestamp,
+            registration_status: statusMsg,
+            email_sent: (mode === 'new') ? "No" : (originalData.email_sent || "No"),
+            event_id: eventId
+        };
 
-
-// --- THE MERS MERGE (INTEGRITY VERSION) ---
-        // 1. Start with previous data
-        let harvestedData = { ...originalData, ...mersTempData };
-
-        // 2. FORCE HARVEST: Grab every field from the screen (including Section 1)
-        // This ensures disabled fields are NOT ignored.
-        fieldRules.forEach(r => {
-            const el = document.getElementById(`inp-${r.field_id}`);
-            if (el) {
-                harvestedData[r.field_id] = el.value;
-            }
-        });
-
-     const formData = {
-    ...harvestedData,
-    registration_id: finalRegId,
-    timestamp: finalTimestamp,
-    registration_status: statusMsg,
-    email_sent: (mode === 'new') ? "No" : (originalData.email_sent || "No"),
-    event_id: eventId
-};
-
-      
         // SAVE & EMAIL
         await db.ref('registrations/' + finalRegId).set(formData);
 
@@ -1079,163 +1064,67 @@ function manualFormatCheck() {
   }
 }
 
+
 async function loadExistingData(regId, mode) {
+    console.log(`[DIAGNOSTIC] loadExistingData started for ID: ${regId}`);
     try {
-        // 1. Fetch data using your stable Firebase logic
-        const [delSnap, masterSnap, regSnap] = await Promise.all([
-            db.ref('deleted_registrations/' + regId).once('value'),
-            db.ref('masters/Master_Internal_DB/' + regId).once('value'),
-            db.ref('registrations/' + regId).once('value')
-        ]);
+        // PATH A: Check the Master Internal DB first
+        let snap = await db.ref('masters/Master_Internal_DB/' + regId).once('value');
+        let data = snap.val();
 
-        const deletedData = delSnap.val();
-        let activeData = masterSnap.val() || regSnap.val();
-
-        // 2. Clear the loader immediately using your established ID
-        if (document.getElementById('loading-init')) {
-            document.getElementById('loading-init').style.display = 'none';
+        // PATH B: If not found, check the root 'registrations' folder
+        if (!data) {
+            console.log("MERS: Not found in Master_Internal_DB, checking root registrations...");
+            snap = await db.ref('registrations/' + regId).once('value');
+            data = snap.val();
         }
 
-        // 3. Define the main container we verified
-        const mainContainer = document.getElementById('form-content');
-
-        // PATH A: ARCHIVE (Handle deleted records)
-        if (deletedData) {
-            mainContainer.style.display = 'block';
-            mainContainer.innerHTML = `<div style="text-align:center; padding:40px;"><h2>Registration Deleted</h2><p>Deleted on: ${deletedData.deleted_at}</p></div>`;
+        if (!data) {
+            console.error("MERS: Registration REALLY not found for ID: " + regId);
+            alert("Registration not found. Please ensure the ID is correct.");
             return;
         }
 
-        // PATH B: DELETE (The logic we fixed together)
-        if (mode === 'delete' && activeData) {
-            mainContainer.style.display = 'block';
-            renderDeleteInterface(regId, activeData);
-            return; 
-        }
+        // --- SUCCESS: DATA FOUND ---
+        originalData = data;
+        profileSnapshotForScript = encodeURIComponent(JSON.stringify(data));
 
-        // PATH C: EDIT (The stable detail view)
-        if (mode === 'edit' && activeData) {
-            originalData = activeData;
-            renderForm();
+        if (mode === 'edit') {
+            renderForm(); 
 
             fieldRules.forEach(r => {
                 const el = document.getElementById(`inp-${r.field_id}`);
-                if (el && activeData[r.field_id] !== undefined) {
-                    el.value = activeData[r.field_id];
+                if (el && data[r.field_id] !== undefined) {
+                    el.value = data[r.field_id];
                     if (['full_name', 'mobile', 'email'].includes(r.field_id)) {
                         el.disabled = true;
+                        el.style.background = "#f9f9f9";
                     }
                 }
             });
 
-            mainContainer.style.display = 'block';
-            
+            document.getElementById('loading-init').style.display = 'none';
+            document.getElementById('form-content').style.display = 'block';
+
+            const startBtnsContainer = document.getElementById('btns-start');
+            if (startBtnsContainer) startBtnsContainer.style.display = 'flex';
+
             const regBtn = document.getElementById('btn-register');
             if (regBtn) {
                 regBtn.disabled = false;
+                regBtn.style.opacity = "1";
                 regBtn.innerText = "DETAILS ARE OKAY, CLICK HERE TO PROCEED FURTHER";
             }
-            return;
+            
+            if (typeof updateButtonState === 'function') updateButtonState();
         }
-
-        // THE SAFETY NET: If no data is found, show this instead of a blank screen
-        if (mainContainer) {
-            mainContainer.style.display = 'block';
-            mainContainer.innerHTML = `<div style="text-align:center; padding:40px;"><h2>No Record Found</h2><p>ID: ${regId} does not exist.</p></div>`;
-        }
-
-    } catch (e) { 
-        console.error("MERS Restore Error:", e);
-        if (document.getElementById('loading-init')) {
-            document.getElementById('loading-init').style.display = 'none';
-        }
+    } catch (e) {
+        console.error("MERS Entry Error:", e);
     }
 }
 
-  
-  
-// THE INTEGRITY SAVE FUNCTION
-async function updateRegistrationWithIntegrity() {
-    let updatedPayload = {};
-    const now = new Date();
-    
-    // GATHER ALL ANSWERS from all sections (even disabled ones)
-    fieldRules.forEach(r => {
-        const el = document.getElementById(`inp-${r.field_id}`);
-        if (el) {
-            updatedPayload[r.field_id] = el.value;
-        }
-    });
 
-    // UPDATE STATUS REMARK
-    updatedPayload.registration_status = `EDITED ON ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
-    
-    // PUSH TO FIREBASE
-    const regId = new URLSearchParams(window.location.search).get('regId');
-    await db.ref('registrations/' + regId).update(updatedPayload);
-    await db.ref('masters/Master_Internal_DB/' + regId).update(updatedPayload);
-    
-    showSuccessScreen("Changes Saved Successfully");
-}
 
-  
-// PERSONALIZED STAY MESSAGE (Keep details, remove buttons)
-function showStayMessage(userName) {
-    document.getElementById('delete-action-area').style.display = 'none';
-    const container = document.getElementById('delete-container');
-    container.style.borderColor = "#b7eb8f";
-    container.style.background = "#f6ffed";
-    
-    const msgDiv = document.createElement('div');
-    msgDiv.style.textAlign = "center";
-    msgDiv.style.marginTop = "20px";
-    msgDiv.innerHTML = `
-        <div style="font-size: 50px; margin-bottom: 10px;">🙏</div>
-        <h3 style="color: #389e0d; margin: 0;">Thank you, ${userName}!</h3>
-        <p style="color: #595959; font-size: 17px;">Your registration remains active and no changes were made.</p>
-        <p style="color: #8c8c8c; font-size: 14px;">You may safely close this tab.</p>
-    `;
-    container.appendChild(msgDiv);
-}
-
-function confirmSurgicalDeletion(regId, data) {
-    const area = document.getElementById('delete-action-area');
-    area.innerHTML = `
-        <div style="text-align: center; width: 100%;">
-            <p style="color: #cf1322; font-weight: bold; margin-bottom: 20px;">ARE YOU ABSOLUTELY SURE? THIS ACTION IS PERMANENT.</p>
-            <div style="display: flex; gap: 15px; justify-content: center;">
-                <button onclick='executeSurgicalDeletion("${regId}", ${JSON.stringify(data).replace(/"/g, '&quot;')})' style="background: #cf1322; color: white; border: none; padding: 12px 30px; border-radius: 8px; cursor: pointer; font-weight: bold;">Yes, Delete Permanently</button>
-                <button onclick='showStayMessage("${data.full_name || data.name}")' style="background: #595959; color: white; border: none; padding: 12px 30px; border-radius: 8px; cursor: pointer;">I do not want to cancel</button>
-            </div>
-        </div>`;
-}
-
-async function executeSurgicalDeletion(regId, data) {
-    // Add deletion timestamp
-    const now = new Date();
-    data.deleted_at = now.toLocaleDateString() + " " + now.toLocaleTimeString();
-
-    const updates = {};
-    updates[`registrations/${regId}`] = null;
-    updates[`masters/Master_Internal_DB/${regId}`] = null;
-    updates[`deleted_registrations/${regId}`] = data; // Move to Archive
-
-    await db.ref().update(updates);
-    
-    document.getElementById('form-content').innerHTML = `
-        <div style='max-width: 800px; margin: 40px auto; text-align:center; padding:50px; border: 1px solid #f0f0f0; border-radius: 20px; font-family: sans-serif; background: #fff;'>
-            <div style="font-size: 70px; margin-bottom: 20px;">✅</div>
-            <h2 style='color: #52c41a;'>Registration Cancelled</h2>
-            <div style="text-align: left; background: #fafafa; padding: 25px; border-radius: 12px; border: 1px dashed #d9d9d9; margin: 20px 0;">
-                <p><strong>Name:</strong> ${data.full_name || data.name}</p>
-                <p><strong>Reg ID:</strong> ${regId}</p>
-                <p><strong>Status:</strong> Removed</p>
-            </div>
-            <p style="color: #8c8c8c;">This record has been archived. You may close this tab.</p>
-        </div>`;
-}
-
-  
   
   function cancelDeletionAction() {
     document.getElementById('delete-confirmation-card').style.display = 'none';
@@ -1880,35 +1769,7 @@ function validateField(id, value, rule) {
 
 init();
 
-  function renderDeleteInterface(regId, data) {
-    const mainContainer = document.getElementById('form-content');
-    if (!mainContainer) return;
-
-    mainContainer.innerHTML = `
-        <div style="text-align:center; padding:20px; border:1px solid #ccc; border-radius:8px; background:#fff;">
-            <h3 style="color:#d32f2f;">Cancel Registration?</h3>
-            <p>Are you sure you want to cancel the registration for: <strong>${data.full_name || 'this participant'}</strong>?</p>
-            <div style="margin-top:20px;">
-                <button id="confirm-delete-btn" class="btn-delete" style="background:#d32f2f; color:white; padding:10px 20px; border:none; border-radius:4px; cursor:pointer; margin-right:10px;">
-                    YES, CANCEL REGISTRATION
-                </button>
-                <button onclick="window.close()" style="padding:10px 20px; border:1px solid #ccc; border-radius:4px; cursor:pointer;">
-                    NO, KEEP IT
-                </button>
-            </div>
-        </div>
-    `;
-
-    // Ensure the button actually triggers the deletion
-    const deleteBtn = document.getElementById('confirm-delete-btn');
-    if (deleteBtn) {
-        deleteBtn.onclick = () => {
-            if(confirm("This will permanently remove the record. Proceed?")) {
-                executeDeletion(regId); 
-            }
-        };
-    }
-}
+  
 
   
 </script>
