@@ -916,16 +916,31 @@ console.log("%c [DIAGNOSTIC] submitData started! ", "background: #222; color: #b
         }
 
         // --- THE MERS MERGE ---
-        const formData = {
-            ...originalData,
-            ...mersTempData,
-            registration_id: finalRegId,
-            timestamp: finalTimestamp,
-            registration_status: statusMsg,
-            email_sent: (mode === 'new') ? "No" : (originalData.email_sent || "No"),
-            event_id: eventId
-        };
 
+
+// --- THE MERS MERGE (INTEGRITY VERSION) ---
+        // 1. Start with previous data
+        let harvestedData = { ...originalData, ...mersTempData };
+
+        // 2. FORCE HARVEST: Grab every field from the screen (including Section 1)
+        // This ensures disabled fields are NOT ignored.
+        fieldRules.forEach(r => {
+            const el = document.getElementById(`inp-${r.field_id}`);
+            if (el) {
+                harvestedData[r.field_id] = el.value;
+            }
+        });
+
+     const formData = {
+    ...harvestedData,
+    registration_id: finalRegId,
+    timestamp: finalTimestamp,
+    registration_status: statusMsg,
+    email_sent: (mode === 'new') ? "No" : (originalData.email_sent || "No"),
+    event_id: eventId
+};
+
+      
         // SAVE & EMAIL
         await db.ref('registrations/' + finalRegId).set(formData);
 
@@ -1064,19 +1079,20 @@ function manualFormatCheck() {
   }
 }
 
+
 async function loadExistingData(regId, mode) {
     try {
-        // 1. Parallel Fetch for Speed
-        const [masterSnap, regSnap, delSnap] = await Promise.all([
+        // STEP 1: Fast Parallel Fetch (Checking Deleted first for Transparency)
+        const [delSnap, masterSnap, regSnap] = await Promise.all([
+            db.ref('deleted_registrations/' + regId).once('value'),
             db.ref('masters/Master_Internal_DB/' + regId).once('value'),
-            db.ref('registrations/' + regId).once('value'),
-            db.ref('deleted_registrations/' + regId).once('value')
+            db.ref('registrations/' + regId).once('value')
         ]);
 
-        let data = masterSnap.val() || regSnap.val();
         const deletedData = delSnap.val();
+        let data = masterSnap.val() || regSnap.val();
 
-        // --- SCENARIO A: RECORD ALREADY DELETED (Transparency Screen) ---
+        // SCENARIO: Already Deleted (The "Transparency" Screen)
         if (deletedData) {
             document.getElementById('loading-init').style.display = 'none';
             const mainContainer = document.getElementById('form-content');
@@ -1085,17 +1101,16 @@ async function loadExistingData(regId, mode) {
                 <div style="max-width: 800px; margin: 50px auto; padding: 40px; text-align: center; border: 1px solid #d9d9d9; border-radius: 15px; font-family: sans-serif; background: #fafafa;">
                     <div style="font-size: 60px; margin-bottom: 20px;">ℹ️</div>
                     <h2 style="color: #595959;">Registration History</h2>
-                    <p style="font-size: 18px; color: #262626;">Hello <strong>${deletedData.full_name || deletedData.name}</strong>,</p>
-                    <p style="font-size: 16px; color: #8c8c8c;">Our records show that Registration <strong>${regId}</strong> was <span style="color: #cf1322; font-weight: bold;">Permanently Deleted</span> on:</p>
-                    <div style="background: #fff; border: 1px dashed #cf1322; padding: 15px; display: inline-block; border-radius: 8px; margin: 15px 0; font-family: monospace; font-size: 18px; color: #cf1322;">
+                    <p style="font-size: 18px;">Hello <strong>${deletedData.full_name || deletedData.name}</strong>,</p>
+                    <p>Our records show this registration was <span style="color: #cf1322; font-weight: bold;">Deleted</span> on:</p>
+                    <div style="background: #fff; border: 1px dashed #cf1322; padding: 15px; display: inline-block; border-radius: 8px; margin: 15px 0; font-family: monospace; color: #cf1322;">
                         ${deletedData.deleted_at}
                     </div>
-                    <p style="color: #8c8c8c; margin-top: 20px;">Because this record has been removed, the link is no longer active.</p>
+                    <p style="color: #8c8c8c;">This link is no longer active.</p>
                 </div>`;
             return;
         }
 
-        // --- SCENARIO B: RECORD NOT FOUND ANYWHERE ---
         if (!data) {
             document.getElementById('loading-init').style.display = 'none';
             document.getElementById('form-content').style.display = 'block';
@@ -1103,58 +1118,83 @@ async function loadExistingData(regId, mode) {
             return;
         }
 
-        // --- SCENARIO C: ACTIVE DELETE MODE ---
+        // SCENARIO: Delete Mode (Remains untouched and perfect)
         if (mode === 'delete') {
-            document.getElementById('loading-init').style.display = 'none';
-            const mainContainer = document.getElementById('form-content');
-            mainContainer.style.display = 'block';
-            mainContainer.innerHTML = `
-                <div id="delete-container" style="max-width: 900px; margin: 30px auto; padding: 35px; border: 1px solid #ffccc7; background: #fff2f0; border-radius: 15px; font-family: sans-serif;">
-                    <div style="text-align: center; margin-bottom: 30px;">
-                        <span style="font-size: 55px;">⚠️</span>
-                        <h2 style="color: #cf1322;">Cancel Registration?</h2>
-                    </div>
-                    <div style="background: white; padding: 25px; border-radius: 12px; border: 1px solid #f0f0f0; margin-bottom: 30px;">
-                        <table id="user-details-table" style="width: 100%; font-size: 16px; border-collapse: collapse;">
-                            <tr style="border-bottom: 1px solid #f0f0f0;"><td style="padding: 12px; font-weight: bold; color: #8c8c8c; width: 200px;">Name</td><td style="padding: 12px;">${data.full_name || data.name}</td></tr>
-                            <tr style="border-bottom: 1px solid #f0f0f0;"><td style="padding: 12px; font-weight: bold; color: #8c8c8c;">Reg ID</td><td style="padding: 12px; font-family: monospace;">${regId}</td></tr>
-                            <tr><td style="padding: 12px; font-weight: bold; color: #8c8c8c;">Status</td><td style="padding: 12px;">Active</td></tr>
-                        </table>
-                    </div>
-                    <div id="delete-action-area" style="display: flex; gap: 20px; justify-content: center;">
-                        <button onclick='confirmSurgicalDeletion("${regId}", ${JSON.stringify(data).replace(/"/g, '&quot;')})' style="background: #ff4d4f; color: white; border: none; padding: 15px 40px; border-radius: 8px; font-weight: bold; cursor: pointer;">Confirm Cancellation</button>
-                        <button onclick='showStayMessage("${data.full_name || data.name}")' style="background: #d9d9d9; color: #595959; border: none; padding: 15px 40px; border-radius: 8px; font-weight: bold; cursor: pointer;">I do not want to cancel</button>
-                    </div>
-                </div>`;
+            renderDeleteInterface(regId, data);
             return;
         }
 
-        // --- SCENARIO D: EDIT MODE ---
+        // SCENARIO: Edit Mode (Restoring the Ideal Screen)
         if (mode === 'edit') {
             originalData = data;
             profileSnapshotForScript = encodeURIComponent(JSON.stringify(data));
+            
+            // Render the whole form architecture
             renderForm(); 
+
+            // FETCH ALL ANSWERS: Loop through every rule and fill the field
             fieldRules.forEach(r => {
                 const el = document.getElementById(`inp-${r.field_id}`);
                 if (el && data[r.field_id] !== undefined) {
                     el.value = data[r.field_id];
+                    // Lock core identity fields
                     if (['full_name', 'mobile', 'email'].includes(r.field_id)) {
                         el.disabled = true;
-                        el.style.background = "#f9f9f9";
+                        el.style.background = "#f5f5f5";
                     }
                 }
             });
+
             document.getElementById('loading-init').style.display = 'none';
             document.getElementById('form-content').style.display = 'block';
+
+            // FORCE IDEAL SCREEN BUTTONS (Screenshot _3)
+            const btnArea = document.getElementById('btns-start');
+            if (btnArea) {
+                btnArea.style.display = 'flex';
+                btnArea.style.flexDirection = 'column';
+                btnArea.style.gap = '10px';
+            }
+
             const regBtn = document.getElementById('btn-register');
             if (regBtn) {
                 regBtn.disabled = false;
+                regBtn.style.opacity = "1";
+                regBtn.style.background = "#1a237e"; // Deep Blue
                 regBtn.innerText = "DETAILS ARE OKAY, CLICK HERE TO PROCEED FURTHER";
             }
+            
+            // Ensure any "I want to edit" button logic is also initialized
+            if(typeof updateButtonState === 'function') updateButtonState();
         }
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error("MERS Load Error:", e); }
 }
 
+// THE INTEGRITY SAVE FUNCTION
+async function updateRegistrationWithIntegrity() {
+    let updatedPayload = {};
+    const now = new Date();
+    
+    // GATHER ALL ANSWERS from all sections (even disabled ones)
+    fieldRules.forEach(r => {
+        const el = document.getElementById(`inp-${r.field_id}`);
+        if (el) {
+            updatedPayload[r.field_id] = el.value;
+        }
+    });
+
+    // UPDATE STATUS REMARK
+    updatedPayload.registration_status = `EDITED ON ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+    
+    // PUSH TO FIREBASE
+    const regId = new URLSearchParams(window.location.search).get('regId');
+    await db.ref('registrations/' + regId).update(updatedPayload);
+    await db.ref('masters/Master_Internal_DB/' + regId).update(updatedPayload);
+    
+    showSuccessScreen("Changes Saved Successfully");
+}
+
+  
 // PERSONALIZED STAY MESSAGE (Keep details, remove buttons)
 function showStayMessage(userName) {
     document.getElementById('delete-action-area').style.display = 'none';
