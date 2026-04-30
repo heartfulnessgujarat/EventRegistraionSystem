@@ -860,7 +860,6 @@ async function handleSectionNavigation() {
 }
 
 
-
 async function submitData() {
     console.log("%c [DIAGNOSTIC] submitData started! ", "background: #222; color: #bada55; font-size: 14px;");
 
@@ -869,7 +868,6 @@ async function submitData() {
         const mode = (urlParams.get('mode') || 'new').toLowerCase();
         
         // --- STEP 1: DEEP CAPTURE ---
-        // Forces reading from the UI fields to ensure edited Section 1 data is captured
         const getFreshVal = (id) => {
             const el = document.getElementById(id);
             if (el) {
@@ -890,7 +888,6 @@ async function submitData() {
         
         console.log("MERS: Data captured from screen for Master DB:", updatedSection1);
 
-        // Validation: If full_name is missing, we stop to prevent database corruption
         if (!updatedSection1.full_name) {
             throw new Error("Critical Error: 'full_name' is missing. Cannot sync with Master Database.");
         }
@@ -899,7 +896,6 @@ async function submitData() {
         if (overlay) overlay.style.display = 'block';
 
         // --- STEP 2: UPDATE MASTER DATABASE FIRST ---
-        // This ensures the source of truth is updated before the registration
         const masterRef = db.ref('masters/Master_Internal_DB');
         const masterSearch = await masterRef.orderByChild('full_name').equalTo(updatedSection1.full_name).once('value');
         
@@ -914,9 +910,9 @@ async function submitData() {
         // --- STEP 3: CONSTRUCT FINAL REGISTRATION OBJECT ---
         let finalRegId = urlParams.get('regId');
         const formData = {
-            ...originalData,      // Start with original record
-            ...mersTempData,      // Add dynamic logistics data from Sections 2 & 3
-            ...updatedSection1,   // Force-overwrite with the fresh Section 1 data
+            ...originalData,
+            ...mersTempData,
+            ...updatedSection1,
             registration_id: finalRegId,
             registration_status: (mode === 'new') ? "CONFIRMED" : "EDITED ON " + new Date().toLocaleString()
         };
@@ -928,7 +924,6 @@ async function submitData() {
         console.log("%c [SUCCESS] Both Databases Updated! ", "color: white; background: green;");
         
         // --- STEP 5: PROCEED TO SUCCESS UI ---
-        // Safely hide all relevant sections
         const elementsToHide = ['Section1', 'Section2', 'btn-next-action', 'btn-back-to-profile'];
         elementsToHide.forEach(id => {
             const el = document.getElementById(id);
@@ -951,9 +946,9 @@ async function submitData() {
         if (overlay) overlay.style.display = 'none';
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
-        // Trigger Email Script if available
         if (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) {
-            fetch(`${SCRIPT_URL}?action=sendEmail&regId=${finalRegId}&eventId=${eventId}`)
+            const eventIdParam = typeof eventId !== 'undefined' ? eventId : urlParams.get('id');
+            fetch(`${SCRIPT_URL}?action=sendEmail&regId=${finalRegId}&eventId=${eventIdParam}`)
                 .catch(err => console.error("Email trigger failed:", err));
         }
         
@@ -964,8 +959,6 @@ async function submitData() {
         if (overlay) overlay.style.display = 'none';
     }
 }
-
-
 
 
    
