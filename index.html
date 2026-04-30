@@ -867,13 +867,24 @@ async function submitData() {
         const urlParams = new URLSearchParams(window.location.search);
         const mode = (urlParams.get('mode') || 'new').toLowerCase();
         
-        // --- STEP 1: DEEP CAPTURE ---
+        // --- STEP 1: SMART CAPTURE (THE FIX) ---
+        // Checks screen, then temp storage, then original record to prevent 'missing name' errors
         const getFreshVal = (id) => {
             const el = document.getElementById(id);
-            if (el) {
-                return el.value ? el.value.trim() : ""; 
+            // 1. Try to get value from the physical screen
+            let val = (el && el.value) ? el.value.trim() : "";
+            
+            // 2. If screen is empty (common when hidden), check mersTempData (synced during "Next")
+            if (!val && typeof mersTempData !== 'undefined' && mersTempData[id]) {
+                val = mersTempData[id];
             }
-            return (typeof originalData !== 'undefined' && originalData[id]) ? originalData[id] : "";
+            
+            // 3. Fallback to original record data
+            if (!val && typeof originalData !== 'undefined' && originalData[id]) {
+                val = originalData[id];
+            }
+            
+            return val;
         };
 
         const updatedSection1 = {
@@ -886,25 +897,27 @@ async function submitData() {
             full_address: getFreshVal('full_address')
         };
         
-        console.log("MERS: Data captured from screen for Master DB:", updatedSection1);
+        console.log("MERS: Verified Data for Database Sync:", updatedSection1);
 
+        // Final safety check
         if (!updatedSection1.full_name) {
-            throw new Error("Critical Error: 'full_name' is missing. Cannot sync with Master Database.");
+            throw new Error("Critical Error: 'full_name' is missing. Please ensure Section 1 is filled.");
         }
 
         const overlay = document.getElementById('processing-overlay');
         if (overlay) overlay.style.display = 'block';
 
-        // --- STEP 2: UPDATE MASTER DATABASE FIRST ---
+        // --- STEP 2: UPDATE OR CREATE MASTER DATABASE ---
         const masterRef = db.ref('masters/Master_Internal_DB');
         const masterSearch = await masterRef.orderByChild('full_name').equalTo(updatedSection1.full_name).once('value');
         
         if (masterSearch.exists()) {
             const userKey = Object.keys(masterSearch.val())[0]; 
-            console.log("MERS: Updating Master DB record at key:", userKey);
+            console.log("MERS: Updating existing Master DB record:", userKey);
             await masterRef.child(userKey).update(updatedSection1);
         } else {
-            console.warn("MERS: No matching Master record found for sync.");
+            console.log("MERS: No existing Master record. Creating new entry.");
+            await masterRef.push(updatedSection1);
         }
 
         // --- STEP 3: CONSTRUCT FINAL REGISTRATION OBJECT ---
@@ -924,7 +937,7 @@ async function submitData() {
         console.log("%c [SUCCESS] Both Databases Updated! ", "color: white; background: green;");
         
         // --- STEP 5: PROCEED TO SUCCESS UI ---
-        const elementsToHide = ['Section1', 'Section2', 'btn-next-action', 'btn-back-to-profile'];
+        const elementsToHide = ['Section1', 'Section2', 'Section3', 'btn-next-action', 'btn-back-to-profile'];
         elementsToHide.forEach(id => {
             const el = document.getElementById(id);
             if (el) el.style.display = 'none';
@@ -937,7 +950,7 @@ async function submitData() {
         if (contentDiv) {
             contentDiv.innerHTML = (typeof eventConfig !== 'undefined' && eventConfig.final_html) 
                 ? eventConfig.final_html 
-                : "<h2>Registration Updated Successfully!</h2>";
+                : "<h2>Registration Successful!</h2>";
         }
 
         const successScreen = document.getElementById('success-screen');
@@ -961,7 +974,9 @@ async function submitData() {
 }
 
 
-   
+
+
+  
 function manualFormatCheck() {
   const emailInput = document.getElementById('inp-email');
   const emailVal = emailInput.value.trim(); 
