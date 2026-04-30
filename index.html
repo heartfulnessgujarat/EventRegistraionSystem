@@ -1880,7 +1880,35 @@ function validateField(id, value, rule) {
 
 init();
 
-  
+  function renderDeleteInterface(regId, data) {
+    const mainContainer = document.getElementById('form-content');
+    if (!mainContainer) return;
+
+    mainContainer.innerHTML = `
+        <div style="text-align:center; padding:20px; border:1px solid #ccc; border-radius:8px; background:#fff;">
+            <h3 style="color:#d32f2f;">Cancel Registration?</h3>
+            <p>Are you sure you want to cancel the registration for: <strong>${data.full_name || 'this participant'}</strong>?</p>
+            <div style="margin-top:20px;">
+                <button id="confirm-delete-btn" class="btn-delete" style="background:#d32f2f; color:white; padding:10px 20px; border:none; border-radius:4px; cursor:pointer; margin-right:10px;">
+                    YES, CANCEL REGISTRATION
+                </button>
+                <button onclick="window.close()" style="padding:10px 20px; border:1px solid #ccc; border-radius:4px; cursor:pointer;">
+                    NO, KEEP IT
+                </button>
+            </div>
+        </div>
+    `;
+
+    // Ensure the button actually triggers the deletion
+    const deleteBtn = document.getElementById('confirm-delete-btn');
+    if (deleteBtn) {
+        deleteBtn.onclick = () => {
+            if(confirm("This will permanently remove the record. Proceed?")) {
+                executeDeletion(regId); 
+            }
+        };
+    }
+}
 
   
 </script>
