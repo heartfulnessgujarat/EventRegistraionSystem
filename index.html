@@ -1079,7 +1079,75 @@ function manualFormatCheck() {
   }
 }
 
-async function loadExistingData(regId, mode) {
+  async function loadExistingData(regId, mode) {
+    try {
+        // 1. Fetch data (Back to stable logic)
+        const [delSnap, masterSnap, regSnap] = await Promise.all([
+            db.ref('deleted_registrations/' + regId).once('value'),
+            db.ref('masters/Master_Internal_DB/' + regId).once('value'),
+            db.ref('registrations/' + regId).once('value')
+        ]);
+
+        const deletedData = delSnap.val();
+        let activeData = masterSnap.val() || regSnap.val();
+
+        // --- THE "CLEAN" UI RESET ---
+        // We do this directly so no 'hideLoading is not defined' error can happen.
+        if (document.getElementById('loading-init')) {
+            document.getElementById('loading-init').style.display = 'none';
+        }
+
+        // PATH A: ARCHIVE
+        if (deletedData) {
+            const mainContainer = document.getElementById('form-content');
+            mainContainer.style.display = 'block';
+            mainContainer.innerHTML = `<div style="text-align:center; padding:40px;"><h2>Registration Deleted</h2><p>Deleted on: ${deletedData.deleted_at}</p></div>`;
+            return;
+        }
+
+        // PATH B: DELETE (Restored from stable logic)
+        if (mode === 'delete' && activeData) {
+            document.getElementById('form-content').style.display = 'block'; 
+            renderDeleteInterface(regId, activeData); 
+            return; 
+        }
+
+        // PATH C: EDIT (Restored from stable logic)
+        if (mode === 'edit' && activeData) {
+            originalData = activeData;
+            renderForm(); 
+
+            fieldRules.forEach(r => {
+                const el = document.getElementById(`inp-${r.field_id}`);
+                if (el && activeData[r.field_id] !== undefined) {
+                    el.value = activeData[r.field_id];
+                    if (['full_name', 'mobile', 'email'].includes(r.field_id)) {
+                        el.disabled = true;
+                    }
+                }
+            });
+
+            document.getElementById('form-content').style.display = 'block';
+            
+            // Re-apply our "Ideal Screen" button logic
+            const regBtn = document.getElementById('btn-register');
+            if (regBtn) {
+                regBtn.disabled = false;
+                regBtn.innerText = "DETAILS ARE OKAY, CLICK HERE TO PROCEED FURTHER";
+            }
+            return;
+        }
+
+    } catch (e) { 
+        console.error("MERS Restore Error:", e);
+        if (document.getElementById('loading-init')) document.getElementById('loading-init').style.display = 'none';
+    }
+}
+
+
+
+  
+async function oldloadExistingData(regId, mode) {
     try {
         // 1. IMMEDIATE UI CLEANUP: Stop the spinner for all background-check scenarios
         const hideLoading = () => {
