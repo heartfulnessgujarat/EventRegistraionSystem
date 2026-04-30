@@ -860,66 +860,19 @@ async function handleSectionNavigation() {
 }
 
 
-
-  async function submitData() {
+async function submitData() {
     console.log("%c [DIAGNOSTIC] submitData started! ", "background: #222; color: #bada55; font-size: 14px;");
 
     try {
         const urlParams = new URLSearchParams(window.location.search);
         const mode = (urlParams.get('mode') || 'new').toLowerCase();
-        const existingRegId = urlParams.get('regId');
-
-        // Helper to hide elements only if they exist
-        const safeHide = (id) => {
-            const el = document.getElementById(id) || document.querySelector(id);
-            if (el) el.style.display = 'none';
-        };
-
-        // UI LOCK
-        const overlay = document.getElementById('processing-overlay');
-        if (overlay) overlay.style.display = 'block';
-
-        let finalRegId = existingRegId;
-        let finalTimestamp = originalData.timestamp || "";
-        let statusMsg = "CONFIRMED";
-
-        // --- ID & CAPACITY LOGIC ---
-        if (mode === 'new') {
-            const capacityLimit = parseInt(eventConfig.hall_capacity || "0");
-            const counterRef = db.ref('counters/' + eventId);
-            const transactionResult = await counterRef.transaction((current) => {
-                if (capacityLimit > 0 && (current || 0) >= capacityLimit) return; 
-                return (current || 0) + 1;
-            });
-
-            if (!transactionResult.committed) {
-                alert(eventConfig.hall_capacity_full_msg || "Registration is full.");
-                location.reload();
-                return;
-            }
-
-            const currentCount = transactionResult.snapshot.val();
-            const now = new Date();
-            const istNow = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
-            const dd = String(istNow.getUTCDate()).padStart(2, '0');
-            const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-            const yyyy = istNow.getUTCFullYear();
-            
-            finalTimestamp = `${dd}-${String(istNow.getUTCMonth() + 1).padStart(2, '0')}-${yyyy} ${String(istNow.getUTCHours()).padStart(2, '0')}:${String(istNow.getUTCMinutes()).padStart(2, '0')}:${String(istNow.getUTCSeconds()).padStart(2, '0')}`;
-            const hhmmssms = istNow.getUTCHours().toString().padStart(2, '0') + 
-                             istNow.getUTCMinutes().toString().padStart(2, '0') + 
-                             istNow.getUTCSeconds().toString().padStart(2, '0') + 
-                             istNow.getUTCMilliseconds().toString().padStart(3, '0');
-
-            finalRegId = `${eventId}-REG-${dd}-${months[istNow.getUTCMonth()]}-${yyyy}-${hhmmssms}-${String(currentCount).padStart(3, '0')}`;
-        } else {
-            statusMsg = "EDITED ON " + new Date().toLocaleString();
-        }
-
-        // --- SAFE DATA REFRESH ---
+        
+        // --- STEP 1: CAPTURE SECTION 1 IMMEDIATELY ---
+        // We do this BEFORE showing the overlay or hiding any UI
         const getVal = (id) => {
             const el = document.getElementById(id);
-            return el ? el.value : (originalData[id] || ""); 
+            // If element exists, take its value. If not, keep what we already had.
+            return (el && el.value !== undefined) ? el.value : (originalData[id] || ""); 
         };
 
         const updatedSection1 = {
@@ -931,29 +884,46 @@ async function handleSectionNavigation() {
             pincode: getVal('pincode'),
             full_address: getVal('full_address')
         };
+        
+        console.log("MERS: Section 1 Captured:", updatedSection1);
 
+        // --- STEP 2: PROCEED WITH UI LOCK ---
+        const overlay = document.getElementById('processing-overlay');
+        if (overlay) overlay.style.display = 'block';
+
+        let finalRegId = urlParams.get('regId');
+        let finalTimestamp = originalData.timestamp || "";
+        let statusMsg = (mode === 'new') ? "CONFIRMED" : "EDITED ON " + new Date().toLocaleString();
+
+        // --- STEP 3: HANDLE NEW REGISTRATION LOGIC ---
+        if (mode === 'new') {
+            // ... (Keep your existing Counter/Transaction logic here) ...
+            // ... (Keep your finalRegId generation logic here) ...
+        }
+
+        // --- STEP 4: COMBINE ALL DATA ---
         const formData = {
-            ...originalData,
-            ...updatedSection1,
-            ...mersTempData,
+            ...originalData,      // Start with original record
+            ...mersTempData,      // Overwrite with Sections 2 & 3
+            ...updatedSection1,   // Overwrite with Section 1 (CRITICAL FIX)
             registration_id: finalRegId,
             timestamp: finalTimestamp,
             registration_status: statusMsg,
-            email_sent: (mode === 'new') ? "No" : (originalData.email_sent || "No"),
             event_id: eventId
         };
 
-        // SAVE DATA
+        // --- STEP 5: SAVE TO FIREBASE ---
         await db.ref('registrations/' + finalRegId).set(formData);
+        console.log("MERS: Save Successful for ID:", finalRegId);
 
-        // --- MASTER DB UPDATE ---
+        // --- STEP 6: UPDATE MASTER INTERNAL DB ---
         const masterUpdateData = {
-            pincode: formData.pincode || "",
-            email: formData.email || "",
-            mobile: formData.mobile || "",
-            organization: formData.organization || "",
-            designation: formData.designation || "",
-            full_address: formData.full_address || ""
+            pincode: formData.pincode,
+            email: formData.email,
+            mobile: formData.mobile,
+            organization: formData.organization,
+            designation: formData.designation,
+            full_address: formData.full_address
         };
 
         const masterRef = db.ref('masters/Master_Internal_DB');
@@ -963,30 +933,24 @@ async function handleSectionNavigation() {
             const userKey = Object.keys(masterSearch.val())[0]; 
             await masterRef.child(userKey).update(masterUpdateData);
         }
-      
-        // EMAIL TRIGGER
+
+        // --- STEP 7: TRIGGER EMAIL & UI SWAP ---
         if (typeof SCRIPT_URL !== 'undefined') {
             fetch(`${SCRIPT_URL}?action=sendEmail&regId=${finalRegId}&eventId=${eventId}`)
                 .catch(err => console.error("Email trigger failed:", err));
         }
 
-        // --- CRASH-PROOF UI SWAP ---
-        safeHide('Section1');
-        safeHide('Section2');
-        safeHide('btn-next-action');
-        safeHide('btn-back-to-profile');
-        safeHide('.event-header');
-
-        const dynamicContent = document.getElementById('dynamic-sections-content');
-        if (dynamicContent) dynamicContent.innerHTML = ""; 
-
-        const app = document.getElementById('app');
-        if (app) app.style.display = 'block';
+        // Hide UI safely
+        ['Section1', 'Section2', 'btn-next-action', 'btn-back-to-profile'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+        
+        const header = document.querySelector('.event-header');
+        if (header) header.style.display = 'none';
 
         const contentDiv = document.getElementById('success-content');
-        if (contentDiv) {
-            contentDiv.innerHTML = eventConfig.final_html || "<h2>Registration Successful!</h2>";
-        }
+        if (contentDiv) contentDiv.innerHTML = eventConfig.final_html || "<h2>Registration Successful!</h2>";
 
         const successScreen = document.getElementById('success-screen');
         if (successScreen) successScreen.style.display = 'block';
@@ -996,14 +960,19 @@ async function handleSectionNavigation() {
 
     } catch (error) {
         console.error("[DIAGNOSTIC CRASH]:", error);
-        const overlay = document.getElementById('processing-overlay');
-        if (overlay) overlay.style.display = 'none';
+        if (document.getElementById('processing-overlay')) {
+            document.getElementById('processing-overlay').style.display = 'none';
+        }
     }
 }
 
 
 
 
+
+
+
+  
 
 
 
