@@ -1066,56 +1066,70 @@ function manualFormatCheck() {
 
 async function loadExistingData(regId, mode) {
     try {
-        let snap = await db.ref('masters/Master_Internal_DB/' + regId).once('value');
-        let data = snap.val();
-        if (!data) {
-            snap = await db.ref('registrations/' + regId).once('value');
-            data = snap.val();
-        }
+        // 1. Parallel Fetch for Speed
+        const [masterSnap, regSnap, delSnap] = await Promise.all([
+            db.ref('masters/Master_Internal_DB/' + regId).once('value'),
+            db.ref('registrations/' + regId).once('value'),
+            db.ref('deleted_registrations/' + regId).once('value')
+        ]);
 
-        // --- BRANCH: NOT FOUND ---
-        if (!data) {
+        let data = masterSnap.val() || regSnap.val();
+        const deletedData = delSnap.val();
+
+        // --- SCENARIO A: RECORD ALREADY DELETED (Transparency Screen) ---
+        if (deletedData) {
             document.getElementById('loading-init').style.display = 'none';
             const mainContainer = document.getElementById('form-content');
             mainContainer.style.display = 'block';
             mainContainer.innerHTML = `
-                <div style="max-width: 600px; margin: 100px auto; padding: 50px; text-align: center; border: 1px solid #e8e8e8; border-radius: 20px; font-family: sans-serif; background: #fff;">
-                    <div style="font-size: 70px; margin-bottom: 25px;">🔍</div>
-                    <h2 style="color: #262626;">Registration Not Found</h2>
-                    <p style="color: #8c8c8c; font-size: 17px;">We could not find your registration data.</p>
+                <div style="max-width: 800px; margin: 50px auto; padding: 40px; text-align: center; border: 1px solid #d9d9d9; border-radius: 15px; font-family: sans-serif; background: #fafafa;">
+                    <div style="font-size: 60px; margin-bottom: 20px;">ℹ️</div>
+                    <h2 style="color: #595959;">Registration History</h2>
+                    <p style="font-size: 18px; color: #262626;">Hello <strong>${deletedData.full_name || deletedData.name}</strong>,</p>
+                    <p style="font-size: 16px; color: #8c8c8c;">Our records show that Registration <strong>${regId}</strong> was <span style="color: #cf1322; font-weight: bold;">Permanently Deleted</span> on:</p>
+                    <div style="background: #fff; border: 1px dashed #cf1322; padding: 15px; display: inline-block; border-radius: 8px; margin: 15px 0; font-family: monospace; font-size: 18px; color: #cf1322;">
+                        ${deletedData.deleted_at}
+                    </div>
+                    <p style="color: #8c8c8c; margin-top: 20px;">Because this record has been removed, the link is no longer active.</p>
                 </div>`;
             return;
         }
 
-        // --- BRANCH: DELETE MODE ---
+        // --- SCENARIO B: RECORD NOT FOUND ANYWHERE ---
+        if (!data) {
+            document.getElementById('loading-init').style.display = 'none';
+            document.getElementById('form-content').style.display = 'block';
+            document.getElementById('form-content').innerHTML = `<div style="text-align:center; padding:100px;"><h2>Registration Not Found</h2></div>`;
+            return;
+        }
+
+        // --- SCENARIO C: ACTIVE DELETE MODE ---
         if (mode === 'delete') {
             document.getElementById('loading-init').style.display = 'none';
             const mainContainer = document.getElementById('form-content');
             mainContainer.style.display = 'block';
             mainContainer.innerHTML = `
-                <div style="max-width: 900px; margin: 30px auto; padding: 35px; border: 1px solid #ffccc7; background: #fff2f0; border-radius: 15px; font-family: sans-serif;">
+                <div id="delete-container" style="max-width: 900px; margin: 30px auto; padding: 35px; border: 1px solid #ffccc7; background: #fff2f0; border-radius: 15px; font-family: sans-serif;">
                     <div style="text-align: center; margin-bottom: 30px;">
                         <span style="font-size: 55px;">⚠️</span>
                         <h2 style="color: #cf1322;">Cancel Registration?</h2>
-                        <p style="font-size: 18px;">Please review the details below before confirming cancellation.</p>
                     </div>
                     <div style="background: white; padding: 25px; border-radius: 12px; border: 1px solid #f0f0f0; margin-bottom: 30px;">
-                        <table style="width: 100%; font-size: 16px; border-collapse: collapse;">
+                        <table id="user-details-table" style="width: 100%; font-size: 16px; border-collapse: collapse;">
                             <tr style="border-bottom: 1px solid #f0f0f0;"><td style="padding: 12px; font-weight: bold; color: #8c8c8c; width: 200px;">Name</td><td style="padding: 12px;">${data.full_name || data.name}</td></tr>
                             <tr style="border-bottom: 1px solid #f0f0f0;"><td style="padding: 12px; font-weight: bold; color: #8c8c8c;">Reg ID</td><td style="padding: 12px; font-family: monospace;">${regId}</td></tr>
-                            <tr style="border-bottom: 1px solid #f0f0f0;"><td style="padding: 12px; font-weight: bold; color: #8c8c8c;">Email</td><td style="padding: 12px;">${data.email || 'N/A'}</td></tr>
-                            <tr><td style="padding: 12px; font-weight: bold; color: #8c8c8c;">Mobile</td><td style="padding: 12px;">${data.mobile || 'N/A'}</td></tr>
+                            <tr><td style="padding: 12px; font-weight: bold; color: #8c8c8c;">Status</td><td style="padding: 12px;">Active</td></tr>
                         </table>
                     </div>
                     <div id="delete-action-area" style="display: flex; gap: 20px; justify-content: center;">
-                        <button onclick="confirmSurgicalDeletion('${regId}', ${JSON.stringify(data).replace(/"/g, '&quot;')})" style="background: #ff4d4f; color: white; border: none; padding: 15px 40px; border-radius: 8px; font-weight: bold; cursor: pointer;">Confirm Cancellation</button>
-                        <button onclick="showStayMessage()" style="background: #d9d9d9; color: #595959; border: none; padding: 15px 40px; border-radius: 8px; font-weight: bold; cursor: pointer;">I do not want to cancel</button>
+                        <button onclick='confirmSurgicalDeletion("${regId}", ${JSON.stringify(data).replace(/"/g, '&quot;')})' style="background: #ff4d4f; color: white; border: none; padding: 15px 40px; border-radius: 8px; font-weight: bold; cursor: pointer;">Confirm Cancellation</button>
+                        <button onclick='showStayMessage("${data.full_name || data.name}")' style="background: #d9d9d9; color: #595959; border: none; padding: 15px 40px; border-radius: 8px; font-weight: bold; cursor: pointer;">I do not want to cancel</button>
                     </div>
                 </div>`;
             return;
         }
 
-        // --- BRANCH: EDIT MODE ---
+        // --- SCENARIO D: EDIT MODE ---
         if (mode === 'edit') {
             originalData = data;
             profileSnapshotForScript = encodeURIComponent(JSON.stringify(data));
@@ -1141,51 +1155,61 @@ async function loadExistingData(regId, mode) {
     } catch (e) { console.error(e); }
 }
 
-function showStayMessage() {
-    document.getElementById('form-content').innerHTML = `
-        <div style="max-width: 600px; margin: 100px auto; padding: 50px; text-align: center; border: 1px solid #d9f7be; border-radius: 20px; font-family: sans-serif; background: #f6ffed;">
-            <div style="font-size: 70px; margin-bottom: 25px;">🙏</div>
-            <h2 style="color: #389e0d;">Thank you for staying with us!</h2>
-            <p style="color: #595959; font-size: 18px;">Your registration remains active. No changes were made.</p>
-        </div>`;
+// PERSONALIZED STAY MESSAGE (Keep details, remove buttons)
+function showStayMessage(userName) {
+    document.getElementById('delete-action-area').style.display = 'none';
+    const container = document.getElementById('delete-container');
+    container.style.borderColor = "#b7eb8f";
+    container.style.background = "#f6ffed";
+    
+    const msgDiv = document.createElement('div');
+    msgDiv.style.textAlign = "center";
+    msgDiv.style.marginTop = "20px";
+    msgDiv.innerHTML = `
+        <div style="font-size: 50px; margin-bottom: 10px;">🙏</div>
+        <h3 style="color: #389e0d; margin: 0;">Thank you, ${userName}!</h3>
+        <p style="color: #595959; font-size: 17px;">Your registration remains active and no changes were made.</p>
+        <p style="color: #8c8c8c; font-size: 14px;">You may safely close this tab.</p>
+    `;
+    container.appendChild(msgDiv);
 }
 
-function confirmSurgicalDeletion(regId, userData) {
+function confirmSurgicalDeletion(regId, data) {
     const area = document.getElementById('delete-action-area');
     area.innerHTML = `
         <div style="text-align: center; width: 100%;">
-            <p style="color: #cf1322; font-weight: bold; margin-bottom: 20px; font-size: 18px;">ARE YOU ABSOLUTELY SURE? THIS ACTION IS PERMANENT.</p>
+            <p style="color: #cf1322; font-weight: bold; margin-bottom: 20px;">ARE YOU ABSOLUTELY SURE? THIS ACTION IS PERMANENT.</p>
             <div style="display: flex; gap: 15px; justify-content: center;">
-                <button onclick='executeSurgicalDeletion("${regId}", ${JSON.stringify(userData).replace(/"/g, '&quot;')})' style="background: #cf1322; color: white; border: none; padding: 12px 30px; border-radius: 8px; cursor: pointer; font-weight: bold;">Yes, Delete Permanently</button>
-                <button onclick="showStayMessage()" style="background: #595959; color: white; border: none; padding: 12px 30px; border-radius: 8px; cursor: pointer;">I do not want to cancel</button>
+                <button onclick='executeSurgicalDeletion("${regId}", ${JSON.stringify(data).replace(/"/g, '&quot;')})' style="background: #cf1322; color: white; border: none; padding: 12px 30px; border-radius: 8px; cursor: pointer; font-weight: bold;">Yes, Delete Permanently</button>
+                <button onclick='showStayMessage("${data.full_name || data.name}")' style="background: #595959; color: white; border: none; padding: 12px 30px; border-radius: 8px; cursor: pointer;">I do not want to cancel</button>
             </div>
         </div>`;
 }
 
-function executeSurgicalDeletion(regId, data) {
+async function executeSurgicalDeletion(regId, data) {
+    // Add deletion timestamp
+    const now = new Date();
+    data.deleted_at = now.toLocaleDateString() + " " + now.toLocaleTimeString();
+
     const updates = {};
     updates[`registrations/${regId}`] = null;
     updates[`masters/Master_Internal_DB/${regId}`] = null;
+    updates[`deleted_registrations/${regId}`] = data; // Move to Archive
 
-    db.ref().update(updates).then(() => {
-        document.getElementById('form-content').innerHTML = `
-            <div style='max-width: 800px; margin: 40px auto; text-align:center; padding:50px; border: 1px solid #f0f0f0; border-radius: 20px; font-family: sans-serif; background: #fff;'>
-                <div style="font-size: 70px; margin-bottom: 20px;">✅</div>
-                <h2 style='color: #52c41a; font-size: 28px;'>Registration Cancelled</h2>
-                <p style="font-size: 16px; color: #8c8c8c; margin-bottom: 30px;">The following record has been removed from our system:</p>
-                
-                <div style="text-align: left; background: #fafafa; padding: 25px; border-radius: 12px; display: inline-block; min-width: 80%; border: 1px dashed #d9d9d9;">
-                    <p><strong>Name:</strong> ${data.full_name || data.name}</p>
-                    <p><strong>Reg ID:</strong> <code style="color: #cf1322;">${regId}</code></p>
-                    <p><strong>Email:</strong> ${data.email || 'N/A'}</p>
-                    <p><strong>Mobile:</strong> ${data.mobile || 'N/A'}</p>
-                </div>
-                <p style="color: #8c8c8c; margin-top: 30px; font-style: italic;">You may now safely close this tab.</p>
-            </div>`;
-    });
+    await db.ref().update(updates);
+    
+    document.getElementById('form-content').innerHTML = `
+        <div style='max-width: 800px; margin: 40px auto; text-align:center; padding:50px; border: 1px solid #f0f0f0; border-radius: 20px; font-family: sans-serif; background: #fff;'>
+            <div style="font-size: 70px; margin-bottom: 20px;">✅</div>
+            <h2 style='color: #52c41a;'>Registration Cancelled</h2>
+            <div style="text-align: left; background: #fafafa; padding: 25px; border-radius: 12px; border: 1px dashed #d9d9d9; margin: 20px 0;">
+                <p><strong>Name:</strong> ${data.full_name || data.name}</p>
+                <p><strong>Reg ID:</strong> ${regId}</p>
+                <p><strong>Status:</strong> Removed</p>
+            </div>
+            <p style="color: #8c8c8c;">This record has been archived. You may close this tab.</p>
+        </div>`;
 }
-
-
 
   
   
