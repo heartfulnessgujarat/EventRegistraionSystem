@@ -974,7 +974,8 @@ async function submitData() {
             }
         }
 
-        // --- STEP 3: CONSTRUCT FINAL REGISTRATION OBJECT ---
+
+// --- STEP 3: CONSTRUCT FINAL REGISTRATION OBJECT ---
         let finalRegId = urlParams.get('regId');
         const eventIdParam = typeof eventId !== 'undefined' ? eventId : (urlParams.get('id') || "EVT001");
 
@@ -986,11 +987,9 @@ async function submitData() {
             const year = now.getUTCFullYear();
             const timePart = `${String(now.getUTCHours()).padStart(2, '0')}${String(now.getUTCMinutes()).padStart(2, '0')}${String(now.getUTCSeconds()).padStart(2, '0')}${String(now.getUTCMilliseconds()).padStart(3, '0')}`;
             
-            let countToUse = 0;
-            if (typeof totalRegistrations !== 'undefined') countToUse = totalRegistrations;
-            else if (typeof currentCount !== 'undefined') countToUse = currentCount;
-            
-            const paddedCount = String(countToUse).padStart(3, '0');
+            // We use '000' as a temporary placeholder. 
+            // Step 4's Transaction will overwrite this with the REAL live count.
+            const paddedCount = "000"; 
             finalRegId = `${eventIdParam}-REG-${day}-${month}-${year}-${timePart}-${paddedCount}`;
         }
 
@@ -1003,6 +1002,12 @@ async function submitData() {
             timestamp: new Date().toLocaleString(),
             registration_status: (mode === 'new') ? "CONFIRMED" : "EDITED ON " + new Date().toLocaleString()
         };
+
+
+
+
+      
+      
 // --- STEP 4: SAVE DATA & INCREMENT COUNTER ---
         console.log(`%c [COUNTER] Updating tally for ${eventIdParam}... `, "color: #dfdfdf; background: #333;");
         
