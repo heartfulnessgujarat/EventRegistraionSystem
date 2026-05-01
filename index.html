@@ -1061,11 +1061,21 @@ async function submitData() {
         if (overlay) overlay.style.display = 'none';
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
-        // TRIGGER EMAIL
+
+// TRIGGER EMAIL
         if (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) {
-            const emailUrl = `${SCRIPT_URL}?action=sendEmail&regId=${encodeURIComponent(finalRegId)}&eventId=${eventIdParam}`;
-            fetch(emailUrl).catch(err => console.error("Email trigger failed:", err));
+            // Using formData.registration_id ensures we pass the LIVE incremented ID
+            const emailUrl = `${SCRIPT_URL}?action=sendEmail&regId=${encodeURIComponent(formData.registration_id)}&eventId=${eventIdParam}`;
+            
+            console.log(`%c [EMAIL] Triggering for ID: ${formData.registration_id} `, "color: #ffda44; background: #222;");
+            
+            fetch(emailUrl)
+                .then(response => console.log("[EMAIL] Trigger sent to script successfully"))
+                .catch(err => console.error("[EMAIL] Trigger failed:", err));
         }
+
+
+      
         
     } catch (error) {
         console.error("[CRASH]:", error);
