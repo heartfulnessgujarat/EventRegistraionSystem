@@ -894,6 +894,7 @@ async function handleSectionNavigation() {
     }
 }
 
+
   async function submitData() {
     console.log("%c [DIAGNOSTIC] submitData started! ", "background: #222; color: #bada55; font-size: 14px;");
 
@@ -902,18 +903,14 @@ async function handleSectionNavigation() {
         const mode = (urlParams.get('mode') || 'new').toLowerCase();
         
         // --- STEP 1: SMART CAPTURE (SECTION 1 PREFIX AWARE) ---
-        // Specifically handles the 'inp-' prefix for Section 1 fields
         const getFreshVal = (id) => {
-            // 1. Look for the physical screen element using the Section 1 prefix
             const el = document.getElementById('inp-' + id) || document.getElementById(id);
             let val = (el && el.value) ? el.value.trim() : "";
             
-            // 2. If screen is empty/disabled, check temporary memory (mersTempData)
-            if (!val && typeof mersTempData !== 'undefined' && mersTempData[id]) {
+            if (!val && typeof mertsTempData !== 'undefined' && mersTempData[id]) {
                 val = mersTempData[id];
             }
             
-            // 3. Last resort: check original record data[cite: 1]
             if (!val && typeof originalData !== 'undefined' && originalData[id]) {
                 val = originalData[id];
             }
@@ -921,6 +918,7 @@ async function handleSectionNavigation() {
             return val;
         };
 
+        // MERS UPDATE: Added centre, zone, and district to the capture list
         const updatedSection1 = {
             full_name: getFreshVal('full_name'),
             email: getFreshVal('email'),
@@ -928,12 +926,14 @@ async function handleSectionNavigation() {
             organization: getFreshVal('organization'),
             designation: getFreshVal('designation'),
             pincode: getFreshVal('pincode'),
-            full_address: getFreshVal('full_address')
+            full_address: getFreshVal('full_address'),
+            centre: getFreshVal('centre'),
+            zone: getFreshVal('zone'),
+            district: getFreshVal('district')
         };
         
         console.log("MERS: Verified Data for Database Sync:", updatedSection1);
 
-        // Final safety check[cite: 1]
         if (!updatedSection1.full_name) {
             throw new Error("Critical Error: 'full_name' is missing. Please ensure Section 1 is filled.");
         }
@@ -956,8 +956,8 @@ async function handleSectionNavigation() {
 
         // --- STEP 3: CONSTRUCT FINAL REGISTRATION OBJECT & GENERATE ID ---
         let finalRegId = urlParams.get('regId');
+        const eventIdParam = typeof eventId !== 'undefined' ? eventId : (urlParams.get('id') || "EVT001");
 
-        // NEW: If ID is missing (New Registration), use your custom formula[cite: 1]
         if (!finalRegId || mode === 'new') {
             const now = new Date();
             const monthNames = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
@@ -966,11 +966,9 @@ async function handleSectionNavigation() {
             const year = now.getUTCFullYear();
             const timePart = `${String(now.getUTCHours()).padStart(2, '0')}${String(now.getUTCMinutes()).padStart(2, '0')}${String(now.getUTCSeconds()).padStart(2, '0')}${String(now.getUTCMilliseconds()).padStart(3, '0')}`;
             
-            const eventIdParam = typeof eventId !== 'undefined' ? eventId : (urlParams.get('id') || "EVT");
             const currentCount = (typeof totalRegistrations !== 'undefined') ? totalRegistrations : 0;
             const paddedCount = String(currentCount).padStart(3, '0');
 
-            // Formula: EventID-REG-Day-Month-Year-Time-Counter[cite: 1]
             finalRegId = `${eventIdParam}-REG-${day}-${month}-${year}-${timePart}-${paddedCount}`;
         }
 
@@ -978,18 +976,20 @@ async function handleSectionNavigation() {
             ...originalData,
             ...mersTempData,
             ...updatedSection1,
-            registration_id: finalRegId, // CRITICAL: This ensures the ID is no longer null
+            registration_id: finalRegId,
+            event_id: eventIdParam,
+            timestamp: new Date().toLocaleString(), // Ensures match with your April 25th rows
             registration_status: (mode === 'new') ? "CONFIRMED" : "EDITED ON " + new Date().toLocaleString()
         };
 
-        // --- STEP 4: SAVE TO REGISTRATION DATABASE ---
-        console.log("MERS: Saving to path registrations/" + finalRegId);
-        await db.ref('registrations/' + finalRegId).set(formData);
+        // --- STEP 4: SAVE TO REGISTRATION DATABASE (FOLDER FIX) ---
+        // MERS CRITICAL: Saving inside the /EVT001/ folder so Edit Mode can find it
+        console.log(`MERS: Saving to path registrations/${eventIdParam}/${finalRegId}`);
+        await db.ref('registrations/' + eventIdParam + '/' + finalRegId).set(formData);
         
         console.log("%c [SUCCESS] Both Databases Updated! ", "color: white; background: green;");
         
         // --- STEP 5: PROCEED TO SUCCESS UI ---
-        // (This part remains unchanged to protect your success screen)[cite: 1]
         const elementsToHide = ['Section1', 'Section2', 'Section3', 'btn-next-action', 'btn-back-to-profile'];
         elementsToHide.forEach(id => {
             const el = document.getElementById(id);
@@ -1014,7 +1014,6 @@ async function handleSectionNavigation() {
 
         // Trigger Email
         if (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) {
-            const eventIdParam = typeof eventId !== 'undefined' ? eventId : urlParams.get('id');
             fetch(`${SCRIPT_URL}?action=sendEmail&regId=${finalRegId}&eventId=${eventIdParam}`)
                 .catch(err => console.error("Email trigger failed:", err));
         }
@@ -1026,6 +1025,9 @@ async function handleSectionNavigation() {
         if (overlay) overlay.style.display = 'none';
     }
 }
+
+
+  
   
 function manualFormatCheck() {
   const emailInput = document.getElementById('inp-email');
