@@ -1034,25 +1034,28 @@ async function submitData() {
 
 
 // --- STEP 4: SAVE DATA & CONDITIONAL COUNTER ---
-        if (mode === 'new') {
-            // A. Handle ID Sequence (Unique Fingerprint - Never Decrements)
-            const counterRef = db.ref('counters/' + eventIdParam);
-            const transactionResult = await counterRef.transaction((v) => (v || 0) + 1);
+if (mode === 'new') {
+    // A. ID Sequence (Unique Serial - Never goes down)
+    const counterRef = db.ref('counters/' + eventIdParam);
+    const transactionResult = await counterRef.transaction((v) => (v || 0) + 1);
 
-            if (transactionResult.committed) {
-                const paddedCount = String(transactionResult.snapshot.val()).padStart(3, '0');
-                const idParts = formData.registration_id.split('-');
-                idParts[idParts.length - 1] = paddedCount;
-                formData.registration_id = idParts.join('-');
-            }
+    if (transactionResult.committed) {
+        const paddedCount = String(transactionResult.snapshot.val()).padStart(3, '0');
+        const idParts = formData.registration_id.split('-');
+        idParts[idParts.length - 1] = paddedCount;
+        formData.registration_id = idParts.join('-');
+    }
 
-            // B. Handle Hall Capacity (True Occupancy - Decrements via index-del.html)
-            await db.ref('active_seats/' + eventIdParam).transaction((current) => {
-                return (current || 0) + 1;
-            });
-        }
+    // B. ACTIVE SEATS (Body Count - Decremented by index-del.html)
+    // This line creates the node if it doesn't exist!
+    await db.ref('active_seats/' + eventIdParam).transaction((current) => {
+        return (current || 0) + 1;
+    });
+}
 
 
+      
+      
 
         await db.ref('registrations/' + eventIdParam + '/' + formData.registration_id).set(formData);
 
