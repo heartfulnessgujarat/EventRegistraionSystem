@@ -895,36 +895,23 @@ async function handleSectionNavigation() {
 }
 
 
-async function submitData() {
+
+  async function submitData() {
     console.log("%c [DIAGNOSTIC] submitData started! ", "background: #222; color: #bada55; font-size: 14px;");
 
     try {
         const urlParams = new URLSearchParams(window.location.search);
         const mode = (urlParams.get('mode') || 'new').toLowerCase();
         
-        // --- STEP 1: SMART CAPTURE (PRIORITIZES LIVE SCREEN UPDATES) ---
+        // --- STEP 1: SMART CAPTURE ---
         const getFreshVal = (id) => {
             const el = document.getElementById('inp-' + id) || document.getElementById(id);
-            
-            // PRIORITY 1: Grab the value currently visible on the screen (even if disabled/auto-filled)
-            if (el) {
-                return el.value ? el.value.trim() : "";
-            }
-            
-            // PRIORITY 2: Fallback to temporary storage if the field isn't on this specific screen
-            if (typeof mersTempData !== 'undefined' && typeof mersTempData[id] !== 'undefined') {
-                return mersTempData[id];
-            }
-            
-            // PRIORITY 3: Fallback to the data loaded at the start of the session
-            if (typeof originalData !== 'undefined' && typeof originalData[id] !== 'undefined') {
-                return originalData[id];
-            }
-            
+            if (el) return el.value ? el.value.trim() : "";
+            if (typeof mersTempData !== 'undefined' && typeof mersTempData[id] !== 'undefined') return mersTempData[id];
+            if (typeof originalData !== 'undefined' && typeof originalData[id] !== 'undefined') return originalData[id];
             return "";
         };
 
-        // This captures EVERY field in Section 1, including updated Email and Mobile
         const updatedSection1 = {
             full_name: getFreshVal('full_name'),
             email: getFreshVal('email'),
@@ -947,35 +934,32 @@ async function submitData() {
         const overlay = document.getElementById('processing-overlay');
         if (overlay) overlay.style.display = 'block';
 
-        // --- STEP 2: UPDATE MASTER DATABASE ---
-        // We use the Registration ID as the anchor to ensure we update the correct person
+        // --- STEP 2: UPDATE MASTER DATABASE (SMART SEARCH) ---
         const masterRef = db.ref('masters/Master_Internal_DB');
         const regIdForSearch = urlParams.get('regId');
-        
-        let masterSearch;
+        const userMobile = updatedSection1.mobile;
+        let existingUserKey = null;
+
+        // Search Strategy: Check ID first, then Mobile to prevent duplicates
         if (regIdForSearch) {
-            // In Edit Mode, find the exact record by its unique ID
-            masterSearch = await masterRef.orderByChild('registration_id').equalTo(regIdForSearch).once('value');
+            const idSearch = await masterRef.orderByChild('registration_id').equalTo(regIdForSearch).once('value');
+            if (idSearch.exists()) existingUserKey = Object.keys(idSearch.val())[0];
         }
 
-        if (masterSearch && masterSearch.exists()) {
-            const userKey = Object.keys(masterSearch.val())[0]; 
-            console.log("MERS: Updating Master DB record:", userKey);
-            await masterRef.child(userKey).update(updatedSection1);
+        if (!existingUserKey && userMobile) {
+            const mobileSearch = await masterRef.orderByChild('mobile').equalTo(userMobile).once('value');
+            if (mobileSearch.exists()) existingUserKey = Object.keys(mobileSearch.val())[0];
+        }
+
+        if (existingUserKey) {
+            console.log("MERS: Updating existing Master record:", existingUserKey);
+            await masterRef.child(existingUserKey).update(updatedSection1);
         } else {
-            // If it's a new user or the ID search failed, try searching by mobile
-            const mobileSearch = await masterRef.orderByChild('mobile').equalTo(updatedSection1.mobile).once('value');
-            if (mobileSearch.exists()) {
-                const mobileKey = Object.keys(mobileSearch.val())[0];
-                await masterRef.child(mobileKey).update(updatedSection1);
-            } else {
-                console.log("MERS: Creating new Master entry.");
-                await masterRef.push(updatedSection1);
-            }
+            console.log("MERS: No match found. Creating new Master entry.");
+            await masterRef.push(updatedSection1);
         }
 
-
-// --- STEP 3: CONSTRUCT FINAL REGISTRATION OBJECT ---
+        // --- STEP 3: CONSTRUCT FINAL REGISTRATION OBJECT ---
         let finalRegId = urlParams.get('regId');
         const eventIdParam = typeof eventId !== 'undefined' ? eventId : (urlParams.get('id') || "EVT001");
 
@@ -987,9 +971,7 @@ async function submitData() {
             const year = now.getUTCFullYear();
             const timePart = `${String(now.getUTCHours()).padStart(2, '0')}${String(now.getUTCMinutes()).padStart(2, '0')}${String(now.getUTCSeconds()).padStart(2, '0')}${String(now.getUTCMilliseconds()).padStart(3, '0')}`;
             
-            // We use '000' as a temporary placeholder. 
-            // Step 4's Transaction will overwrite this with the REAL live count.
-            const paddedCount = "000"; 
+            const paddedCount = "000"; // Placeholder
             finalRegId = `${eventIdParam}-REG-${day}-${month}-${year}-${timePart}-${paddedCount}`;
         }
 
@@ -1003,43 +985,28 @@ async function submitData() {
             registration_status: (mode === 'new') ? "CONFIRMED" : "EDITED ON " + new Date().toLocaleString()
         };
 
+        // --- STEP 4: SAVE DATA & CONDITIONAL COUNTER ---
+        if (mode === 'new') {
+            console.log(`%c [COUNTER] Incrementing for new registration... `, "color: #dfdfdf; background: #333;");
+            const counterRef = db.ref('counters/' + eventIdParam);
+            const transactionResult = await counterRef.transaction((currentValue) => {
+                return (currentValue || 0) + 1;
+            });
 
-
-
-      
-      
-// --- STEP 4: SAVE DATA & INCREMENT COUNTER ---
-        console.log(`%c [COUNTER] Updating tally for ${eventIdParam}... `, "color: #dfdfdf; background: #333;");
-        
-        const counterRef = db.ref('counters/' + eventIdParam);
-
-        // This transaction safely increments the tally and returns the new number
-        const transactionResult = await counterRef.transaction((currentValue) => {
-            return (currentValue || 0) + 1;
-        });
-
-        if (transactionResult.committed) {
-            const finalCount = transactionResult.snapshot.val();
-            console.log(`[COUNTER] New Tally: ${finalCount}`);
-
-            // Optional: Re-stamp the ID with the absolute latest count from the database
-            const paddedCount = String(finalCount).padStart(3, '0');
-            
-            // Re-generating the ID suffix to match the live transaction count
-            const idParts = finalRegId.split('-');
-            idParts[idParts.length - 1] = paddedCount;
-            const synchronizedRegId = idParts.join('-');
-
-            formData.registration_id = synchronizedRegId;
-
-            console.log(`MERS: Saving to registrations/${eventIdParam}/${synchronizedRegId}`);
-            await db.ref('registrations/' + eventIdParam + '/' + synchronizedRegId).set(formData);
-            
-            console.log("%c [SUCCESS] Databases & Counter Synchronized! ", "color: white; background: green;");
-        } else {
-            throw new Error("Counter update failed. Please try again.");
+            if (transactionResult.committed) {
+                const finalCount = transactionResult.snapshot.val();
+                const paddedCount = String(finalCount).padStart(3, '0');
+                const idParts = finalRegId.split('-');
+                idParts[idParts.length - 1] = paddedCount;
+                formData.registration_id = idParts.join('-'); // Update ID with real count
+            }
         }
-        
+
+        // Final Save to registrations folder
+        console.log(`MERS: Saving to registrations/${eventIdParam}/${formData.registration_id}`);
+        await db.ref('registrations/' + eventIdParam + '/' + formData.registration_id).set(formData);
+        console.log("%c [SUCCESS] Databases & Counter Synchronized! ", "color: white; background: green;");
+
         // --- STEP 5: UI TRANSITION ---
         const elementsToHide = ['Section1', 'Section2', 'Section3', 'btn-next-action', 'btn-back-to-profile'];
         elementsToHide.forEach(id => {
@@ -1047,8 +1014,7 @@ async function submitData() {
             if (el) el.style.display = 'none';
         });
         
-        const header = document.querySelector('.event-header');
-        if (header) header.style.display = 'none';
+        if (document.querySelector('.event-header')) document.querySelector('.event-header').style.display = 'none';
 
         const contentDiv = document.getElementById('success-content');
         if (contentDiv) {
@@ -1061,21 +1027,12 @@ async function submitData() {
         if (overlay) overlay.style.display = 'none';
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
-
-// TRIGGER EMAIL
+        // --- TRIGGER EMAIL ---
         if (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) {
-            // Using formData.registration_id ensures we pass the LIVE incremented ID
-            const emailUrl = `${SCRIPT_URL}?action=sendEmail&regId=${encodeURIComponent(formData.registration_id)}&eventId=${eventIdParam}`;
-            
+            const emailUrl = `${SCRIPT_URL}?action=sendEmail&regId=${encodeURIComponent(formData.registration_id)}&eventId=${eventIdParam}&mode=${mode}`;
             console.log(`%c [EMAIL] Triggering for ID: ${formData.registration_id} `, "color: #ffda44; background: #222;");
-            
-            fetch(emailUrl)
-                .then(response => console.log("[EMAIL] Trigger sent to script successfully"))
-                .catch(err => console.error("[EMAIL] Trigger failed:", err));
+            fetch(emailUrl).catch(err => console.error("[EMAIL] Trigger failed:", err));
         }
-
-
-      
         
     } catch (error) {
         console.error("[CRASH]:", error);
@@ -1088,6 +1045,8 @@ async function submitData() {
 
 
 
+
+  
   
 function manualFormatCheck() {
   const emailInput = document.getElementById('inp-email');
