@@ -894,6 +894,7 @@ async function handleSectionNavigation() {
     }
 }
 
+
 async function submitData() {
     console.log("%c [DIAGNOSTIC] submitData started! ", "background: #222; color: #bada55; font-size: 14px;");
 
@@ -901,21 +902,21 @@ async function submitData() {
         const urlParams = new URLSearchParams(window.location.search);
         const mode = (urlParams.get('mode') || 'new').toLowerCase();
         
-        // --- STEP 1: SMART CAPTURE (SECTION 1 PREFIX AWARE) ---
+        // --- STEP 1: SMART CAPTURE (PRIORITIZES LIVE SCREEN UPDATES) ---
         const getFreshVal = (id) => {
             const el = document.getElementById('inp-' + id) || document.getElementById(id);
             
-            // PRIORITY 1: Always take what is visible on the screen right now (captured even if disabled)
+            // PRIORITY 1: Grab the value currently visible on the screen (even if disabled/auto-filled)
             if (el) {
                 return el.value ? el.value.trim() : "";
             }
             
-            // PRIORITY 2: If field doesn't exist on screen, check temporary memory
-            if (typeof mersburgTempData !== 'undefined' && typeof mersburgTempData[id] !== 'undefined') {
-                return mersburgTempData[id];
+            // PRIORITY 2: Fallback to temporary storage if the field isn't on this specific screen
+            if (typeof mersTempData !== 'undefined' && typeof mersTempData[id] !== 'undefined') {
+                return mersTempData[id];
             }
             
-            // PRIORITY 3: Fallback to original loaded data
+            // PRIORITY 3: Fallback to the data loaded at the start of the session
             if (typeof originalData !== 'undefined' && typeof originalData[id] !== 'undefined') {
                 return originalData[id];
             }
@@ -923,6 +924,7 @@ async function submitData() {
             return "";
         };
 
+        // This captures EVERY field in Section 1, including updated Email and Mobile
         const updatedSection1 = {
             full_name: getFreshVal('full_name'),
             email: getFreshVal('email'),
@@ -945,21 +947,34 @@ async function submitData() {
         const overlay = document.getElementById('processing-overlay');
         if (overlay) overlay.style.display = 'block';
 
-        // --- STEP 2: UPDATE OR CREATE MASTER DATABASE ---
+        // --- STEP 2: UPDATE MASTER DATABASE ---
+        // We use the Registration ID as the anchor to ensure we update the correct person
         const masterRef = db.ref('masters/Master_Internal_DB');
-        // IMPROVED: Search by Mobile to prevent duplicates even if name is edited
-        const masterSearch = await masterRef.orderByChild('mobile').equalTo(updatedSection1.mobile).once('value');
+        const regIdForSearch = urlParams.get('regId');
         
-        if (masterSearch.exists()) {
-            const userKey = Object.keys(masterSearch.val())[0]; 
-            console.log("MERS: Updating existing Master DB record:", userKey);
-            await masterRef.child(userKey).update(updatedSection1);
-        } else {
-            console.log("MERS: No existing Master record. Creating new entry.");
-            await masterRef.push(updatedSection1);
+        let masterSearch;
+        if (regIdForSearch) {
+            // In Edit Mode, find the exact record by its unique ID
+            masterSearch = await masterRef.orderByChild('registration_id').equalTo(regIdForSearch).once('value');
         }
 
-        // --- STEP 3: CONSTRUCT FINAL REGISTRATION OBJECT & GENERATE ID ---
+        if (masterSearch && masterSearch.exists()) {
+            const userKey = Object.keys(masterSearch.val())[0]; 
+            console.log("MERS: Updating Master DB record:", userKey);
+            await masterRef.child(userKey).update(updatedSection1);
+        } else {
+            // If it's a new user or the ID search failed, try searching by mobile
+            const mobileSearch = await masterRef.orderByChild('mobile').equalTo(updatedSection1.mobile).once('value');
+            if (mobileSearch.exists()) {
+                const mobileKey = Object.keys(mobileSearch.val())[0];
+                await masterRef.child(mobileKey).update(updatedSection1);
+            } else {
+                console.log("MERS: Creating new Master entry.");
+                await masterRef.push(updatedSection1);
+            }
+        }
+
+        // --- STEP 3: CONSTRUCT FINAL REGISTRATION OBJECT ---
         let finalRegId = urlParams.get('regId');
         const eventIdParam = typeof eventId !== 'undefined' ? eventId : (urlParams.get('id') || "EVT001");
 
@@ -989,13 +1004,13 @@ async function submitData() {
             registration_status: (mode === 'new') ? "CONFIRMED" : "EDITED ON " + new Date().toLocaleString()
         };
 
-        // --- STEP 4: SAVE TO REGISTRATION DATABASE ---
-        console.log(`MERS: Saving to path registrations/${eventIdParam}/${finalRegId}`);
+        // --- STEP 4: SAVE TO EVENT-SPECIFIC FOLDER ---
+        console.log(`MERS: Saving to registrations/${eventIdParam}/${finalRegId}`);
         await db.ref('registrations/' + eventIdParam + '/' + finalRegId).set(formData);
         
-        console.log("%c [SUCCESS] Both Databases Updated! ", "color: white; background: green;");
+        console.log("%c [SUCCESS] Databases Synchronized! ", "color: white; background: green;");
         
-        // --- STEP 5: PROCEED TO SUCCESS UI & TRIGGER EMAIL ---
+        // --- STEP 5: UI TRANSITION ---
         const elementsToHide = ['Section1', 'Section2', 'Section3', 'btn-next-action', 'btn-back-to-profile'];
         elementsToHide.forEach(id => {
             const el = document.getElementById(id);
@@ -1012,28 +1027,27 @@ async function submitData() {
                 : "<h2>Registration Successful!</h2>";
         }
 
-        const successScreen = document.getElementById('success-screen');
-        if (successScreen) successScreen.style.display = 'block';
-
+        document.getElementById('success-screen').style.display = 'block';
         if (overlay) overlay.style.display = 'none';
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
         // TRIGGER EMAIL
         if (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) {
             const emailUrl = `${SCRIPT_URL}?action=sendEmail&regId=${encodeURIComponent(finalRegId)}&eventId=${eventIdParam}`;
-            console.log("MERS: Triggering email via:", emailUrl);
-            fetch(emailUrl)
-                .then(() => console.log("MERS: Email script triggered successfully"))
-                .catch(err => console.error("Email trigger failed:", err));
+            fetch(emailUrl).catch(err => console.error("Email trigger failed:", err));
         }
         
     } catch (error) {
-        console.error("[DIAGNOSTIC CRASH]:", error);
+        console.error("[CRASH]:", error);
         alert("Save Failed: " + error.message);
-        const overlay = document.getElementById('processing-overlay');
-        if (overlay) overlay.style.display = 'none';
+        if (document.getElementById('processing-overlay')) {
+            document.getElementById('processing-overlay').style.display = 'none';
+        }
     }
 }
+
+
+
   
 function manualFormatCheck() {
   const emailInput = document.getElementById('inp-email');
