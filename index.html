@@ -894,7 +894,6 @@ async function handleSectionNavigation() {
     }
 }
 
-
 async function submitData() {
     console.log("%c [DIAGNOSTIC] submitData started! ", "background: #222; color: #bada55; font-size: 14px;");
 
@@ -905,17 +904,23 @@ async function submitData() {
         // --- STEP 1: SMART CAPTURE (SECTION 1 PREFIX AWARE) ---
         const getFreshVal = (id) => {
             const el = document.getElementById('inp-' + id) || document.getElementById(id);
-            let val = (el && el.value) ? el.value.trim() : "";
             
-            if (!val && typeof mersTempData !== 'undefined' && mersTempData[id]) {
-                val = mersTempData[id];
+            // PRIORITY 1: Always take what is visible on the screen right now (captured even if disabled)
+            if (el) {
+                return el.value ? el.value.trim() : "";
             }
             
-            if (!val && typeof originalData !== 'undefined' && originalData[id]) {
-                val = originalData[id];
+            // PRIORITY 2: If field doesn't exist on screen, check temporary memory
+            if (typeof mersburgTempData !== 'undefined' && typeof mersburgTempData[id] !== 'undefined') {
+                return mersburgTempData[id];
             }
             
-            return val;
+            // PRIORITY 3: Fallback to original loaded data
+            if (typeof originalData !== 'undefined' && typeof originalData[id] !== 'undefined') {
+                return originalData[id];
+            }
+            
+            return "";
         };
 
         const updatedSection1 = {
@@ -942,7 +947,8 @@ async function submitData() {
 
         // --- STEP 2: UPDATE OR CREATE MASTER DATABASE ---
         const masterRef = db.ref('masters/Master_Internal_DB');
-        const masterSearch = await masterRef.orderByChild('full_name').equalTo(updatedSection1.full_name).once('value');
+        // IMPROVED: Search by Mobile to prevent duplicates even if name is edited
+        const masterSearch = await masterRef.orderByChild('mobile').equalTo(updatedSection1.mobile).once('value');
         
         if (masterSearch.exists()) {
             const userKey = Object.keys(masterSearch.val())[0]; 
@@ -965,7 +971,6 @@ async function submitData() {
             const year = now.getUTCFullYear();
             const timePart = `${String(now.getUTCHours()).padStart(2, '0')}${String(now.getUTCMinutes()).padStart(2, '0')}${String(now.getUTCSeconds()).padStart(2, '0')}${String(now.getUTCMilliseconds()).padStart(3, '0')}`;
             
-            // COUNTER FIX: Check both common variable names
             let countToUse = 0;
             if (typeof totalRegistrations !== 'undefined') countToUse = totalRegistrations;
             else if (typeof currentCount !== 'undefined') countToUse = currentCount;
@@ -1013,7 +1018,7 @@ async function submitData() {
         if (overlay) overlay.style.display = 'none';
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
-        // TRIGGER EMAIL FIX
+        // TRIGGER EMAIL
         if (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) {
             const emailUrl = `${SCRIPT_URL}?action=sendEmail&regId=${encodeURIComponent(finalRegId)}&eventId=${eventIdParam}`;
             console.log("MERS: Triggering email via:", emailUrl);
@@ -1029,7 +1034,6 @@ async function submitData() {
         if (overlay) overlay.style.display = 'none';
     }
 }
-  
   
 function manualFormatCheck() {
   const emailInput = document.getElementById('inp-email');
