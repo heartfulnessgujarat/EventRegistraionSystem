@@ -894,8 +894,7 @@ async function handleSectionNavigation() {
     }
 }
 
-
-  async function submitData() {
+async function submitData() {
     console.log("%c [DIAGNOSTIC] submitData started! ", "background: #222; color: #bada55; font-size: 14px;");
 
     try {
@@ -933,48 +932,56 @@ async function handleSectionNavigation() {
 
         // --- STEP 2: UPDATE MASTER DATABASE (EVENT-TYPE AWARE) ---
         const masterRef = db.ref('masters/Master_Internal_DB');
-        
-        // Fetch event_type directly from your global config
         const eventType = (typeof eventConfig !== 'undefined' && eventConfig.event_type) 
                           ? eventConfig.event_type.toLowerCase() 
                           : 'internal'; 
 
-        console.log(`[DIAGNOSTIC] Detected Event Type: ${eventType}`);
-
         if (eventType === 'internal') {
-            // INTERNAL LOGIC: Search by Name (the selection made by the user)
             const nameSearch = await masterRef.orderByChild('full_name').equalTo(updatedSection1.full_name).once('value');
-            
             if (nameSearch.exists()) {
                 const masterKey = Object.keys(nameSearch.val())[0];
-                console.log("MERS: Internal Event - Updating existing Master record:", masterKey);
                 await masterRef.child(masterKey).update(updatedSection1);
             } else {
-                // Fallback search by Mobile if name search is inconclusive
                 const mobSearch = await masterRef.orderByChild('mobile').equalTo(updatedSection1.mobile).once('value');
                 if (mobSearch.exists()) {
                     const mobKey = Object.keys(mobSearch.val())[0];
                     await masterRef.child(mobKey).update(updatedSection1);
                 } else {
-                    console.warn("MERS: User not found in Master DB. Creating entry as fallback.");
                     await masterRef.push(updatedSection1);
                 }
             }
         } else {
-            // EXTERNAL LOGIC: Create or Update based on Mobile to prevent duplicates
             const mobSearch = await masterRef.orderByChild('mobile').equalTo(updatedSection1.mobile).once('value');
             if (mobSearch.exists()) {
                 const mobKey = Object.keys(mobSearch.val())[0];
                 await masterRef.child(mobKey).update(updatedSection1);
             } else {
-                console.log("MERS: New External User - Pushing to Master DB.");
                 await masterRef.push(updatedSection1);
             }
         }
 
-        // --- STEP 3: CONSTRUCT FINAL REGISTRATION OBJECT ---
+        // --- STEP 3: CONSTRUCT FINAL REGISTRATION OBJECT (DUP-FIX) ---
         let finalRegId = urlParams.get('regId');
         const eventIdParam = typeof eventId !== 'undefined' ? eventId : (urlParams.get('id') || "EVT001");
+
+        // Merge all data
+        let formData = {
+            ...originalData,
+            ...mersTempData,
+            ...updatedSection1
+        };
+
+        // DUP ENTRY FIX: Explicitly consolidate clean keys into "extra_" keys
+        const keysToConsolidate = ['arrival_date', 'arrival_time', 'depart_date', 'depart_time', 'gender', 'travel_mode', 'stay_option'];
+
+        keysToConsolidate.forEach(key => {
+            const extraKey = 'extra_' + key;
+            // If the clean key exists, move its value to the extra_ key and delete the clean one
+            if (formData[key]) {
+                formData[extraKey] = formData[key]; 
+                delete formData[key]; 
+            }
+        });
 
         if (!finalRegId || mode === 'new') {
             const now = new Date();
@@ -983,19 +990,13 @@ async function handleSectionNavigation() {
             const month = monthNames[now.getUTCMonth()];
             const year = now.getUTCFullYear();
             const timePart = `${String(now.getUTCHours()).padStart(2, '0')}${String(now.getUTCMinutes()).padStart(2, '0')}${String(now.getUTCSeconds()).padStart(2, '0')}${String(now.getUTCMilliseconds()).padStart(3, '0')}`;
-            
             finalRegId = `${eventIdParam}-REG-${day}-${month}-${year}-${timePart}-000`;
         }
 
-        const formData = {
-            ...originalData,
-            ...mersTempData,
-            ...updatedSection1,
-            registration_id: finalRegId,
-            event_id: eventIdParam,
-            timestamp: new Date().toLocaleString(),
-            registration_status: (mode === 'new') ? "CONFIRMED" : "EDITED ON " + new Date().toLocaleString()
-        };
+        formData.registration_id = finalRegId;
+        formData.event_id = eventIdParam;
+        formData.timestamp = new Date().toLocaleString();
+        formData.registration_status = (mode === 'new') ? "CONFIRMED" : "EDITED ON " + new Date().toLocaleString();
 
         // --- STEP 4: SAVE DATA & CONDITIONAL COUNTER ---
         if (mode === 'new') {
@@ -1004,7 +1005,7 @@ async function handleSectionNavigation() {
 
             if (transactionResult.committed) {
                 const paddedCount = String(transactionResult.snapshot.val()).padStart(3, '0');
-                const idParts = finalRegId.split('-');
+                const idParts = formData.registration_id.split('-');
                 idParts[idParts.length - 1] = paddedCount;
                 formData.registration_id = idParts.join('-');
             }
@@ -1031,7 +1032,7 @@ async function handleSectionNavigation() {
         if (overlay) overlay.style.display = 'none';
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
-        // --- TRIGGER EMAIL (Stable logic) ---
+        // --- TRIGGER EMAIL ---
         if (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) {
             const emailUrl = `${SCRIPT_URL}?action=sendEmail&regId=${encodeURIComponent(formData.registration_id)}&eventId=${eventIdParam}`;
             fetch(emailUrl).catch(err => console.error("Email failed:", err));
@@ -1045,9 +1046,6 @@ async function handleSectionNavigation() {
         }
     }
 }
-
-
-
 
   
   
