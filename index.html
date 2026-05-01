@@ -895,7 +895,6 @@ async function handleSectionNavigation() {
 }
 
 
-
   async function submitData() {
     console.log("%c [DIAGNOSTIC] submitData started! ", "background: #222; color: #bada55; font-size: 14px;");
 
@@ -903,7 +902,7 @@ async function handleSectionNavigation() {
         const urlParams = new URLSearchParams(window.location.search);
         const mode = (urlParams.get('mode') || 'new').toLowerCase();
         
-        // --- STEP 1: SMART CAPTURE ---
+        // --- STEP 1: FINAL DATA CAPTURE ---
         const getFreshVal = (id) => {
             const el = document.getElementById('inp-' + id) || document.getElementById(id);
             if (el) return el.value ? el.value.trim() : "";
@@ -925,8 +924,6 @@ async function handleSectionNavigation() {
             district: getFreshVal('district')
         };
         
-        console.log("MERS: Verified Data for Database Sync:", updatedSection1);
-
         if (!updatedSection1.full_name) {
             throw new Error("Critical Error: 'full_name' is missing. Please ensure Section 1 is filled.");
         }
@@ -934,29 +931,45 @@ async function handleSectionNavigation() {
         const overlay = document.getElementById('processing-overlay');
         if (overlay) overlay.style.display = 'block';
 
-        // --- STEP 2: UPDATE MASTER DATABASE (SMART SEARCH) ---
+        // --- STEP 2: UPDATE MASTER DATABASE (EVENT-TYPE AWARE) ---
         const masterRef = db.ref('masters/Master_Internal_DB');
-        const regIdForSearch = urlParams.get('regId');
-        const userMobile = updatedSection1.mobile;
-        let existingUserKey = null;
+        
+        // Fetch event_type directly from your global config
+        const eventType = (typeof eventConfig !== 'undefined' && eventConfig.event_type) 
+                          ? eventConfig.event_type.toLowerCase() 
+                          : 'internal'; 
 
-        // Search Strategy: Check ID first, then Mobile to prevent duplicates
-        if (regIdForSearch) {
-            const idSearch = await masterRef.orderByChild('registration_id').equalTo(regIdForSearch).once('value');
-            if (idSearch.exists()) existingUserKey = Object.keys(idSearch.val())[0];
-        }
+        console.log(`[DIAGNOSTIC] Detected Event Type: ${eventType}`);
 
-        if (!existingUserKey && userMobile) {
-            const mobileSearch = await masterRef.orderByChild('mobile').equalTo(userMobile).once('value');
-            if (mobileSearch.exists()) existingUserKey = Object.keys(mobileSearch.val())[0];
-        }
-
-        if (existingUserKey) {
-            console.log("MERS: Updating existing Master record:", existingUserKey);
-            await masterRef.child(existingUserKey).update(updatedSection1);
+        if (eventType === 'internal') {
+            // INTERNAL LOGIC: Search by Name (the selection made by the user)
+            const nameSearch = await masterRef.orderByChild('full_name').equalTo(updatedSection1.full_name).once('value');
+            
+            if (nameSearch.exists()) {
+                const masterKey = Object.keys(nameSearch.val())[0];
+                console.log("MERS: Internal Event - Updating existing Master record:", masterKey);
+                await masterRef.child(masterKey).update(updatedSection1);
+            } else {
+                // Fallback search by Mobile if name search is inconclusive
+                const mobSearch = await masterRef.orderByChild('mobile').equalTo(updatedSection1.mobile).once('value');
+                if (mobSearch.exists()) {
+                    const mobKey = Object.keys(mobSearch.val())[0];
+                    await masterRef.child(mobKey).update(updatedSection1);
+                } else {
+                    console.warn("MERS: User not found in Master DB. Creating entry as fallback.");
+                    await masterRef.push(updatedSection1);
+                }
+            }
         } else {
-            console.log("MERS: No match found. Creating new Master entry.");
-            await masterRef.push(updatedSection1);
+            // EXTERNAL LOGIC: Create or Update based on Mobile to prevent duplicates
+            const mobSearch = await masterRef.orderByChild('mobile').equalTo(updatedSection1.mobile).once('value');
+            if (mobSearch.exists()) {
+                const mobKey = Object.keys(mobSearch.val())[0];
+                await masterRef.child(mobKey).update(updatedSection1);
+            } else {
+                console.log("MERS: New External User - Pushing to Master DB.");
+                await masterRef.push(updatedSection1);
+            }
         }
 
         // --- STEP 3: CONSTRUCT FINAL REGISTRATION OBJECT ---
@@ -971,8 +984,7 @@ async function handleSectionNavigation() {
             const year = now.getUTCFullYear();
             const timePart = `${String(now.getUTCHours()).padStart(2, '0')}${String(now.getUTCMinutes()).padStart(2, '0')}${String(now.getUTCSeconds()).padStart(2, '0')}${String(now.getUTCMilliseconds()).padStart(3, '0')}`;
             
-            const paddedCount = "000"; // Placeholder
-            finalRegId = `${eventIdParam}-REG-${day}-${month}-${year}-${timePart}-${paddedCount}`;
+            finalRegId = `${eventIdParam}-REG-${day}-${month}-${year}-${timePart}-000`;
         }
 
         const formData = {
@@ -987,29 +999,21 @@ async function handleSectionNavigation() {
 
         // --- STEP 4: SAVE DATA & CONDITIONAL COUNTER ---
         if (mode === 'new') {
-            console.log(`%c [COUNTER] Incrementing for new registration... `, "color: #dfdfdf; background: #333;");
             const counterRef = db.ref('counters/' + eventIdParam);
-            const transactionResult = await counterRef.transaction((currentValue) => {
-                return (currentValue || 0) + 1;
-            });
+            const transactionResult = await counterRef.transaction((v) => (v || 0) + 1);
 
             if (transactionResult.committed) {
-                const finalCount = transactionResult.snapshot.val();
-                const paddedCount = String(finalCount).padStart(3, '0');
+                const paddedCount = String(transactionResult.snapshot.val()).padStart(3, '0');
                 const idParts = finalRegId.split('-');
                 idParts[idParts.length - 1] = paddedCount;
-                formData.registration_id = idParts.join('-'); // Update ID with real count
+                formData.registration_id = idParts.join('-');
             }
         }
 
-        // Final Save to registrations folder
-        console.log(`MERS: Saving to registrations/${eventIdParam}/${formData.registration_id}`);
         await db.ref('registrations/' + eventIdParam + '/' + formData.registration_id).set(formData);
-        console.log("%c [SUCCESS] Databases & Counter Synchronized! ", "color: white; background: green;");
 
         // --- STEP 5: UI TRANSITION ---
-        const elementsToHide = ['Section1', 'Section2', 'Section3', 'btn-next-action', 'btn-back-to-profile'];
-        elementsToHide.forEach(id => {
+        ['Section1', 'Section2', 'Section3', 'btn-next-action', 'btn-back-to-profile'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.style.display = 'none';
         });
@@ -1027,15 +1031,14 @@ async function handleSectionNavigation() {
         if (overlay) overlay.style.display = 'none';
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
-        // --- TRIGGER EMAIL ---
+        // --- TRIGGER EMAIL (Stable logic) ---
         if (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) {
-            const emailUrl = `${SCRIPT_URL}?action=sendEmail&regId=${encodeURIComponent(formData.registration_id)}&eventId=${eventIdParam}&mode=${mode}`;
-            console.log(`%c [EMAIL] Triggering for ID: ${formData.registration_id} `, "color: #ffda44; background: #222;");
-            fetch(emailUrl).catch(err => console.error("[EMAIL] Trigger failed:", err));
+            const emailUrl = `${SCRIPT_URL}?action=sendEmail&regId=${encodeURIComponent(formData.registration_id)}&eventId=${eventIdParam}`;
+            fetch(emailUrl).catch(err => console.error("Email failed:", err));
         }
         
     } catch (error) {
-        console.error("[CRASH]:", error);
+        console.error("CRASH:", error);
         alert("Save Failed: " + error.message);
         if (document.getElementById('processing-overlay')) {
             document.getElementById('processing-overlay').style.display = 'none';
