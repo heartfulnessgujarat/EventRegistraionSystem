@@ -1923,16 +1923,29 @@ function validateField(id, value, rule) {
 init();
 
 
+
+
 /**
  * SECTION 2: Dynamic Stay Option Swapper
+ * This listener lives on the 'document' so it works even when Section 2 is loaded late.
  */
-function updateStayOptions() {
-  console.log("--- MERS X-RAY: [Stay Engine Triggered] ---");
+function updateStayOptions(event) {
+  // 1. Identify the target of the change event
+  const targetId = event ? event.target.id : null;
+  
+  // 2. Check for your specific Section 2 Gender IDs (including the extra_ prefix)
+  const validGenderIds = ['extra_gender', 'inp-gender', 'gender'];
+  
+  if (event && !validGenderIds.includes(targetId)) {
+    return; // Ignore changes to Section 1 or Section 3 fields
+  }
+
+  console.log("--- MERS X-RAY: [Section 2 Engine Triggered] ---");
   
   const urlParams = new URLSearchParams(window.location.search);
   const eventId = urlParams.get('id'); 
   
-  // EXPANDED OR LOGIC: Checks for extra_, inp-, or plain IDs
+  // Find the Gender and Stay elements (using OR logic for prefixes)
   const genderEl = document.getElementById('extra_gender') || 
                    document.getElementById('inp-gender') || 
                    document.getElementById('gender');
@@ -1942,20 +1955,19 @@ function updateStayOptions() {
                      document.getElementById('stay_option');
 
   if (!genderEl || !staySelect) {
-    console.error("MERS DIAG: Could not find Gender or Stay element. Check IDs in Section 1.");
+    console.log("MERS DIAG: Section 2 elements not rendered yet.");
     return;
   }
 
   const gender = genderEl.value;
-  console.log("MERS DIAG: EventID:", eventId, " | Gender:", gender, " | Element ID used:", genderEl.id);
-
   if (!gender || !eventId) return;
 
+  // Visual feedback in Section 2 dropdown
   staySelect.innerHTML = '<option>Checking availability...</option>';
 
   google.script.run
     .withSuccessHandler(function(status) {
-      console.log("--- MERS X-RAY: [Server Success] ---", status);
+      console.log("--- MERS X-RAY: [Section 2 Server Success] ---", status);
       staySelect.innerHTML = ''; 
       
       let optDefault = document.createElement('option');
@@ -1993,24 +2005,9 @@ function updateStayOptions() {
     .getStayAvailability(eventId, gender);
 }
 
-// SAFE LISTENER ATTACHMENT
-window.addEventListener('load', function() {
-  const genderEl = document.getElementById('extra_gender') || 
-                   document.getElementById('inp-gender') || 
-                   document.getElementById('gender');
-                   
-  if (genderEl) {
-    genderEl.addEventListener('change', updateStayOptions);
-    console.log("MERS DIAG: Listener successfully attached to:", genderEl.id);
-  } else {
-    console.warn("MERS DIAG: Gender field NOT found. Please check your HTML for the correct ID.");
-  }
-});
-
-
-
-// Attach the listener to your Gender dropdown
-document.getElementById('gender').addEventListener('change', updateStayOptions);
+// Attach to document once - This will never throw a "null" error
+document.addEventListener('change', updateStayOptions);
+console.log("MERS DIAG: Section 2 Listener Active via Delegation");
 
 
 
