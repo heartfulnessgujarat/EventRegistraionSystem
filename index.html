@@ -1336,7 +1336,8 @@ function buildExtraSections(sectionId) {
 }
 
 
-async function buildExtraSections(targetSectionNumber) {
+
+  async function buildExtraSections(targetSectionNumber) {
     if (!targetSectionNumber) targetSectionNumber = "Section2";
 
     const container = document.getElementById('dynamic-sections-content');
@@ -1402,6 +1403,7 @@ async function buildExtraSections(targetSectionNumber) {
                     input = document.createElement('select');
                     input.className = 'form-control';
                     input.id = inputId;
+                    
                     const placeholder = document.createElement('option');
                     placeholder.text = "-- Select --"; placeholder.value = "";
                     input.appendChild(placeholder);
@@ -1411,7 +1413,21 @@ async function buildExtraSections(targetSectionNumber) {
                             const lookupSnap = await db.ref(`masters/${rule.lookup_tab}`).once('value');
                             const lookupData = lookupSnap.val();
                             if (lookupData) {
-                                const choices = Object.values(lookupData).map(row => row[rule.lookup_column]).filter(v => v);
+                                let choices = Object.values(lookupData).map(row => row[rule.lookup_column]).filter(v => v);
+
+                                // --- MERS: ROOM FILTERING LOGIC ---
+                                // Only filters if global availability data exists and field name relates to rooms
+                                if (window.availability && fieldId.toLowerCase().includes('room')) {
+                                    choices = choices.filter(choice => {
+                                        const choiceLower = choice.toLowerCase();
+                                        // Hide "Room" options if availability.room is false
+                                        if (window.availability.room === false && choiceLower.includes('room')) return false;
+                                        // Hide "Waiting" options if availability.waiting is false
+                                        if (window.availability.waiting === false && choiceLower.includes('waiting')) return false;
+                                        return true;
+                                    });
+                                }
+
                                 [...new Set(choices)].forEach(choice => {
                                     const opt = document.createElement('option');
                                     opt.value = choice; opt.text = choice;
@@ -1435,7 +1451,7 @@ async function buildExtraSections(targetSectionNumber) {
                     if (typeof validateField === 'function') {
                         if (validateField(this.id.replace('extra_', ''), this.value, rule.field_validation) === false) return;
                     }
-                    handleFieldChange(this, rule);
+                    handleFieldChange(this, rule); //[cite: 1]
                 };
 
                 input.oninput = function() { updateButtonState(); };
@@ -1459,7 +1475,7 @@ async function buildExtraSections(targetSectionNumber) {
                 buildExtraSections('Section3');
             } else {
                 console.log("MERS: Finalizing Submission with updated values...");
-                submitData(); // This triggers your existing thank you/email logic
+                submitData(); // Triggers existing thank you/email logic[cite: 1]
             }
         };
 
@@ -1476,11 +1492,6 @@ async function buildExtraSections(targetSectionNumber) {
         setTimeout(() => { updateButtonState(); }, 800);
     }
 }
-
-  
-
-
-
 
 
 
