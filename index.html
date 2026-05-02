@@ -1922,57 +1922,56 @@ function validateField(id, value, rule) {
 
 init();
 
-  
-/**
- * SECTION 2: Dynamic Stay Option Swapper
- * Triggered when Gender is selected.
- */
+
 function updateStayOptions() {
-  const eventId = document.getElementById('event_id').value; // Ensure you have an element with this ID
+  const eventId = document.getElementById('event_id').value;
   const gender = document.getElementById('gender').value;
-  const staySelect = document.getElementById('stay_option'); // The ID of your stay dropdown
+  const staySelect = document.getElementById('stay_option');
 
   if (!gender || !eventId) return;
 
-  // Show a "Loading..." state in the stay dropdown so user knows it's checking
-  const originalOptions = Array.from(staySelect.options).map(opt => opt.value);
   staySelect.innerHTML = '<option>Checking availability...</option>';
 
   google.script.run.withSuccessHandler(function(status) {
-    // 1. Clear the "Checking..." message
-    staySelect.innerHTML = '';
-
-    // 2. Define the logic for which labels to show
-    // We assume your master_stay_options has: "Room", "Dormitory", "Room (Waiting List)", "Dormitory (Waiting List)"
+    staySelect.innerHTML = ''; // Clear previous options
     
-    const optionsToDisplay = [
-      "I will arrange my own stay outside the venue" // Always available
-    ];
+    // Add default blank option
+    let optDefault = document.createElement('option');
+    optDefault.value = ""; optDefault.text = "-- Select --";
+    staySelect.appendChild(optDefault);
 
-    // Room Logic
-    if (status.room === "Available") {
-      optionsToDisplay.unshift("Room");
+    // Logic for Room
+    let optRoom = document.createElement('option');
+    if (status.roomSeats > 0) {
+      optRoom.value = "Room";
+      optRoom.text = "Room (" + status.roomSeats + " seats available)";
     } else {
-      optionsToDisplay.push("Room (Waiting List)");
+      optRoom.value = "Room (Waiting List)";
+      optRoom.text = "Room (Waiting List)";
     }
+    staySelect.appendChild(optRoom);
 
-    // Dorm Logic
-    if (status.dorm === "Available") {
-      optionsToDisplay.push("Dormitory");
+    // Logic for Dormitory
+    let optDorm = document.createElement('option');
+    if (status.dormSeats > 0) {
+      optDorm.value = "Dormitory";
+      optDorm.text = "Dormitory (" + status.dormSeats + " seats available)";
     } else {
-      optionsToDisplay.push("Dormitory (Waiting List)");
+      optDorm.value = "Dormitory (Waiting List)";
+      optDorm.text = "Dormitory (Waiting List)";
     }
+    staySelect.appendChild(optDorm);
 
-    // 3. Rebuild the dropdown
-    optionsToDisplay.forEach(text => {
-      let opt = document.createElement('option');
-      opt.value = text;
-      opt.innerHTML = text;
-      staySelect.appendChild(opt);
-    });
+    // Logic for Own Arrangement
+    let optOwn = document.createElement('option');
+    optOwn.value = "I will arrange my own stay outside the venue";
+    optOwn.text = "I will arrange my own stay outside the venue";
+    staySelect.appendChild(optOwn);
 
   }).getStayAvailability(eventId, gender);
 }
+
+
 
 // Attach the listener to your Gender dropdown
 document.getElementById('gender').addEventListener('change', updateStayOptions);
