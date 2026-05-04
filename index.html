@@ -1929,33 +1929,47 @@ function updateStayOptions(event) {
   const targetId = event ? event.target.id : null;
   const validGenderIds = ['extra_gender', 'inp-gender', 'gender'];
   
-  // Only trigger if a gender dropdown was changed
   if (event && !validGenderIds.includes(targetId)) return;
 
-  console.log("--- MERS X-RAY: [Section 2 Test Triggered] ---");
-  
-  const container = document.getElementById('capacity-container');
-  const countSpan = document.getElementById('static-count');
+  // 1. Try to find the Gender dropdown
   const genderEl = document.getElementById('extra_gender') || 
                    document.getElementById('inp-gender') || 
                    document.getElementById('gender');
 
-  if (genderEl && genderEl.value) {
-    // TEST PHASE: Show the green box with the number 5
-    if (container) container.style.display = 'block';
-    if (countSpan) countSpan.innerText = "5"; 
-    console.log("MERS TEST: UI display successful for gender: " + genderEl.value);
+  if (!genderEl) {
+    console.log("MERS DIAG: Waiting for gender dropdown to render...");
+    return;
+  }
+
+  // 2. Check if the box already exists; if not, create it
+  let container = document.getElementById('capacity-container');
+  
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'capacity-container';
+    // Style it to match your previous green box
+    container.style = "margin: 15px 0; font-weight: bold; color: #2e7d32; background-color: #e8f5e9; padding: 12px; border-radius: 8px; border: 2px solid #c8e6c9; text-align: center; font-family: sans-serif; display: none;";
+    
+    // 3. Inject it exactly AFTER the gender selection dropdown
+    genderEl.parentNode.insertBefore(container, genderEl.nextSibling);
+    console.log("MERS: Capacity box injected below gender dropdown.");
+  }
+
+  // 4. Show the "Static 5" when a gender is selected
+  if (genderEl.value) {
+    container.style.display = 'block';
+    container.innerHTML = 'Available Seats = <span id="static-count">5</span>';
   } else {
-    if (container) container.style.display = 'none';
+    container.style.display = 'none';
   }
 }
+
 
 // Keep this at the bottom - it connects the function to your form
 document.addEventListener('change', updateStayOptions);
 console.log("MERS DIAG: Section 2 Listener Active via Delegation");
 
 
-  
 
   
 </script>
