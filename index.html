@@ -1930,35 +1930,35 @@ init();
  * Calculates availability based on Gender and Event Config
  */
 
-
-  async function getStayAvailability(eventId, gender) {
+async function getStayAvailability(eventId, gender) {
   const safeId = eventId || new URLSearchParams(window.location.search).get('id');
-  console.log(`--- MERS X-RAY: Logic for Event: ${safeId} ---`);
+  console.log(`--- MERS X-RAY: Attempting fetch for ${safeId} ---`);
 
-  if (!safeId) throw new Error("No Event ID found");
+  // 1. Try to fetch the full 'eventConfig' node to see what's inside
+  const configSnap = await firebase.database().ref(`eventConfig`).once('value');
+  const allConfigs = configSnap.val();
+  
+  console.log("MERS DIAG: All configs found:", allConfigs);
 
-  // 1. Fetch from the nodes seen in Screenshot (93).png
-  const [configSnap, counterSnap] = await Promise.all([
-    firebase.database().ref(`eventConfig/${safeId}`).once('value'),
-    firebase.database().ref(`counters/${safeId}`).once('value')
-  ]);
+  const config = allConfigs ? allConfigs[safeId] : null;
 
-  const config = configSnap.val();
-  const counters = counterSnap.val() || {};
+  if (!config) {
+    throw new Error(`Config for ${safeId} not found. Available IDs: ${allConfigs ? Object.keys(allConfigs) : 'NONE'}`);
+  }
 
-  if (!config) throw new Error(`Config not found at eventConfig/${safeId}`);
-
-  // 2. Numeric Conversion from your Firebase strings ("2", "10", etc.)
-  // Since you use total capacities, we pull them directly
+  // 2. Numeric Conversion (Text to Number) as per Screenshot (94).png
   const roomMax = Number(config.room_capacity) || 0;
   const dormMax = Number(config.dorm_capacity) || 0;
 
-  // 3. Occupancy logic (subtracting from total capacity)
-  // If your counters are split by gender, we pull gender-specific occupancy
-  const roomOccupancy = Number(counters[gender]?.room) || Number(counters.room) || 0;
-  const dormOccupancy = Number(counters[gender]?.dorm) || Number(counters.dorm) || 0;
+  // 3. Fetch Counters
+  const counterSnap = await firebase.database().ref(`counters/${safeId}`).once('value');
+  const counters = counterSnap.val() || {};
 
-  console.log(`MERS MATH: Room(${roomMax} - ${roomOccupancy}) Dorm(${dormMax} - ${dormOccupancy})`);
+  // Check for gender-nested counters or flat counters
+  const roomOccupancy = Number(counters[gender]?.room || counters.room || 0);
+  const dormOccupancy = Number(counters[gender]?.dorm || counters.dorm || 0);
+
+  console.log(`MERS MATH: Room(${roomMax}-${roomOccupancy}) Dorm(${dormMax}-${dormOccupancy})`);
 
   return {
     roomSeats: Math.max(0, roomMax - roomOccupancy),
