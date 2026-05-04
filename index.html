@@ -1925,42 +1925,57 @@ function validateField(id, value, rule) {
 
 init();
 
-function updateStayOptions(event) {
+async function updateStayOptions(event) {
   const targetId = event ? event.target.id : null;
   const validGenderIds = ['extra_gender', 'inp-gender', 'gender'];
-  
   if (event && !validGenderIds.includes(targetId)) return;
 
-  // 1. Try to find the Gender dropdown
   const genderEl = document.getElementById('extra_gender') || 
                    document.getElementById('inp-gender') || 
                    document.getElementById('gender');
 
-  if (!genderEl) {
-    console.log("MERS DIAG: Waiting for gender dropdown to render...");
+  if (!genderEl || !genderEl.value) {
+    const container = document.getElementById('capacity-container');
+    if (container) container.style.display = 'none';
     return;
   }
 
-  // 2. Check if the box already exists; if not, create it
+  // 1. Find or Create the Capacity Box
   let container = document.getElementById('capacity-container');
-  
   if (!container) {
     container = document.createElement('div');
     container.id = 'capacity-container';
-    // Style it to match your previous green box
-    container.style = "margin: 15px 0; font-weight: bold; color: #2e7d32; background-color: #e8f5e9; padding: 12px; border-radius: 8px; border: 2px solid #c8e6c9; text-align: center; font-family: sans-serif; display: none;";
-    
-    // 3. Inject it exactly AFTER the gender selection dropdown
+    container.style = "margin: 15px 0; font-weight: bold; padding: 12px; border-radius: 8px; border: 2px solid #c8e6c9; background-color: #f1f8e9; font-family: sans-serif;";
     genderEl.parentNode.insertBefore(container, genderEl.nextSibling);
-    console.log("MERS: Capacity box injected below gender dropdown.");
   }
 
-  // 4. Show the "Static 5" when a gender is selected
-  if (genderEl.value) {
-    container.style.display = 'block';
-    container.innerHTML = 'Available Seats = <span id="static-count">5</span>';
-  } else {
-    container.style.display = 'none';
+  container.style.display = 'block';
+  container.innerHTML = '<div style="color: #2e7d32;">Checking live availability...</div>';
+
+  try {
+    // 2. Trigger the availability calculation (Replacing the static "5")
+    // Note: eventConfig and getStayAvailability must be defined in your script
+    const status = await getStayAvailability(window.currentEventId, genderEl.value);
+
+    // 3. Display the two rows (Room and Dorm)
+    container.innerHTML = `
+      <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #c8e6c9; padding-bottom: 5px; margin-bottom: 5px;">
+        <span>Room Availability:</span>
+        <span style="color: ${status.roomSeats > 0 ? '#2e7d32' : '#d32f2f'};">
+          ${status.roomSeats > 0 ? status.roomSeats + ' Seats' : 'Waiting List'}
+        </span>
+      </div>
+      <div style="display: flex; justify-content: space-between;">
+        <span>Dorm Availability:</span>
+        <span style="color: ${status.dormSeats > 0 ? '#2e7d32' : '#d32f2f'};">
+          ${status.dormSeats > 0 ? status.dormSeats + ' Seats' : 'Waiting List'}
+        </span>
+      </div>
+    `;
+    console.log("MERS: Live capacity displayed for", genderEl.value);
+  } catch (error) {
+    container.innerHTML = '<div style="color: #d32f2f;">Error loading availability</div>';
+    console.error("MERS Error:", error);
   }
 }
 
