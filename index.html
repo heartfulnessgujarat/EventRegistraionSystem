@@ -2085,15 +2085,24 @@ async function getStayAvailability(eventId, gender) {
     options.push("I will arrange my own stay outside the venue");
 
     // 6. Populate dropdown
-    stayEl.innerHTML = '';
 
-    options.forEach(opt => {
-      const option = document.createElement("option");
-      option.value = opt;
-      option.textContent = opt;
-      stayEl.appendChild(option);
-    });
+const select = document.createElement('select');
+select.className = 'form-control';
+select.id = stayEl.id; // preserve ID
 
+options.forEach(opt => {
+  const option = document.createElement("option");
+  option.value = opt;
+  option.textContent = opt;
+  select.appendChild(option);
+});
+
+// Replace old element
+stayEl.parentNode.replaceChild(select, stayEl);
+
+
+    
+    
     // 7. Ensure visibility
     if (stayEl.parentElement) {
       stayEl.parentElement.style.display = 'block';
