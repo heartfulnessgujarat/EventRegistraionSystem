@@ -2043,6 +2043,15 @@ async function getStayAvailability(eventId, gender) {
 
 async function updateStayOptions(event) {
 
+console.log("updateStayOptions fired →", {
+  section: currentSection,
+  target: event?.target?.id
+});
+
+
+
+  
+
   // Run only in Section 2
   if (typeof currentSection !== 'undefined' && currentSection !== 2) {
 
