@@ -2053,19 +2053,6 @@ async function getStayAvailability(eventId, gender) {
   // ✅ Run ONLY in Section 2
 
 
-    const section2Visible = document.querySelector('[data-section="2"], #section2');
-
-if (!section2Visible || section2Visible.offsetParent === null) return;
-
-const genderEl =
-  document.getElementById('extra_gender') ||
-  document.getElementById('inp-gender') ||
-  document.getElementById('gender');
-
-if (!genderEl || !genderEl.value) return;
-
-
-
   const genderEl =
     document.getElementById('extra_gender') ||
     document.getElementById('inp-gender') ||
