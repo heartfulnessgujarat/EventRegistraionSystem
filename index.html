@@ -2045,10 +2045,17 @@ async function updateStayOptions(event) {
 
   // Run only in Section 2
   if (typeof currentSection !== 'undefined' && currentSection !== 2) {
+
+
+    
     return;
   }
 
   const targetId = event ? event.target.id : null;
+
+
+  if (!targetId || !targetId.includes('gender')) return;
+  
   const validGenderIds = ['extra_gender', 'inp-gender', 'gender'];
 
   if (event && !validGenderIds.includes(targetId)) return;
