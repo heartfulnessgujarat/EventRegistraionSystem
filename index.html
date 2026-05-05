@@ -2147,7 +2147,17 @@ async function getStayAvailability(eventId, gender) {
         stayEl.value = currentValue;
       }
 
-      console.log("MERS: Dropdown updated correctly");
+// 👉 ADD THIS LINE HERE (exactly here)
+
+
+if (stayEl.value) {
+  stayEl.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+
+      
+
+console.log("MERS: Dropdown updated correctly");
 
     }, 200);
 
