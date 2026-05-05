@@ -2053,13 +2053,10 @@ console.log("updateStayOptions fired →", {
   
 
   // Run only in Section 2
-  if (typeof currentSection !== 'undefined' && currentSection !== 2) {
 
-
-    
-    return;
-  }
-
+  if (typeof window.currentSection === 'undefined' || window.currentSection !== 2) {
+  return;
+}
   const targetId = event ? event.target.id : null;
 
 
