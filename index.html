@@ -2135,6 +2135,18 @@ async function getStayAvailability(eventId, gender) {
       // Replace options safely
       stayEl.innerHTML = '';
 
+      // Add placeholder (prevents auto-selection)
+const placeholder = document.createElement('option');
+placeholder.value = "";
+placeholder.textContent = "-- Select --";
+placeholder.disabled = true;
+placeholder.selected = true;
+
+stayEl.appendChild(placeholder);
+
+
+      
+
       newOptions.forEach(opt => {
         const option = document.createElement('option');
         option.value = opt;
