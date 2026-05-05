@@ -1243,12 +1243,6 @@ function processFinalDeletion(regId, eventId, gender) {
 
 
 
-
-
-
-
-
-
   
 function buildExtraSections(sectionId) {
     console.log("MERS: Building Section with Memory Check for: " + sectionId);
@@ -1391,7 +1385,10 @@ function buildExtraSections(sectionId) {
                 fieldWrapper.appendChild(label);
 
                 let input;
-                if (rule.edit_behavior === 'Editable_lookup_Dropdown') {
+
+               if (rule.edit_behavior && rule.edit_behavior.includes('Editable_lookup_Dropdown')) {
+
+                  
                     input = document.createElement('select');
                     input.className = 'form-control';
                     input.id = inputId;
