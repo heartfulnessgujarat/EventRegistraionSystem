@@ -1869,12 +1869,7 @@ function validateField(id, value, rule) {
         }
     }
 
-
-
-
-
-  
-    
+      
     // --- DEPARTURE DATE (EED) - UNTOUCHED ---
     if (rule.includes("EED")) {
         const isoInput = translateToISO(val);
@@ -1926,33 +1921,21 @@ function validateField(id, value, rule) {
 init();
 
 
+
 /**
  * NEW: MERS Live Availability Engine (Rooms + Dorms - Gender Aware)
  */
+
+
 async function getStayAvailability(eventId, gender) {
   const db = firebase.database();
 
-  // 1. Fetch Config
+  // ✅ USE EXISTING GLOBAL CONFIG (DO NOT FETCH AGAIN)
+  const config = eventConfig;
 
-  
-  
-
-let configSnap = await db.ref(`eventConfig/${eventId}`).once('value');
-let config = configSnap.val();
-
-if (!config) {
-  configSnap = await db.ref(`masters/eventConfig/${eventId}`).once('value');
-  config = configSnap.val();
-}
-
-if (!config) {
-  throw new Error("Event config not found");
-}
-
-  
-
-  
-  const config = configSnap.val();
+  if (!config) {
+    throw new Error("Event config not loaded");
+  }
 
   const roomCapacity = Number(config.room_capacity) || 0;
   const personsPerRoom = Number(config.persons_per_room) || 2;
@@ -1963,7 +1946,7 @@ if (!config) {
   const maleDormSize = Number(config.male_dorm_persons_per_dorm) || 0;
   const femaleDormSize = Number(config.female_dorm_persons_per_dorm) || 0;
 
-  // 2. Fetch Registrations
+  // ✅ FETCH REGISTRATIONS (correct path)
   const regSnap = await db.ref(`registrations/${eventId}`).once('value');
   const regs = regSnap.val() || {};
 
@@ -1973,20 +1956,21 @@ if (!config) {
   Object.values(regs).forEach(r => {
     if (r.registration_status === "CANCELLED") return;
 
-    if (r.stay_option === "Room") {
-      if (r.gender === "Male") maleRoom++;
-      if (r.gender === "Female") femaleRoom++;
+    const genderVal = r.extra_gender || r.gender;
+    const stay = r.extra_stay_option || r.stay_option;
+
+    if (stay === "Room") {
+      if (genderVal === "Male") maleRoom++;
+      if (genderVal === "Female") femaleRoom++;
     }
 
-    if (r.stay_option === "Dormitory") {
-      if (r.gender === "Male") maleDorm++;
-      if (r.gender === "Female") femaleDorm++;
+    if (stay === "Dormitory") {
+      if (genderVal === "Male") maleDorm++;
+      if (genderVal === "Female") femaleDorm++;
     }
   });
 
-  // ---------------------------
-  // 🛏️ DORM LOGIC
-  // ---------------------------
+  // 🛏️ DORM
   const maleDormTotal = maleDormCap * maleDormSize;
   const femaleDormTotal = femaleDormCap * femaleDormSize;
 
@@ -1995,9 +1979,7 @@ if (!config) {
       ? Math.max(0, maleDormTotal - maleDorm)
       : Math.max(0, femaleDormTotal - femaleDorm);
 
-  // ---------------------------
-  // 🏠 ROOM LOGIC
-  // ---------------------------
+  // 🏠 ROOM
   const totalRoomUsers = maleRoom + femaleRoom;
   const totalRoomsUsed = totalRoomUsers / personsPerRoom;
 
@@ -2019,18 +2001,16 @@ if (!config) {
   return { roomSeats, dormSeats };
 }
 
-
-
 async function updateStayOptions(event) {
   const targetId = event ? event.target.id : null;
   const validGenderIds = ['extra_gender', 'inp-gender', 'gender'];
 
-  // Only react to gender change
   if (event && !validGenderIds.includes(targetId)) return;
 
-  const genderEl = document.getElementById('extra_gender') || 
-                   document.getElementById('inp-gender') || 
-                   document.getElementById('gender');
+  const genderEl =
+    document.getElementById('extra_gender') ||
+    document.getElementById('inp-gender') ||
+    document.getElementById('gender');
 
   if (!genderEl || !genderEl.value) {
     const container = document.getElementById('capacity-container');
@@ -2038,7 +2018,6 @@ async function updateStayOptions(event) {
     return;
   }
 
-  // 1. Create / Find Capacity Box
   let container = document.getElementById('capacity-container');
   if (!container) {
     container = document.createElement('div');
@@ -2059,10 +2038,9 @@ async function updateStayOptions(event) {
   container.innerHTML = '<div style="color: #2e7d32;">Checking live availability...</div>';
 
   try {
-    // 2. Get live availability
-    const status = await getStayAvailability(window.currentEventId, genderEl.value);
+    // ✅ USE GLOBAL eventId (not window.currentEventId)
+    const status = await getStayAvailability(eventId, genderEl.value);
 
-    // 3. Show Room + Dorm availability
     container.innerHTML = `
       <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #c8e6c9; padding-bottom: 5px; margin-bottom: 5px;">
         <span>Available Seats for Room:</span>
@@ -2078,34 +2056,19 @@ async function updateStayOptions(event) {
       </div>
     `;
 
-    // 4. Update Stay Option Dropdown (🔥 MAIN FEATURE)
-    const stayEl = document.getElementById('extra_stay_option') ||
-                   document.getElementById('stay_option');
+    const stayEl =
+      document.getElementById('extra_stay_option') ||
+      document.getElementById('stay_option');
 
     if (stayEl) {
       let options = [];
 
-      // ROOM
-      if (status.roomSeats > 0) {
-        options.push("Room");
-      } else {
-        options.push("Room (Waiting List)");
-      }
-
-      // DORM
-      if (status.dormSeats > 0) {
-        options.push("Dormitory");
-      } else {
-        options.push("Dormitory (Waiting List)");
-      }
-
-      // ALWAYS AVAILABLE
+      options.push(status.roomSeats > 0 ? "Room" : "Room (Waiting List)");
+      options.push(status.dormSeats > 0 ? "Dormitory" : "Dormitory (Waiting List)");
       options.push("I will arrange my own stay outside the venue");
 
-      // Clear old options
       stayEl.innerHTML = '';
 
-      // Add new options
       options.forEach(opt => {
         const option = document.createElement("option");
         option.value = opt;
@@ -2113,7 +2076,6 @@ async function updateStayOptions(event) {
         stayEl.appendChild(option);
       });
 
-      // Show stay option AFTER gender selection
       if (stayEl.parentElement) {
         stayEl.parentElement.style.display = 'block';
       }
@@ -2127,8 +2089,7 @@ async function updateStayOptions(event) {
   }
 }
 
-
-
+  
 // Keep this at the bottom - it connects the function to your form
 document.addEventListener('change', updateStayOptions);
 console.log("MERS DIAG: Section 2 Listener Active via Delegation");
