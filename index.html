@@ -2001,15 +2001,13 @@ async function getStayAvailability(eventId, gender) {
   return { roomSeats, dormSeats };
 }
 
+async function updateStayOptions(event) {
 
+  // Run only in Section 2
+  if (typeof currentSection !== 'undefined' && currentSection !== 2) {
+    return;
+  }
 
-  async function updateStayOptions(event) {
-
-if (typeof currentSection !== 'undefined' && currentSection !== 2) {
-  return;
-}
-
-    
   const targetId = event ? event.target.id : null;
   const validGenderIds = ['extra_gender', 'inp-gender', 'gender'];
 
@@ -2026,7 +2024,7 @@ if (typeof currentSection !== 'undefined' && currentSection !== 2) {
     return;
   }
 
-  // 1. Create / Find Capacity Box
+  // Create / Find Capacity Box
   let container = document.getElementById('capacity-container');
   if (!container) {
     container = document.createElement('div');
@@ -2047,15 +2045,15 @@ if (typeof currentSection !== 'undefined' && currentSection !== 2) {
   container.innerHTML = '<div style="color: #2e7d32;">Checking live availability...</div>';
 
   try {
-    // 2. Get availability
+    // Get availability
     const status = await getStayAvailability(eventId, genderEl.value);
 
+    // Prevent async overwrite after section change
     if (typeof currentSection !== 'undefined' && currentSection !== 2) {
-  return;
-}
+      return;
+    }
 
-  
-    // 3. Show availability
+    // Show availability ONLY (no field manipulation)
     container.innerHTML = `
       <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #c8e6c9; padding-bottom: 5px; margin-bottom: 5px;">
         <span>Available Seats for Room:</span>
@@ -2071,63 +2069,7 @@ if (typeof currentSection !== 'undefined' && currentSection !== 2) {
       </div>
     `;
 
-    // 4. WAIT for Stay Option field (🔥 KEY FIX)
-    const waitForStayElement = async () => {
-      for (let i = 0; i < 20; i++) {
-        const el = document.querySelector('[id*="stay_option"]');
-        if (el) return el;
-        await new Promise(r => setTimeout(r, 100));
-      }
-      return null;
-    };
-
-    const stayEl = await waitForStayElement();
-
-    if (!stayEl) {
-      console.warn("MERS: Stay option field not found");
-      return;
-    }
-
-    // 5. Build options dynamically
-    let options = [];
-
-    options.push(status.roomSeats > 0 ? "Room" : "Room (Waiting List)");
-    options.push(status.dormSeats > 0 ? "Dormitory" : "Dormitory (Waiting List)");
-    options.push("I will arrange my own stay outside the venue");
-
-
-// 6. Populate dropdown (SAFE UPDATE)
-
-const stayContainer = document.querySelector('[id*="stay_option"]');
-
-if (!stayContainer) {
-  console.warn("MERS: Stay option container not found");
-  return;
-}
-
-// Find all option labels inside it
-const items = stayContainer.querySelectorAll('label, div, span');
-
-items.forEach(el => {
-  const text = el.innerText.trim();
-
-  if (text.includes("Room")) {
-    el.innerText = status.roomSeats > 0 ? "Room" : "Room (Waiting List)";
-  }
-
-  if (text.includes("Dormitory")) {
-    el.innerText = status.dormSeats > 0 ? "Dormitory" : "Dormitory (Waiting List)";
-  }
-});
-
-   
-    
-    // 7. Ensure visibility
-    if (stayEl.parentElement) {
-      stayEl.parentElement.style.display = 'block';
-    }
-
-    console.log("MERS: Capacity + Stay Options updated for", genderEl.value);
+    console.log("MERS: Capacity displayed for", genderEl.value);
 
   } catch (error) {
     container.innerHTML = '<div style="color: #d32f2f;">Error loading availability</div>';
