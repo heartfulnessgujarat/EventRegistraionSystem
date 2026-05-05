@@ -1933,7 +1933,25 @@ async function getStayAvailability(eventId, gender) {
   const db = firebase.database();
 
   // 1. Fetch Config
-  const configSnap = await db.ref(`config/eventConfig/${eventId}`).once('value');
+
+  
+  
+
+let configSnap = await db.ref(`eventConfig/${eventId}`).once('value');
+let config = configSnap.val();
+
+if (!config) {
+  configSnap = await db.ref(`masters/eventConfig/${eventId}`).once('value');
+  config = configSnap.val();
+}
+
+if (!config) {
+  throw new Error("Event config not found");
+}
+
+  
+
+  
   const config = configSnap.val();
 
   const roomCapacity = Number(config.room_capacity) || 0;
