@@ -2100,25 +2100,30 @@ if (typeof currentSection !== 'undefined' && currentSection !== 2) {
 
 if (stayEl.tagName === 'SELECT') {
 
+  const currentValue = stayEl.value; // preserve selected value
+
   Array.from(stayEl.options).forEach(opt => {
 
     if (opt.value.includes("Room")) {
       opt.text = status.roomSeats > 0 ? "Room" : "Room (Waiting List)";
-      opt.value = opt.text;
+      // ❌ DO NOT change opt.value
     }
 
     if (opt.value.includes("Dormitory")) {
       opt.text = status.dormSeats > 0 ? "Dormitory" : "Dormitory (Waiting List)";
-      opt.value = opt.text;
+      // ❌ DO NOT change opt.value
     }
 
   });
+
+  // restore selection
+  stayEl.value = currentValue;
 
 } else {
   console.warn("MERS: stay option is not SELECT, skipping safe update");
 }
 
-    
+
    
     
     // 7. Ensure visibility
