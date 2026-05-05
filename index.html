@@ -2004,6 +2004,12 @@ async function getStayAvailability(eventId, gender) {
 
 
   async function updateStayOptions(event) {
+
+if (typeof currentSection !== 'undefined' && currentSection !== 2) {
+  return;
+}
+
+    
   const targetId = event ? event.target.id : null;
   const validGenderIds = ['extra_gender', 'inp-gender', 'gender'];
 
@@ -2044,6 +2050,11 @@ async function getStayAvailability(eventId, gender) {
     // 2. Get availability
     const status = await getStayAvailability(eventId, genderEl.value);
 
+    if (typeof currentSection !== 'undefined' && currentSection !== 2) {
+  return;
+}
+
+  
     // 3. Show availability
     container.innerHTML = `
       <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #c8e6c9; padding-bottom: 5px; margin-bottom: 5px;">
