@@ -1151,7 +1151,7 @@ const activeResult = await activeSeatsRef.transaction((current) => {
 
 if (confirmedCounterPath) {
  
-
+ 
     await db.ref(confirmedCounterPath).transaction((current) => {
         return (current || 0) + 1;
     });
@@ -1159,10 +1159,17 @@ if (confirmedCounterPath) {
     console.log("MERS: confirmed accommodation counter incremented.");
 }
 
+// ===== WAITLIST COUNTER INCREMENT =====
 
+if (waitlistCounterPath) {
 
+    await db.ref(waitlistCounterPath).transaction((current) => {
+        return (current || 0) + 1;
+    });
 
-                     
+    console.log("MERS: waitlist counter incremented.");
+}
+
 
               
 
