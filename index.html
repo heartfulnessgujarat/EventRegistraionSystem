@@ -225,8 +225,9 @@
     </div> <!-- CLOSE SECTION2 -->
 <div id="success-screen">
 
+  <div id="success-content"></div>
   
-    <div id="success-content" class="thank-you-card"></div>
+   //  <div id="success-content" class="thank-you-card"></div>
 </div>
   
     
@@ -1112,13 +1113,9 @@ showSuccessScreen();
     ? eventConfig.final_html 
     : "<h2>Registration Successful!</h2>";
 
-// contentDiv.innerHTML = finalHTML;
+ contentDiv.innerHTML = finalHTML;
 
-contentDiv.innerHTML = `
-    <div class="thank-you-card">
-        ${finalHTML}
-    </div>
-`;
+
 
           
         }
