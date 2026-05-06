@@ -2424,10 +2424,8 @@ if (!formContent || formContent.style.display === 'none') {
 
 ${status.roomSeats > 0 
     ? status.roomSeats + ' Seats' 
-  
-  
-    'WL-' + ((status.roomWaitlist || 0) + 1)
-          
+    : 'WL-' + ((status.roomWaitlist || 0) + 1)}
+
         </span>
       </div>
       <div style="display: flex; justify-content: space-between;">
