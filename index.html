@@ -2170,16 +2170,20 @@ init();
  * NEW: MERS Live Availability Engine (Rooms + Dorms - Gender Aware)
  */
 
-
 async function getStayAvailability(eventId, gender) {
+
   const db = firebase.database();
 
-  // ✅ USE EXISTING GLOBAL CONFIG (DO NOT FETCH AGAIN)
+  // ✅ USE EXISTING GLOBAL CONFIG
   const config = eventConfig;
 
   if (!config) {
     throw new Error("Event config not loaded");
   }
+
+  // =====================================================
+  // CONFIG
+  // =====================================================
 
   const roomCapacity = Number(config.room_capacity) || 0;
   const personsPerRoom = Number(config.persons_per_room) || 2;
@@ -2190,31 +2194,37 @@ async function getStayAvailability(eventId, gender) {
   const maleDormSize = Number(config.male_dorm_persons_per_dorm) || 0;
   const femaleDormSize = Number(config.female_dorm_persons_per_dorm) || 0;
 
-  // ✅ FETCH REGISTRATIONS (correct path)
-  const regSnap = await db.ref(`registrations/${eventId}`).once('value');
-  const regs = regSnap.val() || {};
+  // =====================================================
+  // FETCH CONFIRMED COUNTERS
+  // =====================================================
 
-  let maleRoom = 0, femaleRoom = 0;
-  let maleDorm = 0, femaleDorm = 0;
+  const [
+    maleRoomSnap,
+    femaleRoomSnap,
+    maleDormSnap,
+    femaleDormSnap
+  ] = await Promise.all([
 
-  Object.values(regs).forEach(r => {
-    if (r.registration_status === "CANCELLED") return;
+    db.ref('counters/confirmed_counters/room_male/' + eventId).once('value'),
 
-    const genderVal = r.extra_gender || r.gender;
-    const stay = r.extra_stay_option || r.stay_option;
+    db.ref('counters/confirmed_counters/room_female/' + eventId).once('value'),
 
-    if (stay === "Room") {
-      if (genderVal === "Male") maleRoom++;
-      if (genderVal === "Female") femaleRoom++;
-    }
+    db.ref('counters/confirmed_counters/dorm_male/' + eventId).once('value'),
 
-    if (stay === "Dormitory") {
-      if (genderVal === "Male") maleDorm++;
-      if (genderVal === "Female") femaleDorm++;
-    }
-  });
+    db.ref('counters/confirmed_counters/dorm_female/' + eventId).once('value')
 
-  // 🛏️ DORM
+  ]);
+
+  const maleRoom = maleRoomSnap.val() || 0;
+  const femaleRoom = femaleRoomSnap.val() || 0;
+
+  const maleDorm = maleDormSnap.val() || 0;
+  const femaleDorm = femaleDormSnap.val() || 0;
+
+  // =====================================================
+  // DORM CALCULATION
+  // =====================================================
+
   const maleDormTotal = maleDormCap * maleDormSize;
   const femaleDormTotal = femaleDormCap * femaleDormSize;
 
@@ -2223,65 +2233,109 @@ async function getStayAvailability(eventId, gender) {
       ? Math.max(0, maleDormTotal - maleDorm)
       : Math.max(0, femaleDormTotal - femaleDorm);
 
-  // 🏠 ROOM
-  const totalRoomUsers = maleRoom + femaleRoom;
-  const totalRoomsUsed = totalRoomUsers / personsPerRoom;
+  // =====================================================
+  // ROOM CALCULATION (NEW CORRECT LOGIC)
+  // =====================================================
 
-  let remainingRooms = roomCapacity - totalRoomsUsed;
+  const totalRoomSeats = roomCapacity * personsPerRoom;
 
-  let oppositePartial = 0;
+  let roomSeats = 0;
 
   if (gender === "Male") {
-    if (femaleRoom % personsPerRoom !== 0) oppositePartial = 1;
+
+    // SAME gender usable seats
+    const sameGenderRemaining =
+      totalRoomSeats - maleRoom;
+
+    // ROOMS blocked by opposite gender
+    const femaleRoomsOccupied =
+      Math.ceil(femaleRoom / personsPerRoom);
+
+    const roomsAvailableForMale =
+      Math.max(0, roomCapacity - femaleRoomsOccupied);
+
+    const maxMaleSeatsPossible =
+      roomsAvailableForMale * personsPerRoom;
+
+    roomSeats =
+      Math.min(sameGenderRemaining, maxMaleSeatsPossible);
+
   } else {
-    if (maleRoom % personsPerRoom !== 0) oppositePartial = 1;
+
+    // SAME gender usable seats
+    const sameGenderRemaining =
+      totalRoomSeats - femaleRoom;
+
+    // ROOMS blocked by opposite gender
+    const maleRoomsOccupied =
+      Math.ceil(maleRoom / personsPerRoom);
+
+    const roomsAvailableForFemale =
+      Math.max(0, roomCapacity - maleRoomsOccupied);
+
+    const maxFemaleSeatsPossible =
+      roomsAvailableForFemale * personsPerRoom;
+
+    roomSeats =
+      Math.min(sameGenderRemaining, maxFemaleSeatsPossible);
   }
 
-  let availableRooms = Math.floor(remainingRooms - oppositePartial);
-  availableRooms = Math.max(0, availableRooms);
+  roomSeats = Math.max(0, roomSeats);
 
-  const roomSeats = availableRooms * personsPerRoom;
+  // =====================================================
+  // WAITLIST COUNTERS
+  // =====================================================
 
   let roomWaitlist = 0;
-let dormWaitlist = 0;
+  let dormWaitlist = 0;
 
-// ===== ROOM WL =====
-if (gender.toLowerCase() === 'male') {
+  // ===== ROOM WL =====
 
-    const roomWLSnap = await db.ref('counters/waitlist_counters/room_male/' + eventId).once('value');
+  if (gender.toLowerCase() === 'male') {
 
-    roomWaitlist = roomWLSnap.val() || 0;
-
-} else {
-
-    const roomWLSnap = await db.ref('counters/waitlist_counters/room_female/' + eventId).once('value');
+    const roomWLSnap =
+      await db.ref('counters/waitlist_counters/room_male/' + eventId).once('value');
 
     roomWaitlist = roomWLSnap.val() || 0;
-}
 
-// ===== DORM WL =====
-if (gender.toLowerCase() === 'male') {
+  } else {
 
-    const dormWLSnap = await db.ref('counters/waitlist_counters/dorm_male/' + eventId).once('value');
+    const roomWLSnap =
+      await db.ref('counters/waitlist_counters/room_female/' + eventId).once('value');
+
+    roomWaitlist = roomWLSnap.val() || 0;
+  }
+
+  // ===== DORM WL =====
+
+  if (gender.toLowerCase() === 'male') {
+
+    const dormWLSnap =
+      await db.ref('counters/waitlist_counters/dorm_male/' + eventId).once('value');
 
     dormWaitlist = dormWLSnap.val() || 0;
 
-} else {
+  } else {
 
-    const dormWLSnap = await db.ref('counters/waitlist_counters/dorm_female/' + eventId).once('value');
+    const dormWLSnap =
+      await db.ref('counters/waitlist_counters/dorm_female/' + eventId).once('value');
 
     dormWaitlist = dormWLSnap.val() || 0;
-}
+  }
 
-return {
+  // =====================================================
+  // RETURN
+  // =====================================================
+
+  return {
     roomSeats,
     dormSeats,
     roomWaitlist,
     dormWaitlist
-};
-  
+  };
 }
 
+  
 
 async function updateStayOptions(event) {
 
