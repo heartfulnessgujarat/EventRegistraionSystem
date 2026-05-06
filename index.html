@@ -2431,7 +2431,13 @@ ${status.roomSeats > 0
       <div style="display: flex; justify-content: space-between;">
         <span>Available Seats for Dorm:</span>
         <span style="color: ${status.dormSeats > 0 ? '#2e7d32' : '#d32f2f'};">
-          ${status.dormSeats > 0 ? status.dormSeats + ' Seats' : 'Waiting List'}
+        
+${status.dormSeats > 0 
+    ? status.dormSeats + ' Seats' 
+    : 'WL-' + ((status.dormWaitlist || 0) + 1)}
+
+
+          
         </span>
       </div>
     `;
