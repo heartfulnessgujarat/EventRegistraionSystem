@@ -1093,14 +1093,25 @@ if (latestActiveSeats > roomCapacity) {
               
                 console.log("MERS: active_seats incremented successfully.");
 
-// ===== WAITLIST COUNTER INITIALIZATION =====
-const wlRef = db.ref('waitlist_seats/' + eventIdParam);
+// ===== NEW SEPARATE COUNTER INITIALIZATION =====
 
-const wlSnapshot = await wlRef.once('value');
+const counterPaths = [
+    'confirmed_room_seats/',
+    'confirmed_dorm_seats/',
+    'waitlist_room_seats/',
+    'waitlist_dorm_seats/'
+];
 
-if (!wlSnapshot.exists()) {
-    await wlRef.set(0);
-    console.log("MERS: waitlist counter initialized.");
+for (const path of counterPaths) {
+
+    const refObj = db.ref(path + eventIdParam);
+
+    const snap = await refObj.once('value');
+
+    if (!snap.exists()) {
+        await refObj.set(0);
+        console.log("MERS: initialized ->", path + eventIdParam);
+    }
 }
 
 
