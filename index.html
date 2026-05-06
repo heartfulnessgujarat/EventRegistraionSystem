@@ -1047,6 +1047,44 @@ async function submitData() {
         formData.registration_status = (mode === 'new') ? "CONFIRMED" : "EDITED ON " + new Date().toLocaleString();
 
 
+      // ===== ACCOMMODATION COUNTER TYPE DETECTION =====
+
+const selectedGender = (formData.extra_gender || "").toLowerCase();
+
+const selectedStay = (formData.extra_stay_option || "").toLowerCase();
+
+let confirmedCounterPath = "";
+
+// ROOM
+if (selectedStay.includes("room")) {
+
+    if (selectedGender === "male") {
+        confirmedCounterPath = 'counters/confirmed_counters/room_male/' + eventIdParam;
+    }
+
+    if (selectedGender === "female") {
+        confirmedCounterPath = 'counters/confirmed_counters/room_female/' + eventIdParam;
+    }
+}
+
+// DORM
+if (selectedStay.includes("dorm")) {
+
+    if (selectedGender === "male") {
+        confirmedCounterPath = 'counters/confirmed_counters/dorm_male/' + eventIdParam;
+    }
+
+    if (selectedGender === "female") {
+        confirmedCounterPath = 'counters/confirmed_counters/dorm_female/' + eventIdParam;
+    }
+}
+      
+
+
+
+    
+
+
 
 // --- STEP 4: SAVE DATA & CONDITIONAL COUNTER ---
         if (mode === 'new') {
