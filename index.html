@@ -1095,12 +1095,26 @@ if (latestActiveSeats > roomCapacity) {
 
 // ===== NEW SEPARATE COUNTER INITIALIZATION =====
 
-const counterPaths = [
-    'confirmed_room_seats/',
-    'confirmed_dorm_seats/',
-    'waitlist_room_seats/',
-    'waitlist_dorm_seats/'
+// ===== WAITLIST COUNTER INITIALIZATION =====
+
+const waitlistPaths = [
+    'waitlist_room_male/',
+    'waitlist_room_female/',
+    'waitlist_dorm_male/',
+    'waitlist_dorm_female/'
 ];
+
+for (const path of waitlistPaths) {
+
+    const refObj = db.ref(path + eventIdParam);
+
+    const snap = await refObj.once('value');
+
+    if (!snap.exists()) {
+        await refObj.set(0);
+        console.log("MERS: initialized ->", path + eventIdParam);
+    }
+}
 
 for (const path of counterPaths) {
 
