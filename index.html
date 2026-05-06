@@ -1113,28 +1113,20 @@ if (selectedStay === "dormitory (waiting list)") {
     }
 }
 
-
-      
-      
-
-      
-if (selectedStay.includes("dorm")) {
+    if (selectedStay === "dormitory") {
 
     if (selectedGender === "male") {
-        confirmedCounterPath = 'counters/confirmed_counters/dorm_male/' + eventIdParam;
+        confirmedCounterPath =
+            'counters/confirmed_counters/dorm_male/' + eventIdParam;
     }
 
     if (selectedGender === "female") {
-        confirmedCounterPath = 'counters/confirmed_counters/dorm_female/' + eventIdParam;
+        confirmedCounterPath =
+            'counters/confirmed_counters/dorm_female/' + eventIdParam;
     }
 }
       
-
-
-
-    
-
-
+      
 
 // --- STEP 4: SAVE DATA & CONDITIONAL COUNTER ---
         if (mode === 'new') {
