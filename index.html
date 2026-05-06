@@ -1097,19 +1097,7 @@ async function submitData() {
     ? eventConfig.final_html 
     : "<h2>Registration Successful!</h2>";
 
-contentDiv.innerHTML = `
-    <div style="
-        max-width: 600px;
-        margin: 40px auto;
-        padding: 20px;
-        background: #ffffff;
-        border-radius: 10px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        text-align: left;
-    ">
-        ${finalHTML}
-    </div>
-`;
+contentDiv.innerHTML = finalHTML;
     
         }
 
