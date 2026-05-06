@@ -1160,66 +1160,9 @@ if (confirmedCounterPath) {
 }
 
 
-// ===== WAITLIST COUNTER UPDATE =====
-
-const roomCapacity = Number(eventConfig?.room_capacity || 0);
-
-const dormCapacity = Number(eventConfig?.dorm_capacity || 0);
-
-let currentConfirmedCount = 0;
-
-if (confirmedCounterPath) {
-
-    const confirmedSnap = await db.ref(confirmedCounterPath).once('value');
-
-    currentConfirmedCount = confirmedSnap.val() || 0;
-}
-
-let waitlistCounterPath = "";
-
-// ROOM WAITLIST
-if (selectedStay.includes("room")) {
-
-    if (currentConfirmedCount > roomCapacity) {
-
-        if (selectedGender === "male") {
-            waitlistCounterPath = 'counters/waitlist_counters/room_male/' + eventIdParam;
-        }
-
-        if (selectedGender === "female") {
-            waitlistCounterPath = 'counters/waitlist_counters/room_female/' + eventIdParam;
-        }
-    }
-}
-
-// DORM WAITLIST
-if (selectedStay.includes("dorm")) {
-
-    if (currentConfirmedCount > dormCapacity) {
-
-        if (selectedGender === "male") {
-            waitlistCounterPath = 'counters/waitlist_counters/dorm_male/' + eventIdParam;
-        }
-
-        if (selectedGender === "female") {
-            waitlistCounterPath = 'counters/waitlist_counters/dorm_female/' + eventIdParam;
-        }
-    }
-}
-
-if (waitlistCounterPath) {
-
-    await db.ref(waitlistCounterPath).transaction((current) => {
-        return (current || 0) + 1;
-    });
-
-    console.log("MERS: waitlist counter incremented.");
-}
 
 
-              
-
-              
+                     
 
               
 
