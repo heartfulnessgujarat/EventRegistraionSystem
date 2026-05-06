@@ -1109,8 +1109,15 @@ showSuccessScreen();
     ? eventConfig.final_html 
     : "<h2>Registration Successful!</h2>";
 
-contentDiv.innerHTML = finalHTML;
-    
+// contentDiv.innerHTML = finalHTML;
+
+contentDiv.innerHTML = `
+    <div class="thank-you-card">
+        ${finalHTML}
+    </div>
+`;
+
+          
         }
 
         document.getElementById('success-screen').style.display = 'block';
