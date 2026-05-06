@@ -1069,6 +1069,15 @@ async function submitData() {
                     return nextVal;
                 });
                 console.log("MERS: active_seats incremented successfully.");
+
+              console.log("STEP-1 PASSED");
+
+console.log("eventConfig.final_html exists?", !!eventConfig.final_html);
+
+console.log("About to call showSuccessScreen()");
+
+
+              
             } catch (seatErr) {
                 console.error("MERS: active_seats transaction failed:", seatErr);
             }
