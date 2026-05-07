@@ -1046,7 +1046,9 @@ async function submitData() {
         formData.timestamp = new Date().toLocaleString();
         formData.registration_status = (mode === 'new') ? "CONFIRMED" : "EDITED ON " + new Date().toLocaleString();
 
+      formData.stay_allocation_code = "";
 
+      
       // ===== ACCOMMODATION COUNTER TYPE DETECTION =====
 
 const selectedGender = (formData.extra_gender || "").toLowerCase();
@@ -1054,6 +1056,9 @@ const selectedGender = (formData.extra_gender || "").toLowerCase();
 const selectedStay = (formData.extra_stay_option || "").toLowerCase();
 
 let confirmedCounterPath = "";
+
+      let waitlistCounterPath = "";
+let stayAllocationCode = "";
 // =====================================================
 // CONFIRMED ROOM
 // =====================================================
@@ -1162,30 +1167,85 @@ const activeResult = await activeSeatsRef.transaction((current) => {
 
               // ===== CONFIRMED ACCOMMODATION COUNTER UPDATE =====
 
-              
 
 if (confirmedCounterPath) {
- 
- 
-    await db.ref(confirmedCounterPath).transaction((current) => {
+
+    const confirmResult =
+      await db.ref(confirmedCounterPath)
+      .transaction((current) => {
+
         return (current || 0) + 1;
-    });
 
-    console.log("MERS: confirmed accommodation counter incremented.");
+      });
+
+    const confirmCount =
+      confirmResult.snapshot.val();
+
+    // =====================================================
+    // BUILD STAY ALLOCATION CODE
+    // =====================================================
+
+    const stayLabel =
+      selectedStay.includes("room")
+      ? "ROOM"
+      : "DORM";
+
+    stayAllocationCode =
+      `${stayLabel}-CONFIRM#${confirmCount}`;
+
+    console.log(
+      "MERS: stayAllocationCode =",
+      stayAllocationCode
+    );
+
+    console.log(
+      "MERS: confirmed accommodation counter incremented."
+    );
 }
+              
+              
 
+
+              
 // ===== WAITLIST COUNTER INCREMENT =====
 
 if (waitlistCounterPath) {
 
-    await db.ref(waitlistCounterPath).transaction((current) => {
-        return (current || 0) + 1;
-    });
+    const waitlistResult =
+      await db.ref(waitlistCounterPath)
+      .transaction((current) => {
 
-    console.log("MERS: waitlist counter incremented.");
+        return (current || 0) + 1;
+
+      });
+
+    const waitlistCount =
+      waitlistResult.snapshot.val();
+
+    // =====================================================
+    // BUILD STAY ALLOCATION CODE
+    // =====================================================
+
+    const stayLabel =
+      selectedStay.includes("room")
+      ? "ROOM"
+      : "DORM";
+
+    stayAllocationCode =
+      `${stayLabel}-WAITLIST#${waitlistCount}`;
+
+    console.log(
+      "MERS: stayAllocationCode =",
+      stayAllocationCode
+    );
+
+    console.log(
+      "MERS: waitlist counter incremented."
+    );
 }
 
-
+              
+              
               
 
 // ===== WAITLIST COUNTER INITIALIZATION =====
@@ -1256,6 +1316,18 @@ showSuccessScreen();
         }
 
 
+// =====================================================
+// SAVE FINAL STAY ALLOCATION CODE
+// =====================================================
+
+formData.stay_allocation_code =
+  stayAllocationCode;
+
+
+
+
+
+      
         await db.ref('registrations/' + eventIdParam + '/' + formData.registration_id).set(formData);
 
         // --- STEP 5: UI TRANSITION ---
