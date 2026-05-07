@@ -203,10 +203,46 @@ async function handleResponse(choice) {
 
     const regStatus = originalStatus;
 
+
+    
+
     // =====================================================
     // DECREMENT CONFIRMED COUNTERS
     // =====================================================
 
+// =====================================================
+// DECREMENT OLD ROOT COUNTERS
+// =====================================================
+
+if (regStatus === "CONFIRMED") {
+
+  // OLD active_seats counter
+  await db.ref(
+    `active_seats/${eventId}`
+  ).transaction(current => {
+
+    return Math.max((current || 0) - 1, 0);
+
+  });
+
+  // OLD root counters
+  await db.ref(
+    `counters/${eventId}`
+  ).transaction(current => {
+
+    return Math.max((current || 0) - 1, 0);
+
+  });
+
+}
+
+
+
+
+
+
+
+    
     if (regStatus === "CONFIRMED") {
 
       // ---------- ROOM ----------
