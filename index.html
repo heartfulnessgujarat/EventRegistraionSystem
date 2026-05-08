@@ -2669,8 +2669,21 @@ stayEl.disabled =
 
 if (!window.accommodationEditUnlocked) {
 
+  stayEl.disabled = true;
+
+  stayEl.setAttribute(
+    "disabled",
+    "disabled"
+  );
+
   stayEl.style.background =
     "#f5f5f5";
+
+  stayEl.style.pointerEvents =
+    "none";
+
+  stayEl.style.opacity =
+    "0.8";
 
 }
       
