@@ -1740,12 +1740,6 @@ if (fieldId === 'stay_option' && window.availability) {
   });
 }
 
-
-
-
-
-
-
                               
 
                                 // --- MERS: ROOM FILTERING LOGIC ---
@@ -1814,7 +1808,24 @@ if (fieldId === 'stay_option' && window.availability) {
 
         if (backBtn) {
             backBtn.onclick = (targetSectionNumber === "Section3") 
-                ? () => buildExtraSections('Section2') 
+
+              
+          //      ? () => buildExtraSections('Section2') 
+
+? () => {
+
+    buildExtraSections('Section2');
+
+    setTimeout(() => {
+
+        updateStayOptions({
+            type: 'mers-section-refresh'
+        });
+
+    }, 300);
+
+}
+              
                 : () => { 
                     document.getElementById('Section2').style.display = 'none';  
                     document.getElementById('Section1').style.display = 'block';  
@@ -1962,6 +1973,19 @@ function proceedToLogistics() {
 
     const s2 = document.getElementById('Section2');
     if (s2) s2.style.display = 'block';
+
+// =====================================================
+// FORCE LIVE SECTION 2 AVAILABILITY REFRESH
+// =====================================================
+
+setTimeout(() => {
+
+    updateStayOptions({
+        type: 'mers-section-refresh'
+    });
+
+}, 300);
+
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -2439,9 +2463,27 @@ roomSeats = Math.max(0, roomSeats);
 
 async function updateStayOptions(event) {
 
-// ✅ Run ONLY when gender field changes
+// ✅ Run  when gender field changes  and also when section 2 is live..either from section 1 or from section 3 or for edit mode...
+
+ // const targetId = event?.target?.id || '';
+ 
+ //  if (!targetId.includes('gender')) return;
+
 const targetId = event?.target?.id || '';
-if (!targetId.includes('gender')) return;
+
+// =====================================================
+// ALLOW MANUAL SECTION-2 REFRESH
+// =====================================================
+
+const forcedRefresh =
+  event?.type === 'mers-section-refresh';
+
+if (
+  !targetId.includes('gender') &&
+  !forcedRefresh
+) return;
+  
+  
 
 const formContent = document.getElementById('form-content');
 
@@ -2595,9 +2637,6 @@ console.log("MERS: Dropdown updated correctly");
 // ✅ Keep this listener (unchanged)
 document.addEventListener('change', updateStayOptions);
 console.log("MERS DIAG: Section 2 Listener Active via Delegation");
-
-
-
   
 </script>
 </body>
