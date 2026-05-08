@@ -1044,7 +1044,16 @@ async function submitData() {
         formData.registration_id = finalRegId;
         formData.event_id = eventIdParam;
         formData.timestamp = new Date().toLocaleString();
-        formData.registration_status = (mode === 'new') ? "CONFIRMED" : "EDITED ON " + new Date().toLocaleString();
+     //   formData.registration_status = (mode === 'new') ? "CONFIRMED" : "EDITED ON " + new Date().toLocaleString();
+
+      formData.registration_status =
+  (mode === 'new')
+
+    ? "REGISTERED ON " +
+      new Date().toLocaleString()
+
+    : "EDITED ON " +
+      new Date().toLocaleString();
 
       formData.stay_allocation_code = "";
 
