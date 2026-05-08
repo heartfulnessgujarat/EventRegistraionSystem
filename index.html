@@ -2677,10 +2677,15 @@ if you proceed further.`
 
 window.accommodationEditUnlocked = true;
 
-// Rebuild dropdown with LIVE options
-updateStayOptions({
-  type: 'mers-section-refresh'
-});
+// Allow browser state update first
+setTimeout(() => {
+
+  updateStayOptions({
+    type: 'mers-section-refresh'
+  });
+
+}, 800);
+
 
 // Hide button after unlock
 btn.style.display = "none";
