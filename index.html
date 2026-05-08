@@ -2645,6 +2645,41 @@ if (
 
   wrapper.appendChild(btn);
 
+  // =====================================================
+// FIRST CONFIRMATION
+// =====================================================
+
+btn.onclick = function () {
+
+  const currentStay =
+    stayEl.value || "your current stay option";
+
+  const confirmChange = confirm(
+
+`Are you sure?
+
+Because you may lose your current Stay Option:
+
+"${currentStay}"
+
+if you proceed further.`
+
+  );
+
+  if (!confirmChange) {
+    return;
+  }
+
+  alert(
+    "Next step: accommodation editing will be enabled."
+  );
+
+};
+
+
+
+  
+
 }
 
       
