@@ -2533,31 +2533,71 @@ if (!formContent || formContent.style.display === 'none') {
 
     const status = await getStayAvailability(eventId, genderEl.value);
 
+
     // ✅ Show availability
-    container.innerHTML = `
-      <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #c8e6c9; padding-bottom: 5px; margin-bottom: 5px;">
-        <span>Available Seats for Room:</span>
-        <span style="color: ${status.roomSeats > 0 ? '#2e7d32' : '#d32f2f'};">
+container.innerHTML = `
 
-${status.roomSeats > 0 
-    ? status.roomSeats + ' Seats' 
-    : 'WL-' + ((status.roomWaitlist || 0) + 1)}
+  <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #c8e6c9; padding-bottom: 5px; margin-bottom: 5px;">
 
-        </span>
-      </div>
-      <div style="display: flex; justify-content: space-between;">
-        <span>Available Seats for Dorm:</span>
-        <span style="color: ${status.dormSeats > 0 ? '#2e7d32' : '#d32f2f'};">
-        
-${status.dormSeats > 0 
-    ? status.dormSeats + ' Seats' 
-    : 'WL-' + ((status.dormWaitlist || 0) + 1)}
+    <span><b>Current Available Seats for Room:</b></span>
 
+    <span style="color: ${status.roomSeats > 0 ? '#2e7d32' : '#d32f2f'};">
 
-          
-        </span>
-      </div>
-    `;
+${status.roomSeats > 0
+  ? status.roomSeats + ' Seats'
+  : 'WL-' + ((status.roomWaitlist || 0) + 1)}
+
+    </span>
+
+  </div>
+
+  <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+
+    <span><b>Current Available Seats for Dorm:</b></span>
+
+    <span style="color: ${status.dormSeats > 0 ? '#2e7d32' : '#d32f2f'};">
+
+${status.dormSeats > 0
+  ? status.dormSeats + ' Seats'
+  : 'WL-' + ((status.dormWaitlist || 0) + 1)}
+
+    </span>
+
+  </div>
+
+  ${
+    window.location.search.includes("edit")
+
+    ? `
+
+    <div style="text-align:center; margin-top:15px;">
+
+      <button
+        id="btn-change-accommodation"
+        type="button"
+        style="
+          background:#1565c0;
+          color:white;
+          border:none;
+          padding:10px 18px;
+          border-radius:6px;
+          cursor:pointer;
+          font-weight:bold;
+        "
+      >
+        Change Accommodation
+      </button>
+
+    </div>
+
+    `
+
+    : ""
+
+  }
+
+`;
+
 
     // ✅ WAIT for dropdown render, then update safely
     setTimeout(() => {
