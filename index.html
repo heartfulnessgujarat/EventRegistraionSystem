@@ -2570,25 +2570,14 @@ ${status.dormSeats > 0
 
     ? `
 
-    <div style="text-align:center; margin-top:15px;">
+   
+    
+    
+    
 
-      <button
-        id="btn-change-accommodation"
-        type="button"
-        style="
-          background:#1565c0;
-          color:white;
-          border:none;
-          padding:10px 18px;
-          border-radius:6px;
-          cursor:pointer;
-          font-weight:bold;
-        "
-      >
-        Change Accommodation
-      </button>
 
-    </div>
+
+    
 
     `
 
@@ -2612,6 +2601,53 @@ console.log(
 );
 
       if (!stayEl || stayEl.tagName !== 'SELECT') return;
+
+
+// =====================================================
+// CREATE EDIT STAY OPTION BUTTON
+// =====================================================
+
+if (
+  window.location.search.includes("edit") &&
+  !document.getElementById("btn-edit-stay-option")
+) {
+
+  const btn = document.createElement("button");
+
+  btn.id = "btn-edit-stay-option";
+
+  btn.type = "button";
+
+  btn.innerText = "Edit Stay Option";
+
+  btn.style.background = "#ef6c00";
+  btn.style.color = "white";
+  btn.style.border = "none";
+  btn.style.padding = "6px 10px";
+  btn.style.borderRadius = "6px";
+  btn.style.cursor = "pointer";
+  btn.style.fontWeight = "bold";
+  btn.style.fontSize = "12px";
+  btn.style.marginLeft = "10px";
+
+  const wrapper = document.createElement("div");
+
+  wrapper.style.display = "flex";
+  wrapper.style.alignItems = "center";
+  wrapper.style.marginTop = "8px";
+
+  stayEl.parentNode.insertBefore(
+    wrapper,
+    stayEl
+  );
+
+  wrapper.appendChild(stayEl);
+
+  wrapper.appendChild(btn);
+
+}
+
+      
 
       const currentValue = stayEl.value;
 
