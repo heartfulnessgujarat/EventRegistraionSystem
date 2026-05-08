@@ -279,6 +279,10 @@ function formatFirebaseDate(fbDate) {
   let fieldRules = [], masterData = [], eventConfig = {}, moreSections = [];
 
 let profileSnapshotForScript = ""; // <--- ADD THIS LINE
+
+window.accommodationEditUnlocked = false;
+
+
   
   let originalData = {}; 
   let verificationStates = { email: false, mobile: false };
@@ -2482,7 +2486,28 @@ if (
   !targetId.includes('gender') &&
   !forcedRefresh
 ) return;
-  
+
+
+  // =====================================================
+// LOCK STAY OPTION IN PROTECTED MODE
+// =====================================================
+
+const protectedStayField =
+    document.getElementById(
+        'inp-extra_stay_option'
+    );
+
+if (
+    protectedStayField &&
+    !window.accommodationEditUnlocked
+) {
+
+    protectedStayField.disabled = true;
+
+    protectedStayField.style.background =
+        "#f5f5f5";
+
+}
   
 
 const formContent = document.getElementById('form-content');
@@ -2586,6 +2611,28 @@ ${status.dormSeats > 0
       // Always include outside option
       newOptions.push("I will arrange my own stay outside the venue");
 
+
+
+
+      // =====================================================
+// DO NOT REBUILD OPTIONS IN PROTECTED MODE
+// =====================================================
+
+if (!window.accommodationEditUnlocked) {
+
+  console.log(
+    "MERS: Protected Mode active. Original stay option preserved."
+  );
+
+  return;
+
+}
+
+
+
+
+
+      
       // Replace options safely
       stayEl.innerHTML = '';
 
