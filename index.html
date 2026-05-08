@@ -2628,11 +2628,7 @@ if (!window.accommodationEditUnlocked) {
 
 }
 
-
-
-
-
-      
+     
       // Replace options safely
       stayEl.innerHTML = '';
 
@@ -2645,8 +2641,7 @@ placeholder.selected = true;
 
 stayEl.appendChild(placeholder);
 
-
-      
+     
 
       newOptions.forEach(opt => {
         const option = document.createElement('option');
@@ -2660,6 +2655,20 @@ stayEl.appendChild(placeholder);
         stayEl.value = currentValue;
       }
 
+// =====================================================
+// LOCK DROPDOWN IN PROTECTED MODE
+// =====================================================
+
+stayEl.disabled =
+  !window.accommodationEditUnlocked;
+
+if (!window.accommodationEditUnlocked) {
+
+  stayEl.style.background =
+    "#f5f5f5";
+
+}
+      
 // 👉 ADD THIS LINE HERE (exactly here)
 
 if (stayEl.value && !stayEl.dataset.updated) {
