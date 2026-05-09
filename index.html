@@ -1248,6 +1248,84 @@ if (mode === 'edit') {
     }
 }
 
+// =====================================================
+// EDIT MODE → ASSIGN NEW ACCOMMODATION
+// =====================================================
+
+if (mode === 'edit') {
+
+    console.log(
+        "MERS EDIT: Assigning NEW accommodation..."
+    );
+
+    // =====================================================
+    // CONFIRMED COUNTER
+    // =====================================================
+
+    if (confirmedCounterPath) {
+
+        const confirmResult =
+            await db.ref(confirmedCounterPath)
+            .transaction((current) => {
+
+                return (current || 0) + 1;
+
+            });
+
+        const confirmCount =
+            confirmResult.snapshot.val();
+
+        const stayLabel =
+            selectedStay.includes("room")
+            ? "ROOM"
+            : "DORM";
+
+        stayAllocationCode =
+            `${stayLabel}-CONFIRM#${confirmCount}`;
+
+        console.log(
+            "MERS EDIT: New confirmed allocation:",
+            stayAllocationCode
+        );
+    }
+
+    // =====================================================
+    // WAITLIST COUNTER
+    // =====================================================
+
+    if (waitlistCounterPath) {
+
+        const waitlistResult =
+            await db.ref(waitlistCounterPath)
+            .transaction((current) => {
+
+                return (current || 0) + 1;
+
+            });
+
+        const waitlistCount =
+            waitlistResult.snapshot.val();
+
+        const stayLabel =
+            selectedStay.includes("room")
+            ? "ROOM"
+            : "DORM";
+
+        stayAllocationCode =
+            `${stayLabel}-WAITLIST#${waitlistCount}`;
+
+        console.log(
+            "MERS EDIT: New waitlist allocation:",
+            stayAllocationCode
+        );
+    }
+}
+
+
+
+
+
+      
 // --- STEP 4: SAVE DATA & CONDITIONAL COUNTER ---
         if (mode === 'new') {
             console.log("MERS: Processing counters for Event:", eventIdParam);
