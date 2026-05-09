@@ -1076,7 +1076,19 @@ let stayAllocationCode = "";
 // =====================================================
 
       console.log("FINAL selectedGender =", selectedGender);
-console.log("FINAL selectedStay =", selectedStay);
+      console.log("FINAL selectedStay =", selectedStay);
+
+console.log(
+  "MERS COUNTER PATH CHECK:",
+  {
+    selectedGender,
+    selectedStay,
+    confirmedCounterPath,
+    waitlistCounterPath,
+    formGender: formData.extra_gender,
+    originalGender: originalData?.extra_gender
+  }
+);
 
       
 if (selectedStay === "room") {
