@@ -1143,7 +1143,110 @@ if (selectedStay === "dormitory (waiting list)") {
     }
 }
       
-      
+      // =====================================================
+// EDIT MODE → RELEASE OLD ACCOMMODATION
+// =====================================================
+
+if (mode === 'edit') {
+
+    console.log(
+        "MERS EDIT: Releasing old accommodation allocation..."
+    );
+
+    const oldAllocation =
+        originalData?.stay_allocation_code || "";
+
+    const oldGender =
+        (originalData?.extra_gender || "").toLowerCase();
+
+    console.log(
+        "MERS EDIT OLD DATA:",
+        {
+            oldAllocation,
+            oldGender
+        }
+    );
+
+    let oldCounterPath = "";
+
+    // =====================================================
+    // ROOM CONFIRMED
+    // =====================================================
+
+    if (oldAllocation.includes("ROOM-CONFIRM")) {
+
+        oldCounterPath =
+            oldGender === "male"
+
+            ? 'counters/confirmed_counters/room_male/' + eventIdParam
+
+            : 'counters/confirmed_counters/room_female/' + eventIdParam;
+    }
+
+    // =====================================================
+    // ROOM WAITLIST
+    // =====================================================
+
+    if (oldAllocation.includes("ROOM-WAITLIST")) {
+
+        oldCounterPath =
+            oldGender === "male"
+
+            ? 'counters/waitlist_counters/room_male/' + eventIdParam
+
+            : 'counters/waitlist_counters/room_female/' + eventIdParam;
+    }
+
+    // =====================================================
+    // DORM CONFIRMED
+    // =====================================================
+
+    if (oldAllocation.includes("DORM-CONFIRM")) {
+
+        oldCounterPath =
+            oldGender === "male"
+
+            ? 'counters/confirmed_counters/dorm_male/' + eventIdParam
+
+            : 'counters/confirmed_counters/dorm_female/' + eventIdParam;
+    }
+
+    // =====================================================
+    // DORM WAITLIST
+    // =====================================================
+
+    if (oldAllocation.includes("DORM-WAITLIST")) {
+
+        oldCounterPath =
+            oldGender === "male"
+
+            ? 'counters/waitlist_counters/dorm_male/' + eventIdParam
+
+            : 'counters/waitlist_counters/dorm_female/' + eventIdParam;
+    }
+
+    // =====================================================
+    // DECREMENT OLD COUNTER
+    // =====================================================
+
+    if (oldCounterPath) {
+
+        await db.ref(oldCounterPath)
+        .transaction((current) => {
+
+            current = current || 0;
+
+            return current > 0
+                ? current - 1
+                : 0;
+        });
+
+        console.log(
+            "MERS EDIT: Old allocation released:",
+            oldCounterPath
+        );
+    }
+}
 
 // --- STEP 4: SAVE DATA & CONDITIONAL COUNTER ---
         if (mode === 'new') {
