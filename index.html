@@ -1155,6 +1155,18 @@ if (stayInfo.type === "room") {
             eventIdParam;
     }
 
+
+
+
+
+
+
+
+
+
+
+      
+      
     // ROOM CONFIRMED
     else {
 
@@ -1193,17 +1205,7 @@ if (stayInfo.type === "dorm") {
     }
 }
 
-
-
-
-
-
-
-
-
-
-
-      
+     
 console.log(
     "MERS COUNTER PATH CHECK:",
     {
@@ -1243,62 +1245,46 @@ if (mode === 'edit') {
 
     let oldCounterPath = "";
 
-    // =====================================================
-    // ROOM CONFIRMED
-    // =====================================================
+  const oldIsRoom =
+    oldAllocation.includes("ROOM");
 
-    if (oldAllocation.includes("ROOM-CONFIRM")) {
+const oldIsWaitlist =
+    oldAllocation.includes("WAITLIST");
 
-        oldCounterPath =
-            oldGender === "male"
 
-            ? 'counters/confirmed_counters/room_male/' + eventIdParam
 
-            : 'counters/confirmed_counters/room_female/' + eventIdParam;
-    }
+// =====================================================
+// BUILD OLD COUNTER PATH
+// =====================================================
 
-    // =====================================================
-    // ROOM WAITLIST
-    // =====================================================
+const oldFacility =
+    oldIsRoom
+    ? "room"
+    : "dorm";
 
-    if (oldAllocation.includes("ROOM-WAITLIST")) {
+const oldCounterType =
+    oldIsWaitlist
+    ? "waitlist_counters"
+    : "confirmed_counters";
 
-        oldCounterPath =
-            oldGender === "male"
+oldCounterPath =
+    'counters/' +
+    oldCounterType +
+    '/' +
+    oldFacility +
+    '_' +
+    oldGender +
+    '/' +
+    eventIdParam;
 
-            ? 'counters/waitlist_counters/room_male/' + eventIdParam
 
-            : 'counters/waitlist_counters/room_female/' + eventIdParam;
-    }
 
-    // =====================================================
-    // DORM CONFIRMED
-    // =====================================================
 
-    if (oldAllocation.includes("DORM-CONFIRM")) {
 
-        oldCounterPath =
-            oldGender === "male"
 
-            ? 'counters/confirmed_counters/dorm_male/' + eventIdParam
 
-            : 'counters/confirmed_counters/dorm_female/' + eventIdParam;
-    }
 
-    // =====================================================
-    // DORM WAITLIST
-    // =====================================================
-
-    if (oldAllocation.includes("DORM-WAITLIST")) {
-
-        oldCounterPath =
-            oldGender === "male"
-
-            ? 'counters/waitlist_counters/dorm_male/' + eventIdParam
-
-            : 'counters/waitlist_counters/dorm_female/' + eventIdParam;
-    }
-
+  
     // =====================================================
     // DECREMENT OLD COUNTER
     // =====================================================
