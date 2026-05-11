@@ -2984,51 +2984,175 @@ btn.onclick = function () {
   const currentStay =
     stayEl.value || "your current stay option";
 
-  const confirmChange = confirm(
 
-`Are you sure?
 
-Because you may lose your current Stay Option:
+// =====================================================
+// BUILD DYNAMIC POPUP CONTENT
+// =====================================================
 
-"${currentStay}"
+const popupOverlay =
+  document.getElementById("mersPopupOverlay");
 
-if you proceed further.`
+const popupContent =
+  document.getElementById("mersPopupContent");
 
+const popupCancel =
+  document.getElementById("mersPopupCancel");
+
+const popupProceed =
+  document.getElementById("mersPopupProceed");
+
+// ---------------------------------------------
+// CURRENT STAY TYPE
+// ---------------------------------------------
+
+const currentStayLower =
+  currentStay.toLowerCase();
+
+let alternateStayType = "Dormitory";
+
+if (
+  currentStayLower.includes("dorm")
+) {
+  alternateStayType = "Room";
+}
+
+// ---------------------------------------------
+// GET CURRENT ALTERNATE STATUS
+// ---------------------------------------------
+
+let alternateStatusText =
+  "Checking latest availability...";
+
+const availabilityBox =
+  document.getElementById(
+    "mersStayAvailability"
   );
 
-  if (!confirmChange) {
-    return;
+if (availabilityBox) {
+
+  const availabilityText =
+    availabilityBox.innerText;
+
+  if (
+    alternateStayType === "Room"
+  ) {
+
+    const roomMatch =
+      availabilityText.match(
+        /Available Seats for Room:\s*(.*)/i
+      );
+
+    if (roomMatch) {
+      alternateStatusText =
+        roomMatch[1];
+    }
   }
 
-// =====================================================
-// ENABLE ACCOMMODATION EDIT MODE
-// =====================================================
+  if (
+    alternateStayType === "Dormitory"
+  ) {
 
-window.accommodationEditUnlocked = true;
+    const dormMatch =
+      availabilityText.match(
+        /Available Seats for Dorm:\s*(.*)/i
+      );
 
-// Allow browser state update first
-setTimeout(() => {
+    if (dormMatch) {
+      alternateStatusText =
+        dormMatch[1];
+    }
+  }
+}
 
-  updateStayOptions({
-    type: 'mers-section-refresh'
-  });
+// ---------------------------------------------
+// POPUP HTML
+// ---------------------------------------------
 
-}, 800);
+popupContent.innerHTML = `
 
+<div style="margin-bottom:15px;">
 
-// Hide button after unlock
-btn.style.display = "none";
+<b>Current Accommodation Status</b>
+
+<br><br>
+
+${currentStay}
+
+</div>
+
+<div>
+
+If you continue editing your stay option:
+
+<ul style="margin-top:10px; padding-left:20px;">
+
+<li>
+Your current accommodation allocation will be released
+</li>
+
+<li>
+Your current queue position may be lost permanently
+</li>
+
+<li>
+If you change your stay option from
+<b>${currentStay}</b>
+to
+<b>${alternateStayType}</b>,
+the current ${alternateStayType} availability status is:
+
+<br><br>
+
+<b style="color:#d32f2f;">
+${alternateStatusText}
+</b>
+
+</li>
+
+</ul>
+
+</div>
+`;
+
+// SHOW POPUP
+popupOverlay.style.display = "flex";
+
+// CANCEL BUTTON
+popupCancel.onclick = function () {
+
+  popupOverlay.style.display = "none";
+};
+
+// PROCEED BUTTON
+popupProceed.onclick = function () {
+
+  popupOverlay.style.display = "none";
+
+  // =====================================================
+  // ENABLE ACCOMMODATION EDIT MODE
+  // =====================================================
+
+  window.accommodationEditUnlocked = true;
+
+  setTimeout(() => {
+
+    updateStayOptions({
+      type: 'mers-section-refresh'
+    });
+
+  }, 800);
+
+  btn.style.display = "none";
+};
+
+// STOP EXECUTION HERE
+return;
 
   
 };
-
-
-
-  
-
 }
-
-      
+    
 
       const currentValue = stayEl.value;
 
