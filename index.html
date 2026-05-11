@@ -1127,14 +1127,26 @@ console.log("FINAL selectedStay =", selectedStay);
 confirmedCounterPath = "";
 waitlistCounterPath = "";
 
+
+
+
+
+
+// =====================================================
+// CENTRALIZED STAY CLASSIFICATION
+// =====================================================
+
+const stayInfo =
+    classifyStayOption(selectedStay);
+
 // =====================================================
 // ROOM LOGIC
 // =====================================================
 
-if (selectedStay.includes("room")) {
+if (stayInfo.type === "room") {
 
     // ROOM WAITLIST
-    if (selectedStay.includes("waiting")) {
+    if (stayInfo.isWaitlist) {
 
         waitlistCounterPath =
             'counters/waitlist_counters/room_' +
@@ -1158,10 +1170,10 @@ if (selectedStay.includes("room")) {
 // DORM LOGIC
 // =====================================================
 
-if (selectedStay.includes("dorm")) {
+if (stayInfo.type === "dorm") {
 
     // DORM WAITLIST
-    if (selectedStay.includes("waiting")) {
+    if (stayInfo.isWaitlist) {
 
         waitlistCounterPath =
             'counters/waitlist_counters/dorm_' +
@@ -1181,6 +1193,17 @@ if (selectedStay.includes("dorm")) {
     }
 }
 
+
+
+
+
+
+
+
+
+
+
+      
 console.log(
     "MERS COUNTER PATH CHECK:",
     {
