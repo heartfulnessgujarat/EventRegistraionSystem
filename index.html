@@ -2567,8 +2567,10 @@ function validateField(id, value, rule) {
         const isoConfig = translateToISO(eventConfig.event_start_date);
         if (isoInput && isoConfig && isoInput > isoConfig) {
 
-          showValidationPopup("❌ " + errorMsg);
+        //  showValidationPopup("❌ " + errorMsg);
         //  alert("❌ " + errorMsg);
+
+          showValidationPopup(errorMsg, "date");
                    
           let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
             if (targetBox) targetBox.value = "";
@@ -2604,8 +2606,9 @@ function validateField(id, value, rule) {
 
 
               
-              showValidationPopup("❌ " + errorMsg);
+            //  showValidationPopup("❌ " + errorMsg);
             //  alert("❌ " + errorMsg);
+              showValidationPopup(errorMsg, "time");
 
 
 
@@ -2627,9 +2630,9 @@ function validateField(id, value, rule) {
 
 
           
-            showValidationPopup("❌ " + errorMsg);
+          //  showValidationPopup("❌ " + errorMsg);
         //  alert("❌ " + errorMsg);
-          
+          showValidationPopup(errorMsg, "date");
           
           
           
@@ -2664,10 +2667,10 @@ function validateField(id, value, rule) {
 
 
               
-               showValidationPopup("❌ " + errorMsg);
+           //    showValidationPopup("❌ " + errorMsg);
               
             //  alert("❌ " + errorMsg);
-              
+              showValidationPopup(errorMsg, "time");
               
               let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
                 if (targetBox) targetBox.value = "";
