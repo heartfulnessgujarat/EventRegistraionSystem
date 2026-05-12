@@ -2476,7 +2476,40 @@ function updateButtonState() {
     return str;
 }
 
-  
+  function showValidationPopup(message) {
+
+    const overlay =
+        document.getElementById("mersPopupOverlay");
+
+    const content =
+        document.getElementById("mersPopupContent");
+
+    const proceedBtn =
+        document.getElementById("mersPopupProceed");
+
+    const cancelBtn =
+        document.getElementById("mersPopupCancel");
+
+    // Keep existing popup heading
+    // OR use one generic reusable heading
+
+    // Update dynamic message
+    content.innerHTML = message;
+
+    // Hide Proceed button
+    proceedBtn.style.display = "none";
+
+    // Configure OK button
+    cancelBtn.innerText = "OK";
+
+    // Close popup
+    cancelBtn.onclick = () => {
+        overlay.style.display = "none";
+    };
+
+    // Show popup
+    overlay.style.display = "flex";
+}
 
   
 function validateField(id, value, rule) {
@@ -2499,8 +2532,8 @@ function validateField(id, value, rule) {
         const isoConfig = translateToISO(eventConfig.event_start_date);
         if (isoInput && isoConfig && isoInput > isoConfig) {
 
-         // showValidationPopup("❌ " + errorMsg);
-          alert("❌ " + errorMsg);
+          showValidationPopup("❌ " + errorMsg);
+        //  alert("❌ " + errorMsg);
                    
           let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
             if (targetBox) targetBox.value = "";
@@ -2536,8 +2569,8 @@ function validateField(id, value, rule) {
 
 
               
-             //  showValidationPopup("❌ " + errorMsg);
-              alert("❌ " + errorMsg);
+              showValidationPopup("❌ " + errorMsg);
+            //  alert("❌ " + errorMsg);
 
 
 
@@ -2559,8 +2592,8 @@ function validateField(id, value, rule) {
 
 
           
-        //    showValidationPopup("❌ " + errorMsg);
-          alert("❌ " + errorMsg);
+            showValidationPopup("❌ " + errorMsg);
+        //  alert("❌ " + errorMsg);
           
           
           
@@ -2596,9 +2629,9 @@ function validateField(id, value, rule) {
 
 
               
-            //    showValidationPopup("❌ " + errorMsg);
+               showValidationPopup("❌ " + errorMsg);
               
-              alert("❌ " + errorMsg);
+            //  alert("❌ " + errorMsg);
               
               
               let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
