@@ -2987,6 +2987,9 @@ btn.onclick = function () {
   const currentStay =
     stayEl.value || "your current stay option";
 
+  const originalAllocationCode =
+  originalData?.stay_allocation_code || "";
+
 
 
 // =====================================================
@@ -3077,7 +3080,8 @@ popupContent.innerHTML = `
 <div style="line-height:1.5;">
 
 Your current accommodation status is
-<b>${currentStay}</b>.
+<b>${originalAllocationCode}</b>.
+
 
 <br><br>
 
