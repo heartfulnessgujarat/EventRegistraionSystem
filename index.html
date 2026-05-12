@@ -2592,6 +2592,8 @@ init();
  * NEW: MERS Live Availability Engine (Rooms + Dorms - Gender Aware)
  */
 
+
+
 async function getStayAvailability(eventId, gender) {
 
   const db = firebase.database();
@@ -2604,17 +2606,35 @@ async function getStayAvailability(eventId, gender) {
   }
 
   // =====================================================
+  // NORMALIZE GENDER SAFELY
+  // =====================================================
+
+  const normalizedGender =
+    (gender || "")
+      .trim()
+      .toLowerCase();
+
+  // =====================================================
   // CONFIG
   // =====================================================
 
-  const roomCapacity = Number(config.room_capacity) || 0;
-  const personsPerRoom = Number(config.persons_per_room) || 2;
+  const roomCapacity =
+    Number(config.room_capacity) || 0;
 
-  const maleDormCap = Number(config.male_dorm_capacity) || 0;
-  const femaleDormCap = Number(config.female_dorm_capacity) || 0;
+  const personsPerRoom =
+    Number(config.persons_per_room) || 2;
 
-  const maleDormSize = Number(config.male_dorm_persons_per_dorm) || 0;
-  const femaleDormSize = Number(config.female_dorm_persons_per_dorm) || 0;
+  const maleDormCap =
+    Number(config.male_dorm_capacity) || 0;
+
+  const femaleDormCap =
+    Number(config.female_dorm_capacity) || 0;
+
+  const maleDormSize =
+    Number(config.male_dorm_persons_per_dorm) || 0;
+
+  const femaleDormSize =
+    Number(config.female_dorm_persons_per_dorm) || 0;
 
   // =====================================================
   // FETCH CONFIRMED COUNTERS
@@ -2627,81 +2647,118 @@ async function getStayAvailability(eventId, gender) {
     femaleDormSnap
   ] = await Promise.all([
 
-    db.ref('counters/confirmed_counters/room_male/' + eventId).once('value'),
+    db.ref(
+      'counters/confirmed_counters/room_male/' +
+      eventId
+    ).once('value'),
 
-    db.ref('counters/confirmed_counters/room_female/' + eventId).once('value'),
+    db.ref(
+      'counters/confirmed_counters/room_female/' +
+      eventId
+    ).once('value'),
 
-    db.ref('counters/confirmed_counters/dorm_male/' + eventId).once('value'),
+    db.ref(
+      'counters/confirmed_counters/dorm_male/' +
+      eventId
+    ).once('value'),
 
-    db.ref('counters/confirmed_counters/dorm_female/' + eventId).once('value')
+    db.ref(
+      'counters/confirmed_counters/dorm_female/' +
+      eventId
+    ).once('value')
 
   ]);
 
-  const maleRoom = maleRoomSnap.val() || 0;
-  const femaleRoom = femaleRoomSnap.val() || 0;
+  const maleRoom =
+    maleRoomSnap.val() || 0;
 
-  const maleDorm = maleDormSnap.val() || 0;
-  const femaleDorm = femaleDormSnap.val() || 0;
+  const femaleRoom =
+    femaleRoomSnap.val() || 0;
+
+  const maleDorm =
+    maleDormSnap.val() || 0;
+
+  const femaleDorm =
+    femaleDormSnap.val() || 0;
 
   // =====================================================
   // DORM CALCULATION
   // =====================================================
 
-  const maleDormTotal = maleDormCap * maleDormSize;
-  const femaleDormTotal = femaleDormCap * femaleDormSize;
+  const maleDormTotal =
+    maleDormCap * maleDormSize;
+
+  const femaleDormTotal =
+    femaleDormCap * femaleDormSize;
 
   const dormSeats =
-    gender === "Male"
+    normalizedGender === "male"
+
       ? Math.max(0, maleDormTotal - maleDorm)
+
       : Math.max(0, femaleDormTotal - femaleDorm);
 
-// =====================================================
-// ROOM CALCULATION (FINAL GENDER-BLOCKING LOGIC)
-// =====================================================
+  // =====================================================
+  // ROOM CALCULATION
+  // =====================================================
 
-let roomSeats = 0;
+  let roomSeats = 0;
 
-if (gender === "Male") {
+  if (normalizedGender === "male") {
 
-  // Female occupied rooms block male usage
-  const femaleRoomsOccupied =
-    Math.ceil(femaleRoom / personsPerRoom);
+    // Female occupied rooms block male usage
+    const femaleRoomsOccupied =
+      Math.ceil(
+        femaleRoom / personsPerRoom
+      );
 
-  // Remaining rooms usable for males
-  const roomsAvailableForMale =
-    Math.max(0, roomCapacity - femaleRoomsOccupied);
+    // Remaining rooms usable for males
+    const roomsAvailableForMale =
+      Math.max(
+        0,
+        roomCapacity - femaleRoomsOccupied
+      );
 
-  // Maximum seats males can use
-  const maxMaleSeats =
-    roomsAvailableForMale * personsPerRoom;
+    // Maximum seats males can use
+    const maxMaleSeats =
+      roomsAvailableForMale *
+      personsPerRoom;
 
-  // Remaining usable male seats
+    // Remaining usable male seats
+    roomSeats =
+      maxMaleSeats - maleRoom;
+
+  } else {
+
+    // Male occupied rooms block female usage
+    const maleRoomsOccupied =
+      Math.ceil(
+        maleRoom / personsPerRoom
+      );
+
+    // Remaining rooms usable for females
+    const roomsAvailableForFemale =
+      Math.max(
+        0,
+        roomCapacity - maleRoomsOccupied
+      );
+
+    // Maximum seats females can use
+    const maxFemaleSeats =
+      roomsAvailableForFemale *
+      personsPerRoom;
+
+    // Remaining usable female seats
+    roomSeats =
+      maxFemaleSeats - femaleRoom;
+  }
+
+  // =====================================================
+  // SAFETY
+  // =====================================================
+
   roomSeats =
-    maxMaleSeats - maleRoom;
-
-} else {
-
-  // Male occupied rooms block female usage
-  const maleRoomsOccupied =
-    Math.ceil(maleRoom / personsPerRoom);
-
-  // Remaining rooms usable for females
-  const roomsAvailableForFemale =
-    Math.max(0, roomCapacity - maleRoomsOccupied);
-
-  // Maximum seats females can use
-  const maxFemaleSeats =
-    roomsAvailableForFemale * personsPerRoom;
-
-  // Remaining usable female seats
-  roomSeats =
-    maxFemaleSeats - femaleRoom;
-}
-
-// Safety
-roomSeats = Math.max(0, roomSeats);
-
-  
+    Math.max(0, roomSeats);
 
   // =====================================================
   // WAITLIST COUNTERS
@@ -2712,36 +2769,52 @@ roomSeats = Math.max(0, roomSeats);
 
   // ===== ROOM WL =====
 
-  if (gender.toLowerCase() === 'male') {
+  if (normalizedGender === 'male') {
 
     const roomWLSnap =
-      await db.ref('counters/waitlist_counters/room_male/' + eventId).once('value');
+      await db.ref(
+        'counters/waitlist_counters/room_male/' +
+        eventId
+      ).once('value');
 
-    roomWaitlist = roomWLSnap.val() || 0;
+    roomWaitlist =
+      roomWLSnap.val() || 0;
 
   } else {
 
     const roomWLSnap =
-      await db.ref('counters/waitlist_counters/room_female/' + eventId).once('value');
+      await db.ref(
+        'counters/waitlist_counters/room_female/' +
+        eventId
+      ).once('value');
 
-    roomWaitlist = roomWLSnap.val() || 0;
+    roomWaitlist =
+      roomWLSnap.val() || 0;
   }
 
   // ===== DORM WL =====
 
-  if (gender.toLowerCase() === 'male') {
+  if (normalizedGender === 'male') {
 
     const dormWLSnap =
-      await db.ref('counters/waitlist_counters/dorm_male/' + eventId).once('value');
+      await db.ref(
+        'counters/waitlist_counters/dorm_male/' +
+        eventId
+      ).once('value');
 
-    dormWaitlist = dormWLSnap.val() || 0;
+    dormWaitlist =
+      dormWLSnap.val() || 0;
 
   } else {
 
     const dormWLSnap =
-      await db.ref('counters/waitlist_counters/dorm_female/' + eventId).once('value');
+      await db.ref(
+        'counters/waitlist_counters/dorm_female/' +
+        eventId
+      ).once('value');
 
-    dormWaitlist = dormWLSnap.val() || 0;
+    dormWaitlist =
+      dormWLSnap.val() || 0;
   }
 
   // =====================================================
@@ -2755,6 +2828,7 @@ roomSeats = Math.max(0, roomSeats);
     dormWaitlist
   };
 }
+
 
   
 
