@@ -3378,5 +3378,85 @@ document.addEventListener('change', updateStayOptions);
 console.log("MERS DIAG: Section 2 Listener Active via Delegation");
   
 </script>
+
+
+```html
+<!-- SECTION-3 VALIDATION POPUP -->
+
+<div id="validationPopupOverlay"
+     style="
+        display:none;
+        position:fixed;
+        top:0;
+        left:0;
+        width:100%;
+        height:100%;
+        background:rgba(0,0,0,0.45);
+        z-index:999999;
+        justify-content:center;
+        align-items:center;
+     ">
+
+    <div style="
+        background:white;
+        width:320px;
+        border-radius:16px;
+        padding:24px;
+        text-align:center;
+        box-shadow:0 4px 20px rgba(0,0,0,0.25);
+    ">
+
+        <div id="validationPopupIcon"
+             style="
+                font-size:52px;
+             ">
+            📅
+        </div>
+
+        <div id="validationPopupTitle"
+             style="
+                margin-top:10px;
+                font-size:22px;
+                font-weight:bold;
+                color:#c62828;
+             ">
+            Invalid Date
+        </div>
+
+        <div id="validationPopupMessage"
+             style="
+                margin-top:16px;
+                font-size:15px;
+                line-height:1.5;
+                color:#333;
+             ">
+        </div>
+
+        <button id="validationPopupBtn"
+                style="
+                    margin-top:24px;
+                    padding:10px 22px;
+                    border:none;
+                    border-radius:8px;
+                    background:#c62828;
+                    color:white;
+                    font-size:15px;
+                    cursor:pointer;
+                ">
+            OK
+        </button>
+
+    </div>
+
+</div>
+```
+
+
+    
+
+
+
+
+    
 </body>
 </html>
