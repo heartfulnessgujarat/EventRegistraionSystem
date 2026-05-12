@@ -2476,6 +2476,43 @@ function updateButtonState() {
     return str;
 }
 
+function showValidationPopup(message) {
+
+    const overlay =
+        document.getElementById("mersPopupOverlay");
+
+    const content =
+        document.getElementById("mersPopupContent");
+
+    const proceedBtn =
+        document.getElementById("mersPopupProceed");
+
+    const cancelBtn =
+        document.getElementById("mersPopupCancel");
+
+    // Keep existing popup heading
+    // OR use one generic reusable heading
+
+    // Update dynamic message
+    content.innerHTML = message;
+
+    // Hide Proceed button
+    proceedBtn.style.display = "none";
+
+    // Configure OK button
+    cancelBtn.innerText = "OK";
+
+    // Close popup
+    cancelBtn.onclick = () => {
+        overlay.style.display = "none";
+    };
+
+    // Show popup
+    overlay.style.display = "flex";
+}
+
+
+  
 function validateField(id, value, rule) {
     const val = value ? value.trim() : "";
     const rulesArray = Array.isArray(fieldRules) ? fieldRules : Object.values(fieldRules);
@@ -2495,8 +2532,11 @@ function validateField(id, value, rule) {
         const isoInput = translateToISO(val);
         const isoConfig = translateToISO(eventConfig.event_start_date);
         if (isoInput && isoConfig && isoInput > isoConfig) {
-            alert("❌ " + errorMsg);
-            let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
+
+          showValidationPopup("❌ " + errorMsg);
+          
+                   
+          let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
             if (targetBox) targetBox.value = "";
             updateButtonState();
             return false;
@@ -2526,7 +2566,15 @@ function validateField(id, value, rule) {
 
             // Trigger error only if Arrival Time is NOT earlier than Start Time
             if (isoInputTime >= isoConfigTime) {
-                alert("❌ " + errorMsg);
+
+
+
+              
+               showValidationPopup("❌ " + errorMsg);
+
+
+
+              
                 let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
                 if (targetBox) targetBox.value = "";
                 updateButtonState();
@@ -2541,8 +2589,15 @@ function validateField(id, value, rule) {
         const isoInput = translateToISO(val);
         const isoConfig = translateToISO(eventConfig.event_end_date);
         if (isoInput && isoConfig && isoInput < isoConfig) {
-            alert("❌ " + errorMsg);
-            let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
+
+
+          
+            showValidationPopup("❌ " + errorMsg);
+          
+          
+          
+          
+          let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
             if (targetBox) targetBox.value = "";
             updateButtonState();
             return false;
@@ -2570,8 +2625,15 @@ function validateField(id, value, rule) {
             // Trigger error if Departure Time is NOT later than Event End Time
             // (i.e., if they try to leave before or exactly at the end time)
             if (isoInputTime <= isoConfigTime) {
-                alert("❌ " + errorMsg);
-                let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
+
+
+              
+                showValidationPopup("❌ " + errorMsg);
+              
+              
+              
+              
+              let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
                 if (targetBox) targetBox.value = "";
                 updateButtonState();
                 return false;
