@@ -1668,49 +1668,7 @@ if (waitlistCounterPath) {
 }
 
 
-
-              if (false) {
-              
-              
-
-// ===== WAITLIST COUNTER INITIALIZATION =====
-
-const waitlistPaths = [
-    'counters/waitlist_counters/room_male/',
-    'counters/waitlist_counters/room_female/',
-    'counters/waitlist_counters/dorm_male/',
-    'counters/waitlist_counters/dorm_female/'
-];
-
-for (const path of waitlistPaths) {
-
-    const refObj = db.ref(path + eventIdParam);
-
-    const snap = await refObj.once('value');
-
-    if (!snap.exists()) {
-        await refObj.set(0);
-        console.log("MERS: initialized ->", path + eventIdParam);
-    }
-}
-              
-
-// ===== CONFIRMED COUNTER INITIALIZATION =====
-
-const counterPaths = [
-    'counters/confirmed_counters/room_male/',
-    'counters/confirmed_counters/room_female/',
-    'counters/confirmed_counters/dorm_male/',
-    'counters/confirmed_counters/dorm_female/'
-];
-
-
-
-
-            }
-
-
-              
+                          
 for (const path of counterPaths) {
 
     const refObj = db.ref(path + eventIdParam);
