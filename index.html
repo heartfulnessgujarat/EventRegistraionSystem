@@ -601,7 +601,9 @@ console.log("%c MERS PING 1: Init sequence started. CurrentSection is: " + (type
         document.getElementById('loading-init').innerHTML = "<h2>Error loading form. Please refresh.</h2>";
     }
 
- 
+  //  if (section2) {
+   //     section2.prepend(diag);
+  //  }
     
 }
 
@@ -1236,35 +1238,8 @@ waitlistCounterPath = "";
 // CENTRALIZED STAY CLASSIFICATION
 // =====================================================
 
-console.log("selectedStay =", selectedStay);
-
-console.log("formData.extra_stay_option =", formData.extra_stay_option);
-
-console.log("originalData.extra_stay_option =", originalData.extra_stay_option);
-
-console.log("mersTempData.extra_stay_option =", mersTempData.extra_stay_option);
-
-
-
-
-
-      
 const stayInfo =
     classifyStayOption(selectedStay);
-
-
-
-
-
-      console.log("selectedStay =", selectedStay);
-
-console.log("stayInfo.type =", stayInfo.type);
-
-console.log("stayInfo.isWaitlist =", stayInfo.isWaitlist);
-
-console.log("confirmedCounterPath =", confirmedCounterPath);
-
-console.log("waitlistCounterPath =", waitlistCounterPath);
 
 // =====================================================
 // ROOM LOGIC
@@ -1471,7 +1446,6 @@ console.log(
 const wantsRoom =
   stayInfo.type === "room";
 
-  
 // =====================================================
 // ROOM LOGIC
 // =====================================================
@@ -1526,6 +1500,9 @@ if (wantsRoom) {
     }
 }
 
+// =====================================================
+// DORM LOGIC
+// =====================================================
 
 else {
 
@@ -1577,11 +1554,8 @@ else {
     }
 }
 
-
-
-  
+  }
 // --- STEP 4: SAVE DATA & CONDITIONAL COUNTER ---
-  
         if (mode === 'new') {
             console.log("MERS: Processing counters for Event:", eventIdParam);
 
@@ -2132,7 +2106,9 @@ if (fieldId === 'stay_option' && window.availability) {
         if (backBtn) {
             backBtn.onclick = (targetSectionNumber === "Section3") 
 
-       
+              
+          //      ? () => buildExtraSections('Section2') 
+
 ? () => {
 
     buildExtraSections('Section2');
@@ -2500,79 +2476,6 @@ function updateButtonState() {
     return str;
 }
 
-
-  
-function showValidationPopup(message, type = "date") {
-
-    const overlay =
-        document.getElementById("validationPopupOverlay");
-
-    const icon =
-        document.getElementById("validationPopupIcon");
-
-    const title =
-        document.getElementById("validationPopupTitle");
-
-    const content =
-        document.getElementById("validationPopupMessage");
-
-    const btn =
-        document.getElementById("validationPopupBtn");
-
-    // ==============================
-    // DATE MODE
-    // ==============================
-
-    if (type === "date") {
-
-        icon.innerHTML = "📅";
-
-        title.innerText = "Invalid Date";
-
-        title.style.color = "#c62828";
-
-        btn.style.background = "#c62828";
-    }
-
-    // ==============================
-    // TIME MODE
-    // ==============================
-
-    if (type === "time") {
-
-        icon.innerHTML = "🕒";
-
-        title.innerText = "Invalid Time";
-
-        title.style.color = "#1565c0";
-
-        btn.style.background = "#1565c0";
-    }
-
-    // ==============================
-    // MESSAGE
-    // ==============================
-
-    content.innerHTML = "❌ " + message;
-
-    // ==============================
-    // CLOSE
-    // ==============================
-
-    btn.onclick = function () {
-
-        overlay.style.display = "none";
-    };
-
-    // ==============================
-    // SHOW
-    // ==============================
-
-    overlay.style.display = "flex";
-}
-
-
-  
 function validateField(id, value, rule) {
     const val = value ? value.trim() : "";
     const rulesArray = Array.isArray(fieldRules) ? fieldRules : Object.values(fieldRules);
@@ -2592,13 +2495,8 @@ function validateField(id, value, rule) {
         const isoInput = translateToISO(val);
         const isoConfig = translateToISO(eventConfig.event_start_date);
         if (isoInput && isoConfig && isoInput > isoConfig) {
-
-        //  showValidationPopup("❌ " + errorMsg);
-        //  alert("❌ " + errorMsg);
-
-          showValidationPopup(errorMsg, "date");
-                   
-          let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
+            alert("❌ " + errorMsg);
+            let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
             if (targetBox) targetBox.value = "";
             updateButtonState();
             return false;
@@ -2628,17 +2526,7 @@ function validateField(id, value, rule) {
 
             // Trigger error only if Arrival Time is NOT earlier than Start Time
             if (isoInputTime >= isoConfigTime) {
-
-
-
-              
-            //  showValidationPopup("❌ " + errorMsg);
-            //  alert("❌ " + errorMsg);
-              showValidationPopup(errorMsg, "time");
-
-
-
-              
+                alert("❌ " + errorMsg);
                 let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
                 if (targetBox) targetBox.value = "";
                 updateButtonState();
@@ -2653,16 +2541,8 @@ function validateField(id, value, rule) {
         const isoInput = translateToISO(val);
         const isoConfig = translateToISO(eventConfig.event_end_date);
         if (isoInput && isoConfig && isoInput < isoConfig) {
-
-
-          
-          //  showValidationPopup("❌ " + errorMsg);
-        //  alert("❌ " + errorMsg);
-          showValidationPopup(errorMsg, "date");
-          
-          
-          
-          let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
+            alert("❌ " + errorMsg);
+            let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
             if (targetBox) targetBox.value = "";
             updateButtonState();
             return false;
@@ -2690,15 +2570,8 @@ function validateField(id, value, rule) {
             // Trigger error if Departure Time is NOT later than Event End Time
             // (i.e., if they try to leave before or exactly at the end time)
             if (isoInputTime <= isoConfigTime) {
-
-
-              
-           //    showValidationPopup("❌ " + errorMsg);
-              
-            //  alert("❌ " + errorMsg);
-              showValidationPopup(errorMsg, "time");
-              
-              let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
+                alert("❌ " + errorMsg);
+                let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
                 if (targetBox) targetBox.value = "";
                 updateButtonState();
                 return false;
@@ -3442,77 +3315,5 @@ document.addEventListener('change', updateStayOptions);
 console.log("MERS DIAG: Section 2 Listener Active via Delegation");
   
 </script>
-
-
-<!-- SECTION-3 VALIDATION POPUP -->
-
-<div id="validationPopupOverlay"
-     style="
-        display:none;
-        position:fixed;
-        top:0;
-        left:0;
-        width:100%;
-        height:100%;
-        background:rgba(0,0,0,0.45);
-        z-index:999999;
-        justify-content:center;
-        align-items:center;
-     ">
-
-    <div style="
-        background:white;
-        width:320px;
-        border-radius:16px;
-        padding:24px;
-        text-align:center;
-        box-shadow:0 4px 20px rgba(0,0,0,0.25);
-    ">
-
-        <div id="validationPopupIcon"
-             style="
-                font-size:52px;
-             ">
-            📅
-        </div>
-
-        <div id="validationPopupTitle"
-             style="
-                margin-top:10px;
-                font-size:22px;
-                font-weight:bold;
-                color:#c62828;
-             ">
-            Invalid Date
-        </div>
-
-        <div id="validationPopupMessage"
-             style="
-                margin-top:16px;
-                font-size:15px;
-                line-height:1.5;
-                color:#333;
-             ">
-        </div>
-
-        <button id="validationPopupBtn"
-                style="
-                    margin-top:24px;
-                    padding:10px 22px;
-                    border:none;
-                    border-radius:8px;
-                    background:#c62828;
-                    color:white;
-                    font-size:15px;
-                    cursor:pointer;
-                ">
-            OK
-        </button>
-
-    </div>
-
-</div>
-
-    
 </body>
 </html>
