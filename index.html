@@ -2900,25 +2900,15 @@ async function updateStayOptions(event) {
 
 // ✅ Run  when gender field changes  and also when section 2 is live..either from section 1 or from section 3 or for edit mode...
 
- // const targetId = event?.target?.id || '';
+ 
  
  //  if (!targetId.includes('gender')) return;
 
-const targetId = event?.target?.id || '';
 
-// =====================================================
-// ALLOW MANUAL SECTION-2 REFRESH
-// =====================================================
-
-const forcedRefresh =
-  event?.type === 'mers-section-refresh';
-
-if (
-  !targetId.includes('gender') &&
-  !forcedRefresh
-) return;
-
-
+if (!shouldRunStayRefresh(event)) {
+    return;
+}
+  
 
 const formContent = document.getElementById('form-content');
 
@@ -3172,6 +3162,11 @@ if (availabilityBox) {
   }
 }
 
+
+
+
+
+  
 // ---------------------------------------------
 // POPUP HTML
 // ---------------------------------------------
@@ -3373,6 +3368,33 @@ console.log("MERS: Dropdown updated correctly");
   }
 }
 
+
+
+  function shouldRunStayRefresh(event) {
+
+    const targetId =
+        event?.target?.id || '';
+
+    // =====================================================
+    // ALLOW MANUAL SECTION-2 REFRESH
+    // =====================================================
+
+    const forcedRefresh =
+        event?.type === 'mers-section-refresh';
+
+    return (
+        targetId.includes('gender') ||
+        forcedRefresh
+    );
+}
+
+
+
+
+  
+
+
+  
 
 // ✅ Keep this listener (unchanged)
 document.addEventListener('change', updateStayOptions);
