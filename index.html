@@ -3194,13 +3194,7 @@ popupProceed.onclick = function () {
 
   window.accommodationEditUnlocked = true;
 
-  setTimeout(() => {
-
-    updateStayOptions({
-      type: 'mers-section-refresh'
-    });
-
-  }, 800);
+  refreshSection2BusinessLogic();
 
   btn.style.display = "none";
 };
