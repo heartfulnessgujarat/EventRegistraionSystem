@@ -2046,34 +2046,19 @@ function processFinalDeletion(regId, eventId, gender) {
                                 let choices = Object.values(lookupData).map(row => row[rule.lookup_column]).filter(v => v);
 
                               // --- STEP 2: CHOICE ELIMINATION LOGIC ---
-if (fieldId === 'stay_option' && window.availability) {
 
-  const roomSeats = window.availability.roomSeats || 0;
-  const dormSeats = window.availability.dormSeats || 0;
 
-  choices = choices.filter(choice => {
-    const c = choice.toLowerCase();
 
-    // Always keep outside stay
-    if (c.includes('outside')) return true;
 
-    // ROOM logic
-    if (c.includes('room')) {
-      if (roomSeats > 0 && !c.includes('waiting')) return true;
-      if (roomSeats === 0 && c.includes('waiting')) return true;
-      return false;
-    }
+if (fieldId === 'stay_option') {
 
-    // DORM logic
-    if (c.includes('dorm')) {
-      if (dormSeats > 0 && !c.includes('waiting')) return true;
-      if (dormSeats === 0 && c.includes('waiting')) return true;
-      return false;
-    }
+    choices = filterStayChoices(choices);
 
-    return true;
-  });
 }
+
+
+
+
 
                               
 
@@ -3392,6 +3377,74 @@ function triggerGenderRefresh() {
 }
 
 
+
+  function filterStayChoices(choices) {
+
+    if (!window.availability) {
+        return choices;
+    }
+
+    const roomSeats =
+        window.availability.roomSeats || 0;
+
+    const dormSeats =
+        window.availability.dormSeats || 0;
+
+    return choices.filter(choice => {
+
+        const c = choice.toLowerCase();
+
+        // Always keep outside stay
+        if (c.includes('outside')) {
+            return true;
+        }
+
+        // ROOM logic
+        if (c.includes('room')) {
+
+            if (
+                roomSeats > 0 &&
+                !c.includes('waiting')
+            ) {
+                return true;
+            }
+
+            if (
+                roomSeats === 0 &&
+                c.includes('waiting')
+            ) {
+                return true;
+            }
+
+            return false;
+        }
+
+        // DORM logic
+        if (c.includes('dorm')) {
+
+            if (
+                dormSeats > 0 &&
+                !c.includes('waiting')
+            ) {
+                return true;
+            }
+
+            if (
+                dormSeats === 0 &&
+                c.includes('waiting')
+            ) {
+                return true;
+            }
+
+            return false;
+        }
+
+        return true;
+    });
+}
+
+
+  
 
   
 
