@@ -2080,16 +2080,7 @@ if (fieldId === 'stay_option') {
 
                                 // --- MERS: ROOM FILTERING LOGIC ---
                                 // Only filters if global availability data exists and field name relates to rooms
-                                if (window.availability && fieldId.toLowerCase().includes('room')) {
-                                    choices = choices.filter(choice => {
-                                        const choiceLower = choice.toLowerCase();
-                                        // Hide "Room" options if availability.room is false
-                                        if (window.availability.room === false && choiceLower.includes('room')) return false;
-                                        // Hide "Waiting" options if availability.waiting is false
-                                        if (window.availability.waiting === false && choiceLower.includes('waiting')) return false;
-                                        return true;
-                                    });
-                                }
+                                choices = filterRoomChoices(fieldId, choices);
 
                                 [...new Set(choices)].forEach(choice => {
                                     const opt = document.createElement('option');
@@ -3460,6 +3451,41 @@ function triggerGenderRefresh() {
 }
 
 
+function filterRoomChoices(fieldId, choices) {
+
+    if (
+        !window.availability ||
+        !fieldId.toLowerCase().includes('room')
+    ) {
+        return choices;
+    }
+
+    return choices.filter(choice => {
+
+        const choiceLower =
+            choice.toLowerCase();
+
+        // Hide Room options
+        if (
+            window.availability.room === false &&
+            choiceLower.includes('room')
+        ) {
+            return false;
+        }
+
+        // Hide Waiting options
+        if (
+            window.availability.waiting === false &&
+            choiceLower.includes('waiting')
+        ) {
+            return false;
+        }
+
+        return true;
+    });
+}
+
+  
   
 
   
