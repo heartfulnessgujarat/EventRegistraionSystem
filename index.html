@@ -2146,7 +2146,12 @@ if (nextSection) {
     submitData();
 }
 
-        
+
+
+
+
+
+          
  
           
         };
@@ -2188,14 +2193,17 @@ backBtn.onclick = () => {
    //     actionBtn.innerText = (targetSectionNumber === "Section2") ? "PROCEED TO TRAVEL DETAILS" : "CONFIRM & REGISTER";
 
 
-     const nextSection =
+
+
+
+const nextSectionForLabel =
     getNextSection(targetSectionNumber);
 
-if (nextSection) {
+if (nextSectionForLabel) {
 
     const nextSectionObj =
         moreSections.find(
-            s => s.section_number === nextSection
+            s => s.section_number === nextSectionForLabel
         );
 
     actionBtn.innerText =
@@ -2210,6 +2218,12 @@ if (nextSection) {
         "CONFIRM & REGISTER";
 }
 
+
+
+
+
+
+      
       
         setTimeout(() => { updateButtonState(); }, 800);
     }
