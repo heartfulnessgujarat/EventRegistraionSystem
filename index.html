@@ -2188,10 +2188,27 @@ backBtn.onclick = () => {
    //     actionBtn.innerText = (targetSectionNumber === "Section2") ? "PROCEED TO TRAVEL DETAILS" : "CONFIRM & REGISTER";
 
 
-      actionBtn.innerText =
-    sectionObj.action_button_label ||
-    "CONTINUE";
+     const nextSection =
+    getNextSection(targetSectionNumber);
 
+if (nextSection) {
+
+    const nextSectionObj =
+        moreSections.find(
+            s => s.section_number === nextSection
+        );
+
+    actionBtn.innerText =
+        `PROCEED TO ${(
+            nextSectionObj?.section_name ||
+            "NEXT SECTION"
+        ).toUpperCase()}`;
+
+} else {
+
+    actionBtn.innerText =
+        "CONFIRM & REGISTER";
+}
 
       
         setTimeout(() => { updateButtonState(); }, 800);
