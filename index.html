@@ -31,7 +31,6 @@
  
 </script>
 
-
   
 <style>
     body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; margin: 0; }
@@ -1280,9 +1279,6 @@ waitlistCounterPath = "";
 
 
 
-
-
-
 // =====================================================
 // CENTRALIZED STAY CLASSIFICATION
 // =====================================================
@@ -1781,6 +1777,13 @@ formData.stay_allocation_code =
       
         await db.ref('registrations/' + eventIdParam + '/' + formData.registration_id).set(formData);
 
+      await updateLiveRegDataProjection(
+    formData,
+    eventIdParam
+);
+
+      
+
         // --- STEP 5: UI TRANSITION ---
         ['Section1', 'Section2', 'Section3', 'btn-next-action', 'btn-back-to-profile'].forEach(id => {
             const el = document.getElementById(id);
@@ -1826,6 +1829,128 @@ formData.stay_allocation_code =
     }
 }
 
+
+  async function updateLiveRegDataProjection(
+    formData,
+    eventIdParam
+) {
+
+    try {
+
+        console.log(
+            "MERS LIVE REG: Projection update started..."
+        );
+
+        // ============================================
+        // READ CONFIG
+        // ============================================
+
+        const configSnap =
+            await db.ref(
+                'config/liveRegData'
+            ).once('value');
+
+        if (!configSnap.exists()) {
+
+            console.log(
+                "MERS LIVE REG: No config found."
+            );
+
+            return;
+        }
+
+        const allConfigs =
+            configSnap.val();
+
+        // ============================================
+        // LOOP CONFIGS
+        // ============================================
+
+        for (const configKey in allConfigs) {
+
+            const config =
+                allConfigs[configKey];
+
+            // Skip inactive rows
+            if (
+                String(config.is_active)
+                .toUpperCase() !== "YES"
+            ) {
+                continue;
+            }
+
+            // Skip other events
+            if (
+                config.event_id !== eventIdParam
+            ) {
+                continue;
+            }
+
+            // ============================================
+            // BUILD FILTERED PROJECTION
+            // ============================================
+
+            let selectedColumns = [];
+
+            try {
+
+                selectedColumns =
+                    JSON.parse(
+                        config.selected_columns
+                    );
+
+            } catch (jsonErr) {
+
+                console.error(
+                    "MERS LIVE REG: Invalid JSON:",
+                    config.selected_columns
+                );
+
+                continue;
+            }
+
+            const filteredData = {};
+
+            selectedColumns.forEach(col => {
+
+                filteredData[col] =
+                    formData[col] || "";
+
+            });
+
+            // Always preserve registration_id
+            filteredData.registration_id =
+                formData.registration_id;
+
+            // ============================================
+            // WRITE TO FIREBASE
+            // ============================================
+
+            const projectionPath =
+                'liveRegData/' +
+                eventIdParam +
+                '/' +
+                config.team_name +
+                '/' +
+                formData.registration_id;
+
+            await db.ref(projectionPath)
+            .set(filteredData);
+
+            console.log(
+                "MERS LIVE REG: Updated:",
+                projectionPath
+            );
+        }
+
+    } catch (err) {
+
+        console.error(
+            "MERS LIVE REG ERROR:",
+            err
+        );
+    }
+}
   
   
 function manualFormatCheck() {
