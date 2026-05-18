@@ -10,13 +10,9 @@
 
   <!-- Path Selection Logic: Redirects Delete Mode to index-del.html -->
 
+<script>
 
-
-
-
-  <script>
-
-(function() {
+(async function() {
 
   const urlParams =
     new URLSearchParams(
@@ -53,16 +49,69 @@
   }
 
   // ==================================================
-  // NORMAL FLOW
+  // FETCH EVENT TYPE
   // ==================================================
 
-  console.log(
-    "Standard Registration Flow Active"
-  );
+  try {
+
+    const response =
+      await fetch(
+
+        `https://ferrari-reg-2026-default-rtdb.asia-southeast1.firebasedatabase.app/config/eventConfig/${eventId}/event_type.json`
+
+      );
+
+    const eventType =
+      await response.json();
+
+    console.log(
+      "Event Type:",
+      eventType
+    );
+
+    // ================================================
+    // EXTERNAL EVENT
+    // ================================================
+
+    if (eventType === "EXTERNAL") {
+
+      console.log(
+        "Redirecting to External Flow..."
+      );
+
+      window.location.href =
+        `index-ext.html?id=${eventId}`;
+
+      return;
+
+    }
+
+    // ================================================
+    // INTERNAL EVENT
+    // ================================================
+
+    console.log(
+      "Standard Registration Flow Active"
+    );
+
+  }
+
+  catch (err) {
+
+    console.error(
+      "Event Type Fetch Error:",
+      err
+    );
+
+  }
 
 })();
 </script>
 
+
+
+
+  
 
 
 
