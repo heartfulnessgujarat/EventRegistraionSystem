@@ -618,7 +618,10 @@ console.log("%c MERS PING 1: Init sequence started. CurrentSection is: " + (type
         
         // 1. Load Field Rules (Filtering for this specific Event ID)
         try {
-            const rulesSnap = await db.ref('config/fieldRules').once('value');
+          
+          const rulesSnap = await db.ref('config/extFieldRules').once('value');
+
+          
             const allRules = rulesSnap.val() || {};
             fieldRules = Object.values(allRules).filter(r => String(r.event_id).toUpperCase() === eventId);
             console.log("MERS: Field Rules Loaded:", fieldRules.length);
