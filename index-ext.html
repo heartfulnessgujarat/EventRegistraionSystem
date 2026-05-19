@@ -1195,35 +1195,136 @@ async function submitData() {
         const overlay = document.getElementById('processing-overlay');
         if (overlay) overlay.style.display = 'block';
 
-        // --- STEP 2: UPDATE MASTER DATABASE (EVENT-TYPE AWARE) ---
-        const masterRef = db.ref('masters/Master_Internal_DB');
-        const eventType = (typeof eventConfig !== 'undefined' && eventConfig.event_type) 
-                          ? eventConfig.event_type.toLowerCase() 
-                          : 'internal'; 
 
-        if (eventType === 'internal') {
-            const nameSearch = await masterRef.orderByChild('full_name').equalTo(updatedSection1.full_name).once('value');
-            if (nameSearch.exists()) {
-                const masterKey = Object.keys(nameSearch.val())[0];
-                await masterRef.child(masterKey).update(updatedSection1);
-            } else {
-                const mobSearch = await masterRef.orderByChild('mobile').equalTo(updatedSection1.mobile).once('value');
-                if (mobSearch.exists()) {
-                    const mobKey = Object.keys(mobSearch.val())[0];
-                    await masterRef.child(mobKey).update(updatedSection1);
-                } else {
-                    await masterRef.push(updatedSection1);
-                }
-            }
-        } else {
-            const mobSearch = await masterRef.orderByChild('mobile').equalTo(updatedSection1.mobile).once('value');
-            if (mobSearch.exists()) {
-                const mobKey = Object.keys(mobSearch.val())[0];
-                await masterRef.child(mobKey).update(updatedSection1);
-            } else {
-                await masterRef.push(updatedSection1);
-            }
-        }
+
+
+
+// --- STEP 2: UPDATE MASTER DATABASE (EVENT-TYPE AWARE) ---
+
+const eventType =
+  (typeof eventConfig !== 'undefined' && eventConfig.event_type)
+    ? eventConfig.event_type.toLowerCase()
+    : 'internal';
+
+// =====================================================
+// DYNAMIC MASTER DATABASE PATH
+// =====================================================
+
+const masterDbPath =
+  eventType === 'external'
+    ? 'masters/Master_External_DB'
+    : 'masters/Master_Internal_DB';
+
+const masterRef =
+  db.ref(masterDbPath);
+
+console.log(
+  "MERS MASTER DB PATH =>",
+  masterDbPath
+);
+
+// =====================================================
+// BUILD MASTER PROFILE OBJECT
+// =====================================================
+
+let masterProfile = {};
+
+if (eventType === 'external') {
+
+  masterProfile = {
+
+    ext_full_name:
+      updatedSection1.full_name || "",
+
+    ext_mobile:
+      updatedSection1.mobile || "",
+
+    ext_email:
+      updatedSection1.email || "",
+
+    ext_city:
+      updatedSection1.centre || "",
+
+    ext_district:
+      updatedSection1.district || "",
+
+    ext_pincode:
+      updatedSection1.pincode || "",
+
+    ext_state:
+      updatedSection1.zone || "",
+
+    ext_country:
+      "India",
+
+    ext_designation:
+      updatedSection1.designation || "",
+
+    ext_orgname:
+      updatedSection1.organization || ""
+
+  };
+
+} else {
+
+  masterProfile = updatedSection1;
+
+}
+
+// =====================================================
+// MOBILE SEARCH FIELD
+// =====================================================
+
+const mobileField =
+  eventType === 'external'
+    ? 'ext_mobile'
+    : 'mobile';
+
+const mobileValue =
+  eventType === 'external'
+    ? masterProfile.ext_mobile
+    : masterProfile.mobile;
+
+// =====================================================
+// UPDATE / INSERT
+// =====================================================
+
+const mobSearch =
+  await masterRef
+    .orderByChild(mobileField)
+    .equalTo(mobileValue)
+    .once('value');
+
+if (mobSearch.exists()) {
+
+  const mobKey =
+    Object.keys(mobSearch.val())[0];
+
+  await masterRef
+    .child(mobKey)
+    .update(masterProfile);
+
+  console.log(
+    "MERS MASTER: Existing profile updated."
+  );
+
+} else {
+
+  await masterRef.push(masterProfile);
+
+  console.log(
+    "MERS MASTER: New profile created."
+  );
+
+}
+
+
+
+
+
+
+
+
 
         // --- STEP 3: CONSTRUCT FINAL REGISTRATION OBJECT (DUP-FIX) ---
         let finalRegId = urlParams.get('regId');
