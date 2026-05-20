@@ -1713,16 +1713,17 @@ async function submitData() {
         };
 
         const updatedSection1 = {
-            full_name: getFreshVal('full_name'),
-            email: getFreshVal('email'),
-            mobile: getFreshVal('mobile'),
+          //  full_name: getFreshVal('full_name'),
+          full_name: getFreshVal('ext_full_name'),
+            email: getFreshVal('ext_email'),
+            mobile: getFreshVal('ext_mobile'),
             organization: getFreshVal('organization'),
             designation: getFreshVal('designation'),
-            pincode: getFreshVal('pincode'),
+            pincode: getFreshVal('ext_pincode'),
             full_address: getFreshVal('full_address'),
-            centre: getFreshVal('centre'),
-            zone: getFreshVal('zone'),
-            district: getFreshVal('district')
+            centre: getFreshVal('ext_city'),
+            zone: getFreshVal('ext_zone'),
+            district: getFreshVal('ext_district')
         };
         
         if (!updatedSection1.full_name) {
