@@ -1273,16 +1273,28 @@ async function verifyCodeInput(type, code) {
           ).value;
 
 
-      let targetEmail = targetValue;
 
-if (type === 'ext_mobile') {
+let targetEmail = targetValue;
+
+// =====================================================
+// EXTERNAL FLOW
+// =====================================================
+
+if (
+    type === 'ext_email' ||
+    type === 'ext_mobile'
+) {
 
     targetEmail =
       document.getElementById(
         'inp-ext_email'
       ).value;
 }
+      
 
+
+
+      
         const emailKey =
           targetValue.replace(
             /[.#$[\]]/g,
