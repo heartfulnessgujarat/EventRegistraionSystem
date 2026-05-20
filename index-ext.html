@@ -1190,11 +1190,25 @@ function sendCode(type) {
     // DYNAMIC TARGET VALUE
     // =====================================================
 
-    const targetValue =
-      document.getElementById(
-        `inp-${type}`
-      ).value;
+let targetValue =
+  document.getElementById(
+    `inp-${type}`
+  ).value;
 
+// =====================================================
+// MOBILE VERIFICATION VIA VERIFIED EMAIL
+// =====================================================
+
+if (type === 'ext_mobile') {
+
+    targetValue =
+      document.getElementById(
+        'inp-ext_email'
+      ).value;
+}
+
+
+  
     const btn =
       document.getElementById(
         `vbtn-${type}`
