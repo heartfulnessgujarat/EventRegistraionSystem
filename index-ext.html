@@ -1277,6 +1277,7 @@ console.log("TARGET VALUE:", targetValue);
   }
 
 async function verifyCodeInput(type, code) {
+ 
 
     if (code.length === 6) {
 
@@ -1305,6 +1306,11 @@ if (type === 'ext_mobile') {
       
       const emailKey =
   targetValue.replace(
+
+console.log("VERIFY TYPE:", type);
+console.log("VERIFY TARGET:", targetValue);
+console.log("VERIFY EMAIL KEY:", emailKey);
+    
     /[.#$[\]]/g,
     "_"
   );
