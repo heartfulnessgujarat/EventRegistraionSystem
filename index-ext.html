@@ -1209,7 +1209,7 @@ console.log("TARGET VALUE:", targetValue);
 
     fetch(
 
-      `${SCRIPT_URL}?action=sendVerificationCode&email=${encodeURIComponent(targetEmail)}&eventId=${eventId}`,
+      `${SCRIPT_URL}?action=sendVerificationCode&email=${encodeURIComponent(targetValue)}&eventId=${eventId}`,
 
       { mode: 'no-cors' }
 
