@@ -1274,6 +1274,8 @@ async function verifyCodeInput(type, code) {
 
 
 
+
+      
 let targetEmail = targetValue;
 
 // =====================================================
@@ -1294,12 +1296,13 @@ if (
 
 
 
+      const emailKey =
+  targetEmail.replace(
+    /[.#$[\]]/g,
+    "_"
+  );
+
       
-        const emailKey =
-          targetValue.replace(
-            /[.#$[\]]/g,
-            "_"
-          );
 
         const snap =
           await db.ref(
