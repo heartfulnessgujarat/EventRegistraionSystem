@@ -1284,11 +1284,25 @@ async function verifyCodeInput(type, code) {
         // DYNAMIC EMAIL KEY
         // =====================================================
 
-        const targetValue =
-          document.getElementById(
-            `inp-${type}`
-          ).value;
 
+      let targetValue =
+  document.getElementById(
+    `inp-${type}`
+  ).value;
+
+// =====================================================
+// MOBILE VERIFICATION VIA VERIFIED EMAIL
+// =====================================================
+
+if (type === 'ext_mobile') {
+
+    targetValue =
+      document.getElementById(
+        'inp-ext_email'
+      ).value;
+}
+
+      
       const emailKey =
   targetValue.replace(
     /[.#$[\]]/g,
