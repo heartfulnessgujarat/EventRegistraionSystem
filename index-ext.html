@@ -1365,13 +1365,31 @@ function checkAllValidations() {
             // REQUIRED FIELD CHECK
             // =====================================================
 
-            if (
-                input.value.trim() === "" &&
-                r.initial_state === 'Visible'
-            ) {
 
-                allValid = false;
-            }
+
+// =====================================================
+// REQUIRED FIELD CHECK
+// =====================================================
+
+const isHidden =
+  r.initial_state === 'Hidden';
+
+const isReadOnly =
+  input.disabled;
+
+if (
+    !isHidden &&
+    !isReadOnly &&
+    input.value.trim() === ""
+) {
+
+    allValid = false;
+}
+          
+
+
+
+          
         }
     });
 
