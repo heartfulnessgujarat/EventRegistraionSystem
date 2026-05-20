@@ -1272,20 +1272,15 @@ async function verifyCodeInput(type, code) {
             `inp-${type}`
           ).value;
 
+      const emailKey =
+  targetValue.replace(
+    /[.#$[\]]/g,
+    "_"
+  );
 
 
 
-      
-let targetEmail = targetValue;
-
-// =====================================================
-// EXTERNAL FLOW
-// =====================================================
-
-if (
-    type === 'ext_email' ||
-    type === 'ext_mobile'
-) {
+{
 
     targetEmail =
       document.getElementById(
