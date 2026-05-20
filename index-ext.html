@@ -1236,36 +1236,139 @@ function sendCode(type) {
     sendCode(type);
   }
 
-  async function verifyCodeInput(type, code) {
-    if (code.length === 6) {
-      const emailKey = ((type === 'email') ? document.getElementById('inp-email').value : originalData['email']).replace(/[.#$[\]]/g, "_");
-      const snap = await db.ref("verificationCodes/" + emailKey).once('value');
-      const data = snap.val();
-      const msg = document.getElementById(`vmsg-${type}`);
-      const panel = document.getElementById(`panel-${type}`);
-      const codeInp = document.getElementById(`code-${type}`);
-      if (data && data.code === code && (new Date().getTime() - data.timestamp < 300000)) {
-        msg.innerText = "Verified ✅"; msg.style.color = "#2e7d32"; msg.style.display = "block";
-        if (panel) panel.style.display = "none";
-        document.getElementById(`inp-${type}`).disabled = true;
-        verificationStates[type] = true;
-        verificationAttempts[type] = 0;
-        checkAllValidations();
-      } else {
-        verificationAttempts[type]++;
-        if (verificationAttempts[type] >= 3) {
-          msg.innerText = "Too many failed attempts."; msg.style.color = "#d32f2f"; msg.style.display = "block";
-          codeInp.disabled = true; codeInp.value = "LOCKED";
-        } else {
-          msg.innerText = `Invalid Code. Attempt ${verificationAttempts[type]} of 3.`;
-          msg.style.color = "#d32f2f"; msg.style.display = "block";
-          setTimeout(() => { codeInp.value = ""; codeInp.focus(); }, 1000);
-        }
-        verificationStates[type] = false;
-      }
-    }
-  }
+async function verifyCodeInput(type, code) {
 
+    if (code.length === 6) {
+
+        // =====================================================
+        // DYNAMIC EMAIL KEY
+        // =====================================================
+
+        const targetValue =
+          document.getElementById(
+            `inp-${type}`
+          ).value;
+
+        const emailKey =
+          targetValue.replace(
+            /[.#$[\]]/g,
+            "_"
+          );
+
+        const snap =
+          await db.ref(
+            "verificationCodes/" + emailKey
+          ).once('value');
+
+        const data = snap.val();
+
+        const msg =
+          document.getElementById(
+            `vmsg-${type}`
+          );
+
+        const panel =
+          document.getElementById(
+            `panel-${type}`
+          );
+
+        const codeInp =
+          document.getElementById(
+            `code-${type}`
+          );
+
+        // =====================================================
+        // SUCCESS
+        // =====================================================
+
+        if (
+            data &&
+            data.code === code &&
+            (
+              new Date().getTime() -
+              data.timestamp <
+              300000
+            )
+        ) {
+
+            msg.innerText =
+              "Verified ✅";
+
+            msg.style.color =
+              "#2e7d32";
+
+            msg.style.display =
+              "block";
+
+            if (panel) {
+
+                panel.style.display =
+                  "none";
+            }
+
+            document.getElementById(
+              `inp-${type}`
+            ).disabled = true;
+
+            verificationStates[type] = true;
+
+            verificationAttempts[type] = 0;
+
+            checkAllValidations();
+
+        }
+
+        // =====================================================
+        // FAILURE
+        // =====================================================
+
+        else {
+
+            verificationAttempts[type]++;
+
+            if (
+                verificationAttempts[type] >= 3
+            ) {
+
+                msg.innerText =
+                  "Too many failed attempts.";
+
+                msg.style.color =
+                  "#d32f2f";
+
+                msg.style.display =
+                  "block";
+
+                codeInp.disabled = true;
+
+                codeInp.value = "LOCKED";
+
+            }
+
+            else {
+
+                msg.innerText =
+                  `Invalid Code. Attempt ${verificationAttempts[type]} of 3.`;
+
+                msg.style.color =
+                  "#d32f2f";
+
+                msg.style.display =
+                  "block";
+
+                setTimeout(() => {
+
+                    codeInp.value = "";
+
+                    codeInp.focus();
+
+                }, 1000);
+            }
+
+            verificationStates[type] = false;
+        }
+    }
+}
 
 function checkAllValidations() {
 
