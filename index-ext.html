@@ -1204,6 +1204,9 @@ function sendCode(type) {
 
     btn.innerText = "Sending Code...";
 
+  console.log("SEND CODE TYPE:", type);
+console.log("TARGET VALUE:", targetValue);
+
     fetch(
 
       `${SCRIPT_URL}?action=sendVerificationCode&email=${encodeURIComponent(targetEmail)}&eventId=${eventId}`,
