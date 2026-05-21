@@ -1507,8 +1507,7 @@ else if (
     input.value.trim() !== "" &&
     !verificationStates[r.field_id]
 )
-                
-                
+                              
                 
                 
                 {
@@ -1571,10 +1570,7 @@ if (
     allValid = false;
 }
           
-
-
-
-          
+         
         }
     });
 
@@ -1592,8 +1588,6 @@ if (
         regBtn.disabled = !allValid;
     }
 }
-
-
 
   
   // 1. THE PAGE TURNER: Moves between Section 1, 2, and 3
@@ -1813,12 +1807,6 @@ if (mobSearch.exists()) {
 
 
 
-
-
-
-
-
-
         // --- STEP 3: CONSTRUCT FINAL REGISTRATION OBJECT (DUP-FIX) ---
         let finalRegId = urlParams.get('regId');
         const eventIdParam = typeof eventId !== 'undefined' ? eventId : (urlParams.get('id') || "EVT001");
@@ -1861,9 +1849,9 @@ if (mobSearch.exists()) {
       
       // ===== ACCOMMODATION COUNTER TYPE DETECTION =====
 
-const selectedGender = (formData.extra_gender || "").toLowerCase();
+const selectedGender = (formData.gender || "").toLowerCase();
 
-const selectedStay = (formData.extra_stay_option || "").toLowerCase();
+const selectedStay = (formData.stay_option || "").toLowerCase();
 
 let confirmedCounterPath = "";
 
@@ -1901,16 +1889,6 @@ if (stayInfo.type === "room") {
             '/' +
             eventIdParam;
     }
-
-
-
-
-
-
-
-
-
-
 
       
       
@@ -1960,8 +1938,8 @@ console.log(
         selectedStay,
         confirmedCounterPath,
         waitlistCounterPath,
-        formGender: formData.extra_gender,
-        originalGender: originalData?.extra_gender
+        formGender: formData.gender,
+originalGender: originalData?.gender
     }
 );
 
@@ -1979,8 +1957,8 @@ if (mode === 'edit') {
     const oldAllocation =
         originalData?.stay_allocation_code || "";
 
-    const oldGender =
-        (originalData?.extra_gender || "").toLowerCase();
+   const oldGender =
+    (originalData?.gender || "").toLowerCase();
 
     console.log(
         "MERS EDIT OLD DATA:",
@@ -2023,13 +2001,6 @@ oldCounterPath =
     oldGender +
     '/' +
     eventIdParam;
-
-
-
-
-
-
-
 
   
     // =====================================================
@@ -2242,9 +2213,7 @@ const activeResult = await activeSeatsRef.transaction((current) => {
     return (current || 0) + 1;
 });
 
-
-
-              
+             
                 console.log("MERS: active_seats incremented successfully.");
 
 
@@ -2405,9 +2374,7 @@ formData.stay_allocation_code =
 
  contentDiv.innerHTML = finalHTML;
 
-
-
-          
+         
         }
 
         document.getElementById('success-screen').style.display = 'block';
@@ -2948,9 +2915,13 @@ function processFinalDeletion(regId, eventId, gender) {
     const currentInputs = document.querySelectorAll('[id^="extra_"]');
     currentInputs.forEach(input => { 
         const cleanId = input.id.replace('extra_', '');
-        mersTempData[cleanId] = input.value; 
-        mersTempData[input.id] = input.value;
-        if (originalData) originalData[cleanId] = input.value; // Sync to originalData too
+
+      mersTempData[cleanId] = input.value;
+
+if (originalData) {
+    originalData[cleanId] = input.value;
+}
+      
     });
 
     container.innerHTML = ""; 
@@ -3082,7 +3053,7 @@ if (fieldId === 'stay_option') {
             finalInputs.forEach(input => { 
                 const cleanId = input.id.replace('extra_', '');
                 mersTempData[cleanId] = input.value; 
-                mersTempData[input.id] = input.value;
+             //   mersTempData[input.id] = input.value;
                 if (originalData) originalData[cleanId] = input.value;
             });
 
