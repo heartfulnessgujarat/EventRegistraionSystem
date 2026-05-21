@@ -86,6 +86,10 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
+  console.log(
+  "MERS DEBUG: index-ext-del.html ACTIVE"
+);
+
   const urlParams = new URLSearchParams(window.location.search);
   const eventId = urlParams.get('id') || "EVT001";
   const regId = urlParams.get('regId');
