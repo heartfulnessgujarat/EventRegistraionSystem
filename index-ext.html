@@ -2614,11 +2614,73 @@ formData.stay_allocation_code =
 
     const normalizedKey =
         col.replace(/^extra_/, "");
-      
-    filteredData[col] =
-        formData[col] ??
-        formData[normalizedKey] ??
-        "";
+
+
+
+
+            
+        let value =
+    formData[col] ??
+    formData[normalizedKey];
+
+// =====================================================
+// EXTERNAL → NORMALIZED FIELD MAPPING
+// =====================================================
+
+if (
+    value === undefined ||
+    value === null
+) {
+
+    // CITY → CENTRE
+    if (col === "centre") {
+
+        value =
+          formData["centre"] ??
+          formData["city"] ??
+          formData["ext_city"];
+    }
+
+    // MOBILE
+    if (col === "mobile") {
+
+        value =
+          formData["mobile"] ??
+          formData["ext_mobile"];
+    }
+
+    // FULL NAME
+    if (col === "full_name") {
+
+        value =
+          formData["full_name"] ??
+          formData["ext_full_name"];
+    }
+
+    // ZONE
+    if (col === "zone") {
+
+        value =
+          formData["zone"] ??
+          formData["ext_zone"];
+    }
+
+    // STATE
+    if (col === "state") {
+
+        value =
+          formData["state"] ??
+          formData["ext_state"];
+    }
+}
+
+filteredData[col] =
+    value || "";
+
+
+            
+
+            
 
 });
 
