@@ -193,169 +193,140 @@ async function handleResponse(choice) {
     // READ REQUIRED VALUES
     // =====================================================
 
-    const gender = (
-      data.gender || ""
-    ).trim().toUpperCase();
 
-    const accType = (
-      data.accommodation_type || ""
-    ).trim().toUpperCase();
 
-    const regStatus = originalStatus;
+
+
 
 
 // =====================================================
-// DECREMENT OLD ROOT COUNTERS
+// EXTERNAL ACCOMMODATION RELEASE ENGINE
 // =====================================================
 
-if (regStatus === "CONFIRMED") {
+const oldGender =
+    (data.extra_gender || "")
+    .trim()
+    .toLowerCase();
 
-  // OLD active_seats counter
-  await db.ref(
+const allocationCode =
+    (data.stay_allocation_code || "")
+    .trim()
+    .toUpperCase();
+
+console.log(
+    "MERS EXT DELETE:",
+    {
+        oldGender,
+        allocationCode
+    }
+);
+
+// =====================================================
+// ALWAYS RELEASE ACTIVE SEAT
+// =====================================================
+
+await db.ref(
     `active_seats/${eventId}`
-  ).transaction(current => {
+).transaction(current => {
 
-    return Math.max((current || 0) - 1, 0);
+    return Math.max(
+        (current || 0) - 1,
+        0
+    );
 
-  });
+});
 
-  // OLD root counters
-  await db.ref(
-    `counters/${eventId}`
-  ).transaction(current => {
+// =====================================================
+// DETERMINE COUNTER PATH
+// =====================================================
 
-    return Math.max((current || 0) - 1, 0);
+let counterPath = "";
 
-  });
+// ---------- ROOM CONFIRM ----------
 
+if (
+    allocationCode.includes("ROOM-CONFIRM")
+) {
+
+    counterPath =
+      `counters/confirmed_counters/room_${oldGender}/${eventId}`;
 }
+
+// ---------- ROOM WAITLIST ----------
+
+else if (
+    allocationCode.includes("ROOM-WAITLIST")
+) {
+
+    counterPath =
+      `counters/waitlist_counters/room_${oldGender}/${eventId}`;
+}
+
+// ---------- DORM CONFIRM ----------
+
+else if (
+    allocationCode.includes("DORM-CONFIRM")
+) {
+
+    counterPath =
+      `counters/confirmed_counters/dorm_${oldGender}/${eventId}`;
+}
+
+// ---------- DORM WAITLIST ----------
+
+else if (
+    allocationCode.includes("DORM-WAITLIST")
+) {
+
+    counterPath =
+      `counters/waitlist_counters/dorm_${oldGender}/${eventId}`;
+}
+
+// =====================================================
+// RELEASE COUNTER
+// =====================================================
+
+if (counterPath) {
+
+    console.log(
+        "MERS EXT DELETE releasing:",
+        counterPath
+    );
+
+    await db.ref(counterPath)
+    .transaction(current => {
+
+        return Math.max(
+            (current || 0) - 1,
+            0
+        );
+
+    });
+
+} else {
+
+    console.warn(
+        "MERS EXT DELETE: No matching counter path."
+    );
+}
+
     
-    if (regStatus === "CONFIRMED") {
+    
 
-      // ---------- ROOM ----------
-      if (accType === "ROOM") {
 
-        if (gender === "MALE") {
 
-          await db.ref(
-            `counters/confirmed_counters/room_male/${eventId}`
-          ).transaction(current => {
 
-            return Math.max((current || 0) - 1, 0);
 
-          });
 
-        }
 
-        if (gender === "FEMALE") {
 
-          await db.ref(
-            `counters/confirmed_counters/room_female/${eventId}`
-          ).transaction(current => {
 
-            return Math.max((current || 0) - 1, 0);
 
-          });
 
-        }
 
-      }
 
-      // ---------- DORM ----------
-      if (accType === "DORM") {
 
-        if (gender === "MALE") {
-
-          await db.ref(
-            `counters/confirmed_counters/dorm_male/${eventId}`
-          ).transaction(current => {
-
-            return Math.max((current || 0) - 1, 0);
-
-          });
-
-        }
-
-        if (gender === "FEMALE") {
-
-          await db.ref(
-            `counters/confirmed_counters/dorm_female/${eventId}`
-          ).transaction(current => {
-
-            return Math.max((current || 0) - 1, 0);
-
-          });
-
-        }
-
-      }
-
-    }
-
-    // =====================================================
-    // DECREMENT ROOM WAITLIST COUNTERS
-    // =====================================================
-
-    if (regStatus === "ROOM WL") {
-
-      if (gender === "MALE") {
-
-        await db.ref(
-          `counters/waitlist_counters/room_male/${eventId}`
-        ).transaction(current => {
-
-          return Math.max((current || 0) - 1, 0);
-
-        });
-
-      }
-
-      if (gender === "FEMALE") {
-
-        await db.ref(
-          `counters/waitlist_counters/room_female/${eventId}`
-        ).transaction(current => {
-
-          return Math.max((current || 0) - 1, 0);
-
-        });
-
-      }
-
-    }
-
-    // =====================================================
-    // DECREMENT DORM WAITLIST COUNTERS
-    // =====================================================
-
-    if (regStatus === "DORM WL") {
-
-      if (gender === "MALE") {
-
-        await db.ref(
-          `counters/waitlist_counters/dorm_male/${eventId}`
-        ).transaction(current => {
-
-          return Math.max((current || 0) - 1, 0);
-
-        });
-
-      }
-
-      if (gender === "FEMALE") {
-
-        await db.ref(
-          `counters/waitlist_counters/dorm_female/${eventId}`
-        ).transaction(current => {
-
-          return Math.max((current || 0) - 1, 0);
-
-        });
-
-      }
-
-    }
-
+    
     // =====================================================
     // SUCCESS MESSAGE
     // =====================================================
