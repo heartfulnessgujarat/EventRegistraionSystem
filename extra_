@@ -3575,7 +3575,13 @@ if (rule === 'EMAIL') {
 
 // --- SMART ARRIVAL TIME (T SHOULD BE <EST) ---
     if (rule.includes("T SHOULD BE <EST")) {
-        const dateEl = document.getElementById('arrival_date') || document.getElementById('extra_arrival_date');
+
+
+const dateEl = document.getElementById('inp-arrival_date');
+
+      //  const dateEl = document.getElementById('arrival_date') || document.getElementById('extra_arrival_date');
+
+
         const userArrivalDate = dateEl ? dateEl.value : "";
 
         // Normalize Dates to ISO (YYYY-MM-DD) for accurate comparison
@@ -3633,7 +3639,12 @@ if (rule === 'EMAIL') {
     }
 // --- SMART DEPARTURE TIME (T SHOULD BE >EET) ---
     if (rule.includes("T SHOULD BE >EET")) {
-        const dateEl = document.getElementById('depart_date') || document.getElementById('extra_depart_date');
+
+const dateEl = document.getElementById('inp-depart_date');
+
+
+
+      //  const dateEl = document.getElementById('depart_date') || document.getElementById('extra_depart_date');
         const userDepartDate = dateEl ? dateEl.value : "";
 
         // Normalize Dates for comparison
