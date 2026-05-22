@@ -2901,7 +2901,7 @@ function processFinalDeletion(regId, eventId, gender) {
     // --- 1. SYNC CURRENT SECTION INPUTS BEFORE REDRAWING ---
     const currentInputs = document.querySelectorAll('[id^="inp-"]');
     currentInputs.forEach(input => { 
-        const cleanId = const cleanId =     input.id.replace('inp-', '');
+       const cleanId =     input.id.replace('inp-', '');
 
       mersTempData[cleanId] = input.value;
 
