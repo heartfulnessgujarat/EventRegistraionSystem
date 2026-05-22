@@ -9,6 +9,13 @@
 
   <script src="https://unpkg.com/html5-qrcode"></script>
 
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+
+
+  
   <style>
 
     body {
@@ -39,7 +46,9 @@
 
 <body>
 
-  <h2>MERS Attendance Scanner</h2>
+  <h2 id="eventTitle">
+  Loading Event...
+</h2>
 
   <div id="reader"></div>
 
@@ -51,7 +60,45 @@
 
 <script>
 
-function onScanSuccess(decodedText) {
+// =====================================================
+// FETCH EVENT TITLE
+// =====================================================
+
+const params =
+    new URLSearchParams(
+        window.location.search
+    );
+
+const eventId =
+    params.get("event");
+
+async function loadEventTitle() {
+
+    if (!eventId) return;
+
+    const snap =
+        await db.ref(
+            'config/eventConfig/' +
+            eventId
+        ).once('value');
+
+    if (!snap.exists()) return;
+
+    const config =
+        snap.val();
+
+    document.getElementById(
+        "eventTitle"
+    ).innerText =
+
+        config.event_title ||
+        "Attendance Scanner";
+}
+
+loadEventTitle();
+  
+  
+  function onScanSuccess(decodedText) {
 
     document.getElementById("result")
     .innerHTML =
