@@ -126,6 +126,8 @@ eventConfig.title ||
 
 async function onScanSuccess(decodedText) {
 
+  html5QrCode.stop();
+
     try {
 
         document.getElementById(
