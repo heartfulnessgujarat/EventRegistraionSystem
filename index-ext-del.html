@@ -210,9 +210,10 @@ async function handleResponse(choice) {
 // =====================================================
 
 const oldGender =
-    (data.extra_gender || "")
+    (data.gender || "")
     .trim()
     .toLowerCase();
+
 
 const allocationCode =
     (data.stay_allocation_code || "")
