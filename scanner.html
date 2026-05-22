@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <title>MERS QR Scanner</title>
+
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <style>
+
+    body {
+
+      font-family: Arial;
+      text-align: center;
+      padding: 20px;
+    }
+
+    #reader {
+
+      width: 320px;
+      margin: auto;
+    }
+
+    #result {
+
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+      color: green;
+      word-break: break-all;
+    }
+
+  </style>
+
+</head>
+
+<body>
+
+  <h2>MERS Attendance Scanner</h2>
+
+  <div id="reader"></div>
+
+  <div id="result">
+
+    Waiting for QR scan...
+
+  </div>
+
+<script>
+
+function onScanSuccess(decodedText) {
+
+    document.getElementById("result")
+    .innerHTML =
+
+      "SCANNED TOKEN:<br><br>" +
+      decodedText;
+
+    console.log(
+      "MERS SCAN TOKEN:",
+      decodedText
+    );
+}
+
+const html5QrCode =
+    new Html5Qrcode("reader");
+
+html5QrCode.start(
+
+    { facingMode: "environment" },
+
+    {
+      fps: 10,
+      qrbox: 250
+    },
+
+    onScanSuccess
+
+).catch(err => {
+
+    console.error(
+      "QR CAMERA ERROR:",
+      err
+    );
+});
+
+</script>
+
+</body>
+</html>
