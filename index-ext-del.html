@@ -195,6 +195,45 @@ async function handleResponse(choice) {
       `registrations/${eventId}/${regId}`
     ).remove();
 
+
+// =====================================================
+// REMOVE FROM liveRegData PROJECTIONS
+// =====================================================
+
+try {
+
+    const liveRegSnap = await db.ref(
+        `liveRegData/${eventId}`
+    ).once('value');
+
+    const allTeams = liveRegSnap.val() || {};
+
+    for (const teamName in allTeams) {
+
+        const teamPath =
+            `liveRegData/${eventId}/${teamName}/${regId}`;
+
+        await db.ref(teamPath).remove();
+
+        console.log(
+            "MERS EXT DELETE: Removed from liveRegData:",
+            teamPath
+        );
+    }
+
+} catch (projectionErr) {
+
+    console.error(
+        "MERS EXT DELETE: liveRegData cleanup failed:",
+        projectionErr
+    );
+}
+
+
+
+
+    
+
     // =====================================================
     // READ REQUIRED VALUES
     // =====================================================
