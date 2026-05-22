@@ -2371,11 +2371,13 @@ formData.stay_allocation_code =
     eventIdParam
 );
 
-await syncAttendeeRegistry(
-    formData,
-    eventIdParam
-);
 
+      
+const qrToken =
+await syncAttendeeRegistry(
+ formData,
+ eventIdParam
+);
       
       
 
@@ -2779,6 +2781,8 @@ console.log(
             "MERS ATTENDANCE: Registry synced:",
             attendeePath
         );
+
+      return qrToken;
 
     } catch (err) {
 
