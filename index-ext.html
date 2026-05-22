@@ -2367,9 +2367,11 @@ formData.stay_allocation_code =
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
         // --- TRIGGER EMAIL ---
-               
-          // --- TRIGGER EMAIL ---
 
+      const emailUrl =
+  `${SCRIPT_URL}?action=sendEmail&regId=${encodeURIComponent(formData.registration_id)}&eventId=${eventIdParam}`;
+               
+          
 fetch(emailUrl)
   .catch(err =>
       console.error(
