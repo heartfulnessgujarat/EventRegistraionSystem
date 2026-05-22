@@ -2476,10 +2476,6 @@ formData.stay_allocation_code =
 
     const normalizedKey =
         col.replace(/^extra_/, "");
-
-
-
-
             
         let value =
     formData[col] ??
@@ -2896,9 +2892,9 @@ function processFinalDeletion(regId, eventId, gender) {
     const backBtn = document.getElementById('btn-back-to-profile');
 
     // --- 1. SYNC CURRENT SECTION INPUTS BEFORE REDRAWING ---
-    const currentInputs = document.querySelectorAll('[id^="extra_"]');
+    const currentInputs = document.querySelectorAll('[id^="inp-"]');
     currentInputs.forEach(input => { 
-        const cleanId = input.id.replace('extra_', '');
+        const cleanId = const cleanId =     input.id.replace('inp-', '');
 
       mersTempData[cleanId] = input.value;
 
@@ -3038,9 +3034,9 @@ if (fieldId === 'stay_option') {
 
         actionBtn.onclick = function() {
             // THE "FINAL SYNC" LOCK
-            const finalInputs = document.querySelectorAll('[id^="extra_"]');
+            const finalInputs = document.querySelectorAll('[id^="inp-"]');
             finalInputs.forEach(input => { 
-                const cleanId = input.id.replace('extra_', '');
+                const cleanId = const cleanId =     input.id.replace('inp-', '');
                 mersTempData[cleanId] = input.value; 
              //   mersTempData[input.id] = input.value;
                 if (originalData) originalData[cleanId] = input.value;
