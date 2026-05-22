@@ -83,67 +83,40 @@ const params =
 const eventId =
     params.get("event");
 
+
+
+
 async function loadEventTitle() {
 
     if (!eventId) return;
 
     const snap =
         await db.ref(
-            'config/eventConfig/' +
-            eventId
+            'config/eventConfig'
         ).once('value');
 
     if (!snap.exists()) return;
 
-    const config =
+    const configs =
         snap.val();
+
+    const eventConfig =
+        Object.values(configs).find(
+
+            cfg =>
+            cfg.event_id === eventId
+
+        );
+
+    if (!eventConfig) return;
 
     document.getElementById(
         "eventTitle"
     ).innerText =
 
-        config.event_title ||
+        eventConfig.event_title ||
         "Attendance Scanner";
 }
-
-loadEventTitle();
-  
-  
-  function onScanSuccess(decodedText) {
-
-    document.getElementById("result")
-    .innerHTML =
-
-      "SCANNED TOKEN:<br><br>" +
-      decodedText;
-
-    console.log(
-      "MERS SCAN TOKEN:",
-      decodedText
-    );
-}
-
-const html5QrCode =
-    new Html5Qrcode("reader");
-
-html5QrCode.start(
-
-    { facingMode: "environment" },
-
-    {
-      fps: 10,
-      qrbox: 250
-    },
-
-    onScanSuccess
-
-).catch(err => {
-
-    console.error(
-      "QR CAMERA ERROR:",
-      err
-    );
-});
 
 </script>
 
