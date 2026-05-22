@@ -141,8 +141,8 @@ async function onScanSuccess(decodedText) {
 
         const tokenSnap =
             await db.ref(
-                'attendance_tokens/' +
-                decodedText
+               'attendance_tokens/' +
+encodeURIComponent(decodedText)
             ).once('value');
 
         if (!tokenSnap.exists()) {
