@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="UTF-8">
+
+<title>MERS Attendance</title>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<style>
+
+body{
+    font-family: Arial;
+    text-align:center;
+    padding:40px;
+    background:#f4f4f4;
+}
+
+.card{
+    background:white;
+    padding:30px;
+    border-radius:12px;
+    max-width:500px;
+    margin:auto;
+    box-shadow:0 2px 10px rgba(0,0,0,0.1);
+}
+
+.success{
+    color:green;
+    font-size:24px;
+    font-weight:bold;
+}
+
+.error{
+    color:red;
+    font-size:22px;
+    font-weight:bold;
+}
+
+.small{
+    margin-top:15px;
+    color:#666;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="card">
+
+<div id="status">
+Checking attendance...
+</div>
+
+</div>
+
+<script>
+
+// =====================================================
+// FIREBASE CONFIG
+// =====================================================
+
+const firebaseConfig = {
+
+apiKey: "YOUR_API_KEY",
+authDomain: "YOUR_AUTH_DOMAIN",
+databaseURL: "YOUR_DATABASE_URL",
+projectId: "YOUR_PROJECT_ID",
+storageBucket: "YOUR_STORAGE_BUCKET",
+messagingSenderId: "YOUR_MSG_ID",
+appId: "YOUR_APP_ID"
+
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const db = firebase.database();
+
+// =====================================================
+// URL PARAMS
+// =====================================================
+
+const params =
+    new URLSearchParams(
+        window.location.search
+    );
+
+const eventId =
+    params.get("event");
+
+const attendeeId =
+    params.get("id");
+
+// =====================================================
+// MAIN
+// =====================================================
+
+async function processAttendance() {
+
+    const statusDiv =
+        document.getElementById("status");
+
+    try {
+
+        // =====================================================
+        // VALIDATE PARAMS
+        // =====================================================
+
+        if (!eventId || !attendeeId) {
+
+            statusDiv.innerHTML =
+                `<div class="error">
+                    Invalid QR Code
+                 </div>`;
+
+            return;
+        }
+
+        // =====================================================
+        // LOAD ATTENDEE
+        // =====================================================
+
+        const attendeeSnap =
+            await db.ref(
+                'attendee_registry/' +
+                eventId +
+                '/' +
+                attendeeId
+            ).once('value');
+
+        if (!attendeeSnap.exists()) {
+
+            statusDiv.innerHTML =
+                `<div class="error">
+                    Attendee Not Found
+                 </div>`;
+
+            return;
+        }
+
+        const attendee =
+            attendeeSnap.val();
+
+        // =====================================================
+        // DUPLICATE PREVENTION
+        // =====================================================
+
+        const now =
+            Date.now();
+
+        const duplicateWindow =
+            60 * 1000;
+
+        const lastScan =
+            attendee.last_attendance_scan || 0;
+
+        if (
+            now - lastScan
+            < duplicateWindow
+        ) {
+
+            statusDiv.innerHTML =
+                `<div class="error">
+                    Already Scanned Recently
+                 </div>
+
+                 <div class="small">
+                    Please wait before scanning again.
+                 </div>`;
+
+            return;
+        }
+
+        // =====================================================
+        // BUILD ATTENDANCE LOG
+        // =====================================================
+
+        const attendanceData = {
+
+            attendee_id:
+                attendeeId,
+
+            registration_id:
+                attendee.registration_id || "",
+
+            attendee_type:
+                attendee.attendee_type || "",
+
+            full_name:
+                attendee.full_name || "",
+
+            mobile:
+                attendee.mobile || "",
+
+            event_id:
+                eventId,
+
+            scanned_on:
+                new Date().toLocaleString(),
+
+            scan_timestamp:
+                now,
+
+            scan_mode:
+                "QR_SELF",
+
+            status:
+                "PRESENT"
+
+        };
+
+        // =====================================================
+        // SAVE ATTENDANCE LOG
+        // =====================================================
+
+        const logRef =
+            db.ref(
+                'attendance_logs/' +
+                eventId
+            ).push();
+
+        await logRef.set(
+            attendanceData
+        );
+
+        // =====================================================
+        // UPDATE LAST SCAN
+        // =====================================================
+
+        await db.ref(
+            'attendee_registry/' +
+            eventId +
+            '/' +
+            attendeeId +
+            '/last_attendance_scan'
+        ).set(now);
+
+        // =====================================================
+        // SUCCESS
+        // =====================================================
+
+        statusDiv.innerHTML =
+            `
+            <div class="success">
+                Attendance Recorded
+            </div>
+
+            <div class="small">
+                ${attendee.full_name}
+            </div>
+
+            <div class="small">
+                ${eventId}
+            </div>
+            `;
+
+    } catch (err) {
+
+        console.error(err);
+
+        statusDiv.innerHTML =
+            `
+            <div class="error">
+                Attendance Failed
+            </div>
+            `;
+    }
+}
+
+processAttendance();
+
+</script>
+
+</body>
+</html>
