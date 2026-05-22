@@ -139,11 +139,16 @@ async function onScanSuccess(decodedText) {
         // LOOKUP TOKEN
         // =====================================================
 
-        const tokenSnap =
-            await db.ref(
-              'attendance_tokens/' +
-decodedText.trim()
-            ).once('value');
+const tokenSnap =
+    await db.ref(
+       'attendance_tokens/' +
+       decodedText.trim()
+    ).once('value');
+      
+
+
+      
+      
 
         if (!tokenSnap.exists()) {
 
