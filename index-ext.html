@@ -2948,7 +2948,12 @@ if (originalData) {
                 fieldWrapper.style.marginBottom = "20px";
                 fieldWrapper.style.textAlign = "left";
 
-                const inputId = `extra_${fieldId}`;
+              
+             //   const inputId = `extra_${fieldId}`;
+
+              const inputId = `inp-${fieldId}`;
+
+              
                 let valToSet = "";
                 
                 if (originalData && (originalData[fieldId] !== undefined || originalData[inputId] !== undefined)) {
