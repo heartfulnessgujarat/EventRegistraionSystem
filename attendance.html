@@ -170,39 +170,47 @@ async function processAttendance() {
         // BUILD ATTENDANCE LOG
         // =====================================================
 
-        const attendanceData = {
+const attendanceData = {
 
-            attendee_id:
-                attendeeId,
+    attendee_id:
+        attendee.attendee_id,
 
-            registration_id:
-                attendee.registration_id || "",
+    registration_id:
+        attendee.registration_id,
 
-            attendee_type:
-                attendee.attendee_type || "",
+    full_name:
+        attendee.full_name,
 
-            full_name:
-                attendee.full_name || "",
+    mobile:
+        attendee.mobile,
 
-            mobile:
-                attendee.mobile || "",
+    attendee_type:
+        attendee.attendee_type,
 
-            event_id:
-                eventId,
+    event_id:
+        eventId,
 
-            scanned_on:
-                new Date().toLocaleString(),
+    status:
+        "PRESENT",
 
-            scan_timestamp:
-                now,
+    attendance_status:
+        "PRESENT",
 
-            scan_mode:
-                "QR_SELF",
+    scan_mode:
+        "QR_SELF",
 
-            status:
-                "PRESENT"
+    scan_source:
+        "QR",
 
-        };
+    scan_timestamp:
+        Date.now(),
+
+    scanned_on:
+        new Date().toLocaleString(),
+
+    device_info:
+        navigator.userAgent
+};
 
         // =====================================================
         // SAVE ATTENDANCE LOG
