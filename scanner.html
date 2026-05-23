@@ -243,6 +243,7 @@ const tokenSnap =
 const html5QrCode =
     new Html5Qrcode("reader");
 
+
 html5QrCode.start(
 
     { facingMode: "environment" },
@@ -252,7 +253,18 @@ html5QrCode.start(
         qrbox: 250
     },
 
-    onScanSuccess
+    (decodedText) => {
+
+        html5QrCode.stop();
+
+        onScanSuccess(decodedText);
+
+    }
+
+
+  
+
+  
 
 ).catch(err => {
 
