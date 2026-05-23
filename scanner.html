@@ -126,17 +126,6 @@ eventConfig.title ||
 
 async function onScanSuccess(decodedText) {
 
- console.log(
-  "SCANNED TOKEN:",
-  decodedText
-);
-
-  alert(
-  "TOKEN=[" +
-  decodedText +
-  "]"
-);
-  
 
 
     try {
@@ -222,10 +211,7 @@ const tokenSnap =
 
         "<span style='color:green'>QR VERIFIED</span>";
 
-        console.log(
-            "MERS VERIFIED ATTENDEE:",
-            attendee
-        );
+       
 
     } catch (err) {
 
@@ -235,7 +221,7 @@ const tokenSnap =
         );
 
 
-      alert(err);
+     
 
         document.getElementById(
             "result"
@@ -260,7 +246,7 @@ html5QrCode.start(
 
     (decodedText) => {
 
-      alert("QR DETECTED");
+      
 
         html5QrCode.stop();
 
