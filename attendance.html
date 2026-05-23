@@ -221,15 +221,51 @@ if (logsSnap.exists()) {
             logsSnap.val()
         );
 
-   const attendeeLogs =
-    logs.filter(
-            log =>
+
+console.log(
+    "CURRENT attendeeId:",
+    attendeeId
+);
+
+console.log(
+    "ALL LOGS:",
+    logs
+);
+
+console.log(
+    "CURRENT attendeeId:",
+    attendeeId
+);
+
+console.log(
+    "ALL LOGS:",
+    logs
+);
 
 
 
-          String(
-    log.attendee_id || ""
-) ===
+    
+
+
+  const attendeeLogs =
+    logs.filter(log => {
+
+        console.log(
+            "COMPARE:",
+            log.attendee_id,
+            attendeeId
+        );
+
+        return String(
+            log.attendee_id || ""
+        ) === String(
+            attendeeId || ""
+        );
+    });
+                
+                
+                
+                ===
 String(
     attendeeId || ""
 )
