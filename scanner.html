@@ -126,11 +126,12 @@ eventConfig.title ||
 
 async function onScanSuccess(decodedText) {
 
-  alert(
-  "TOKEN=[" +
-  decodedText +
-  "]"
+ console.log(
+  "SCANNED TOKEN:",
+  decodedText
 );
+
+  
 
 
     try {
