@@ -227,8 +227,7 @@ if (logsSnap.exists()) {
             log =>
 
             log.attendee_id ===
-            attendee.attendee_id
-
+            attendeeId
         );
 
     if (attendeeLogs.length > 0) {
@@ -387,6 +386,10 @@ async function markAttendance() {
 
         const attendee =
             Object.values(attendees).find(
+
+
+                const attendeeId =
+    attendee.attendee_id;
 
                 a =>
 
