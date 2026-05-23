@@ -125,9 +125,16 @@ const eventId =
 
 if (token) {
 
+    document.getElementById(
+        "mobileInput"
+    ).style.display = "none";
+
+    document.querySelector(
+        "button"
+    ).style.display = "none";
+
     verifyTokenAttendance();
 }
-
 async function verifyTokenAttendance() {
 
     const statusDiv =
