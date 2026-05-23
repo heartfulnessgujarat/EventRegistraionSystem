@@ -360,6 +360,88 @@ const attendanceData = {
 
 processAttendance();
 
+async function markAttendance() {
+
+    const mobile =
+        document.getElementById(
+            "mobileInput"
+        ).value.trim();
+
+    if (!mobile) {
+
+        document.getElementById(
+            "status"
+        ).innerHTML =
+
+        "<span style='color:red'>Enter Mobile Number</span>";
+
+        return;
+    }
+
+    // =====================================================
+    // LOAD ATTENDEES
+    // =====================================================
+
+    const snap =
+        await db.ref(
+            'attendee_registry/' +
+            eventId
+        ).once('value');
+
+    if (!snap.exists()) {
+
+        document.getElementById(
+            "status"
+        ).innerHTML =
+
+        "<span style='color:red'>No Attendees Found</span>";
+
+        return;
+    }
+
+    const attendees =
+        snap.val();
+
+    // =====================================================
+    // FIND MOBILE MATCH
+    // =====================================================
+
+    const attendee =
+        Object.values(attendees).find(
+
+            a =>
+            String(a.mobile || "").trim() === mobile
+
+        );
+
+    if (!attendee) {
+
+        document.getElementById(
+            "status"
+        ).innerHTML =
+
+        "<span style='color:red'>Registration Not Found</span>";
+
+        return;
+    }
+
+    // =====================================================
+    // SUCCESS
+    // =====================================================
+
+    document.getElementById(
+        "status"
+    ).innerHTML =
+
+    "<span style='color:green'>" +
+
+    attendee.full_name +
+
+    "<br><br>Registration Verified</span>";
+}
+
+   
+
 </script>
 
 </body>
