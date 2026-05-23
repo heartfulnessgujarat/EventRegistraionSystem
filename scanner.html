@@ -218,8 +218,16 @@ if (logsSnap.exists()) {
 
             log =>
 
-            log.attendee_id ===
-            attendeeId
+
+            String(
+    log.attendee_id || ""
+) ===
+String(
+    attendeeId || ""
+)
+
+
+          
 
         );
 
