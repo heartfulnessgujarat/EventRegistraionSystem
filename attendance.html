@@ -60,6 +60,19 @@ Checking attendance...
 
 <script>
 
+
+    // =====================================================
+// READ EVENT ID
+// =====================================================
+
+const params =
+    new URLSearchParams(
+        window.location.search
+    );
+
+const eventId =
+    params.get("event");
+
 // =====================================================
 // FIREBASE CONFIG
 // =====================================================
@@ -83,8 +96,13 @@ const params =
 const eventId =
     params.get("event");
 
-const token =
-    params.get("token");
+
+    
+//    const token =
+//    params.get("token");
+
+
+    
 
 // =====================================================
 // MAIN
@@ -101,6 +119,11 @@ async function processAttendance() {
         // VALIDATE PARAMS
         // =====================================================
 
+
+
+
+/*
+        
         if (!token) {
 
             statusDiv.innerHTML =
@@ -111,6 +134,10 @@ async function processAttendance() {
             return;
         }
 
+*/
+
+
+        
         // =====================================================
         // LOAD ATTENDEE
         // =====================================================
