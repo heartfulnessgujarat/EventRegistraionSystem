@@ -89,8 +89,21 @@ body{
 
 <script>
 
+// =====================================================
+// FIREBASE CONFIG
+// =====================================================
 
-    // =====================================================
+const firebaseConfig = {
+    databaseURL:
+    "https://ferrari-reg-2026-default-rtdb.asia-southeast1.firebasedatabase.app"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const db =
+    firebase.database();
+
+// =====================================================
 // READ EVENT ID
 // =====================================================
 
@@ -99,347 +112,126 @@ const params =
         window.location.search
     );
 
-
 const eventId =
     params.get("event");
 
 // =====================================================
-// FIREBASE CONFIG
+// MARK ATTENDANCE
 // =====================================================
-
-const firebaseConfig = { databaseURL: "https://ferrari-reg-2026-default-rtdb.asia-southeast1.firebasedatabase.app" };
-
-
-firebase.initializeApp(firebaseConfig);
-
-const db = firebase.database();
-
-// =====================================================
-// URL PARAMS
-// =====================================================
-
-
-const eventId =
-    params.get("event");
-
-
-    
-//    const token =
-//    params.get("token");
-
-
-    
-
-// =====================================================
-// MAIN
-// =====================================================
-
-async function processAttendance() {
-
-    const statusDiv =
-        document.getElementById("status");
-
-    try {
-
-        // =====================================================
-        // VALIDATE PARAMS
-        // =====================================================
-
-
-
-
-/*
-        
-        if (!token) {
-
-            statusDiv.innerHTML =
-                `<div class="error">
-                    Invalid QR Code
-                 </div>`;
-
-            return;
-        }
-
-*/
-
-
-        
-        // =====================================================
-        // LOAD ATTENDEE
-        // =====================================================
-
-       // =====================================================
-// TOKEN LOOKUP
-// =====================================================
-
-const tokenSnap =
-    await db.ref(
-        'attendance_tokens/' +
-        token
-    ).once('value');
-
-if (!tokenSnap.exists()) {
-
-    statusDiv.innerHTML =
-        `<div class="error">
-            Invalid Attendance Token
-         </div>`;
-
-    return;
-}
-
-const tokenData =
-    tokenSnap.val();
-
-const attendeeId =
-    tokenData.attendee_id;
-
-const eventId =
-    tokenData.event_id;
-
-// =====================================================
-// LOAD ATTENDEE
-// =====================================================
-
-const attendeeSnap =
-    await db.ref(
-        'attendee_registry/' +
-        eventId +
-        '/' +
-        attendeeId
-    ).once('value');
-        if (!attendeeSnap.exists()) {
-
-            statusDiv.innerHTML =
-                `<div class="error">
-                    Attendee Not Found
-                 </div>`;
-
-            return;
-        }
-
-        const attendee =
-            attendeeSnap.val();
-
-        // =====================================================
-        // DUPLICATE PREVENTION
-        // =====================================================
-
-        const now =
-            Date.now();
-
-        const duplicateWindow =
-            60 * 1000;
-
-        const lastScan =
-            attendee.last_attendance_scan || 0;
-
-        if (
-            now - lastScan
-            < duplicateWindow
-        ) {
-
-            statusDiv.innerHTML =
-                `<div class="error">
-                    Already Scanned Recently
-                 </div>
-
-                 <div class="small">
-                    Please wait before scanning again.
-                 </div>`;
-
-            return;
-        }
-
-        // =====================================================
-        // BUILD ATTENDANCE LOG
-        // =====================================================
-
-const attendanceData = {
-
-    attendee_id:
-        attendee.attendee_id,
-
-    registration_id:
-        attendee.registration_id,
-
-    full_name:
-        attendee.full_name,
-
-    mobile:
-        attendee.mobile,
-
-    attendee_type:
-        attendee.attendee_type,
-
-    event_id:
-        eventId,
-
-    status:
-        "PRESENT",
-
-    attendance_status:
-        "PRESENT",
-
-    scan_mode:
-        "QR_SELF",
-
-    scan_source:
-        "QR",
-
-    scan_timestamp:
-        Date.now(),
-
-    scanned_on:
-        new Date().toLocaleString(),
-
-    device_info:
-        navigator.userAgent
-};
-
-        // =====================================================
-        // SAVE ATTENDANCE LOG
-        // =====================================================
-
-        const logRef =
-            db.ref(
-                'attendance_logs/' +
-                eventId
-            ).push();
-
-        await logRef.set(
-            attendanceData
-        );
-
-        // =====================================================
-        // UPDATE LAST SCAN
-        // =====================================================
-
-        await db.ref(
-            'attendee_registry/' +
-            eventId +
-            '/' +
-            attendeeId +
-            '/last_attendance_scan'
-        ).set(now);
-
-        // =====================================================
-        // SUCCESS
-        // =====================================================
-
-        statusDiv.innerHTML =
-            `
-            <div class="success">
-                Attendance Recorded
-            </div>
-
-            <div class="small">
-                ${attendee.full_name}
-            </div>
-
-            <div class="small">
-                ${eventId}
-            </div>
-            `;
-
-    } catch (err) {
-
-        console.error(err);
-
-        statusDiv.innerHTML =
-            `
-            <div class="error">
-                Attendance Failed
-            </div>
-            `;
-    }
-}
-
-processAttendance();
 
 async function markAttendance() {
+
+    const statusDiv =
+        document.getElementById(
+            "status"
+        );
 
     const mobile =
         document.getElementById(
             "mobileInput"
         ).value.trim();
 
+    // =====================================================
+    // VALIDATE MOBILE
+    // =====================================================
+
     if (!mobile) {
 
-        document.getElementById(
-            "status"
-        ).innerHTML =
+        statusDiv.innerHTML =
 
-        "<span style='color:red'>Enter Mobile Number</span>";
-
-        return;
-    }
-
-    // =====================================================
-    // LOAD ATTENDEES
-    // =====================================================
-
-    const snap =
-        await db.ref(
-            'attendee_registry/' +
-            eventId
-        ).once('value');
-
-    if (!snap.exists()) {
-
-        document.getElementById(
-            "status"
-        ).innerHTML =
-
-        "<span style='color:red'>No Attendees Found</span>";
+        `<div class="error">
+            Enter Mobile Number
+         </div>`;
 
         return;
     }
 
-    const attendees =
-        snap.val();
+    try {
 
-    // =====================================================
-    // FIND MOBILE MATCH
-    // =====================================================
+        // =====================================================
+        // LOAD ATTENDEES
+        // =====================================================
 
-    const attendee =
-        Object.values(attendees).find(
+        const snap =
+            await db.ref(
+                'attendee_registry/' +
+                eventId
+            ).once('value');
 
-            a =>
-            String(a.mobile || "").trim() === mobile
+        if (!snap.exists()) {
 
-        );
+            statusDiv.innerHTML =
 
-    if (!attendee) {
+            `<div class="error">
+                No Attendees Found
+             </div>`;
 
-        document.getElementById(
-            "status"
-        ).innerHTML =
+            return;
+        }
 
-        "<span style='color:red'>Registration Not Found</span>";
+        const attendees =
+            snap.val();
 
-        return;
+        // =====================================================
+        // FIND MOBILE MATCH
+        // =====================================================
+
+        const attendee =
+            Object.values(attendees).find(
+
+                a =>
+
+                String(
+                    a.mobile || ""
+                ).trim() === mobile
+
+            );
+
+        if (!attendee) {
+
+            statusDiv.innerHTML =
+
+            `<div class="error">
+                Registration Not Found
+             </div>`;
+
+            return;
+        }
+
+        // =====================================================
+        // SUCCESS
+        // =====================================================
+
+        statusDiv.innerHTML =
+
+        `
+        <div class="success">
+            Registration Verified
+        </div>
+
+        <div class="small">
+            ${attendee.full_name}
+        </div>
+
+        <div class="small">
+            ${attendee.attendee_type}
+        </div>
+        `;
+
+    } catch (err) {
+
+        console.error(err);
+
+        statusDiv.innerHTML =
+
+        `
+        <div class="error">
+            Attendance Failed
+        </div>
+        `;
     }
-
-    // =====================================================
-    // SUCCESS
-    // =====================================================
-
-    document.getElementById(
-        "status"
-    ).innerHTML =
-
-    "<span style='color:green'>" +
-
-    attendee.full_name +
-
-    "<br><br>Registration Verified</span>";
 }
 
-   
-
 </script>
-
 </body>
 </html>
