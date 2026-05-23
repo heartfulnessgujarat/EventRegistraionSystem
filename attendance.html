@@ -221,12 +221,21 @@ if (logsSnap.exists()) {
             logsSnap.val()
         );
 
-   log.attendee_id ===
-attendeeId
+   const attendeeLogs =
+    logs.filter(
             log =>
 
-            log.attendee_id ===
-            attendeeId
+
+
+          String(
+    log.attendee_id || ""
+) ===
+String(
+    attendeeId || ""
+)
+
+
+        
         );
 
     if (attendeeLogs.length > 0) {
