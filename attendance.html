@@ -120,22 +120,16 @@ const token =
 
 
 
-        // =====================================================
-// SELF ATTENDANCE GOVERNANCE
-// =====================================================
 
-const attendanceEnabled =
-    false;
 
-const attendanceStart =
-    new Date(
-        "2026-05-23T09:00:00"
-    );
 
-const attendanceEnd =
-    new Date(
-        "2026-05-23T23:59:00"
-    );
+
+
+
+
+
+
+        
 
 // =====================================================
 // TOKEN AUTO ATTENDANCE
@@ -279,6 +273,195 @@ if (now > attendanceEnd) {
 
         const attendee =
             attendeeSnap.val();
+
+
+        // =====================================================
+// LOAD EVENT CONFIG
+// =====================================================
+
+const configSnap =
+    await db.ref(
+        'config/eventConfig'
+    ).once('value');
+
+if (!configSnap.exists()) {
+
+    statusDiv.innerHTML =
+
+    `
+    <div class="error">
+        Event Config Missing
+    </div>
+    `;
+
+    return;
+}
+
+const configs =
+    configSnap.val();
+
+const eventConfig =
+    Object.values(configs).find(
+
+        cfg =>
+        cfg.event_id === tokenEventId
+    );
+
+if (!eventConfig) {
+
+    statusDiv.innerHTML =
+
+    `
+    <div class="error">
+        Event Config Not Found
+    </div>
+    `;
+
+    return;
+}
+
+// =====================================================
+// ATTENDANCE ENABLE CHECK
+// =====================================================
+
+const attendanceEnabled =
+    String(
+        eventConfig.attendance_enabled || ""
+    ).toUpperCase() === "TRUE";
+
+if (!attendanceEnabled) {
+
+    statusDiv.innerHTML =
+
+    `
+    <div class="error">
+        Self Attendance Disabled
+    </div>
+    `;
+
+    return;
+}
+
+// =====================================================
+// BUILD EVENT DATETIME
+// =====================================================
+
+const startDate =
+    eventConfig.event_start_date;
+
+const startTime =
+    eventConfig.event_start_time;
+
+const endDate =
+    eventConfig.event_end_date;
+
+const endTime =
+    eventConfig.event_end_time;
+
+// =====================================================
+// CONVERT DD-MMM-YY TO DATE
+// =====================================================
+
+function parseEventDate(dateStr, timeStr) {
+
+    const months = {
+
+        Jan: "01",
+        Feb: "02",
+        Mar: "03",
+        Apr: "04",
+        May: "05",
+        Jun: "06",
+        Jul: "07",
+        Aug: "08",
+        Sep: "09",
+        Oct: "10",
+        Nov: "11",
+        Dec: "12"
+    };
+
+    const parts =
+        dateStr.split("-");
+
+    const day =
+        parts[0];
+
+    const month =
+        months[
+            parts[1]
+        ];
+
+  const year =
+    parts[2].length === 2
+    ? "20" + parts[2]
+    : parts[2];
+    
+    return new Date(
+
+        `${year}-${month}-${day}T${timeStr}:00`
+    );
+}
+
+const eventStart =
+    parseEventDate(
+        startDate,
+        startTime
+    );
+
+const eventEnd =
+    parseEventDate(
+        endDate,
+        endTime
+    );
+
+// =====================================================
+// ATTENDANCE WINDOW
+// =====================================================
+
+const attendanceStart =
+    new Date(
+        eventStart.getTime() -
+        (2 * 60 * 60 * 1000)
+    );
+
+const attendanceEnd =
+    new Date(
+        eventEnd.getTime() +
+        (2 * 60 * 60 * 1000)
+    );
+
+const now =
+    new Date();
+
+// =====================================================
+// GOVERNANCE CHECK
+// =====================================================
+
+if (now < attendanceStart) {
+
+    statusDiv.innerHTML =
+
+    `
+    <div class="error">
+        Attendance Not Started Yet
+    </div>
+    `;
+
+    return;
+}
+
+if (now > attendanceEnd) {
+
+    statusDiv.innerHTML =
+
+    `
+    <div class="error">
+        Attendance Window Closed
+    </div>
+    `;
+
+    return;
+}
 
       
         // =====================================================
