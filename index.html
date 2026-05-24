@@ -1311,7 +1311,7 @@ if (changedFields.length > 0) {
 
         " updated on " +
 
-        new Date().toLocaleString() +
+        new Date()     .toLocaleDateString(         'en-GB',         {             day: '2-digit',             month: 'short',             year: 'numeric'         }     )     .replace(/ /g, '-')     .toUpperCase() +
 
         " via " +
 
