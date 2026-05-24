@@ -1263,6 +1263,60 @@ async function submitData() {
             state: getFreshVal('state'),
             country: getFreshVal('country')
         };
+
+
+
+      // =====================================================
+// PROFILE CHANGE AUDIT
+// =====================================================
+
+let changedFields = [];
+
+Object.keys(updatedSection1).forEach(key => {
+
+    const oldVal =
+        String(
+            originalData[key] || ""
+        ).trim();
+
+    const newVal =
+        String(
+            updatedSection1[key] || ""
+        ).trim();
+
+    if (oldVal !== newVal) {
+
+        changedFields.push(key);
+    }
+});
+
+if (changedFields.length > 0) {
+
+    const formattedFields =
+
+        changedFields
+        .map(field =>
+
+            field
+            .replace(/_/g, " ")
+            .replace(/\b\w/g,
+                c => c.toUpperCase()
+            )
+        )
+        .join(", ");
+
+    updatedSection1.profile_update_remark =
+
+        formattedFields +
+
+        " updated on " +
+
+        new Date().toLocaleString() +
+
+        " via " +
+
+        eventIdParam;
+}
         
         if (!updatedSection1.full_name) {
             throw new Error("Critical Error: 'full_name' is missing. Please ensure Section 1 is filled.");
