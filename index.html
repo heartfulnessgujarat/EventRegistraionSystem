@@ -1189,7 +1189,10 @@ if (type === 'email') {
 
 }
 
-// =====================================================
+
+
+
+  // =====================================================
 // MOBILE VERIFICATION VIA WHATSAPP
 // =====================================================
 
@@ -1198,98 +1201,43 @@ else if (type === 'mobile') {
   const mobileInput =
     document.getElementById('inp-mobile').value.trim();
 
-  const mobileNumber =
-    "91" + mobileInput;
-
   const otp =
     Math.floor(100000 + Math.random() * 900000).toString();
 
+  // =====================================================
   // SAVE OTP IN FIREBASE
-  await db.ref("verificationCodes/mobile_" + mobileInput).set({
+  // =====================================================
+
+  await db.ref(
+    "verificationCodes/mobile_" + mobileInput
+  ).set({
 
     code: otp,
-    timestamp: new Date().getTime()
+
+    timestamp:
+      new Date().getTime()
 
   });
 
-  // SEND WHATSAPP MESSAGE
-  await fetch(
+  // =====================================================
+  // CALL APPS SCRIPT
+  // =====================================================
 
-    "https://api.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/bulk/",
+  fetch(
+
+    `${SCRIPT_URL}?action=sendWhatsAppOTP&mobile=${mobileInput}&otp=${otp}`,
 
     {
 
-      method: "POST",
+      method: "GET",
 
-      headers: {
-
-        "Content-Type": "application/json",
-
-        "authkey": "519692AaoVnJ2zCx6a147c73P1"
-
-      },
-
-      body: JSON.stringify({
-
-        integrated_number: "919427112842",
-
-        content_type: "template",
-
-        payload: {
-
-          messaging_product: "whatsapp",
-
-          type: "template",
-
-          template: {
-
-            name: "vericode",
-
-            language: {
-
-              code: "en",
-              policy: "deterministic"
-
-            },
-
-            namespace: null,
-
-            to_and_components: [
-
-              {
-
-                to: [mobileNumber],
-
-                components: {
-
-                  body_1: {
-
-                    type: "text",
-
-                    value: otp
-
-                  }
-
-                }
-
-              }
-
-            ]
-
-          }
-
-        }
-
-      })
+      mode: "no-cors"
 
     }
 
   );
 
 }
-
-
-      
       
       
       setTimeout(() => {
