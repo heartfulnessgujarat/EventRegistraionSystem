@@ -994,1636 +994,1637 @@ function selectParticipant(p) {
 
 
       el.value = masterValue;
-
-// ============================================
-// MASK ONLY LOCKED DISPLAY
-// ============================================
-
-if (
-    ['mobile', 'email']
-    .includes(r.field_id)
-) {
-
-    el.dataset.originalValue =
-        masterValue;
-
-    if (r.field_id === 'mobile') {
-
-        el.value =
-            maskMobile(masterValue);
-    }
-
-    if (r.field_id === 'email') {
-
-        el.value =
-            maskEmail(masterValue);
-    }
-}
-      
-      // Sync to originalData for change tracking
-      if (typeof originalData !== 'undefined') {
-        originalData[r.field_id] = masterValue;
-      }
-      
-      // UI: Handle Container Visibility (Section 1)
-      if (cont) {
-        cont.style.display = (r.initial_state === 'Hidden') ? 'none' : 'block';
-      }
-      
-      // UI: Block the field and hide the Edit link
-      el.disabled = true;
-      if (editLink) {
-        editLink.style.display = 'none';
-      }
-    }
-  });
-
-  // UI: Reset search results and show navigation buttons
-  const resName = document.getElementById('res-full_name');
-  if (resName) resName.style.display = 'none';
   
-  const btnsStart = document.getElementById('btns-start');
-  if (btnsStart) btnsStart.style.display = 'flex';
+  // ============================================
+  // MASK ONLY LOCKED DISPLAY
+  // ============================================
   
-  // Ensure the primary ID field is explicitly disabled
-  const inpFullName = document.getElementById('inp-full_name');
-  if (inpFullName) inpFullName.disabled = true;
+  if (
+      ['mobile', 'email']
+      .includes(r.field_id)
+  ) {
   
-  // Trigger validation check to enable "DETAILS ARE OKAY"
-  if (typeof checkAllValidations === 'function') {
+      el.dataset.originalValue =
+          masterValue;
+  
+      if (r.field_id === 'mobile') {
+  
+          el.value =
+              maskMobile(masterValue);
+      }
+  
+      if (r.field_id === 'email') {
+  
+          el.value =
+              maskEmail(masterValue);
+      }
+  }
+        
+        // Sync to originalData for change tracking
+        if (typeof originalData !== 'undefined') {
+          originalData[r.field_id] = masterValue;
+        }
+        
+        // UI: Handle Container Visibility (Section 1)
+        if (cont) {
+          cont.style.display = (r.initial_state === 'Hidden') ? 'none' : 'block';
+        }
+        
+        // UI: Block the field and hide the Edit link
+        el.disabled = true;
+        if (editLink) {
+          editLink.style.display = 'none';
+        }
+      }
+    });
+  
+    // UI: Reset search results and show navigation buttons
+    const resName = document.getElementById('res-full_name');
+    if (resName) resName.style.display = 'none';
+    
+    const btnsStart = document.getElementById('btns-start');
+    if (btnsStart) btnsStart.style.display = 'flex';
+    
+    // Ensure the primary ID field is explicitly disabled
+    const inpFullName = document.getElementById('inp-full_name');
+    if (inpFullName) inpFullName.disabled = true;
+    
+    // Trigger validation check to enable "DETAILS ARE OKAY"
+    if (typeof checkAllValidations === 'function') {
+      checkAllValidations();
+    }
+  }
+  
+  
+  
+  
+  function selectLocation(l) {
+    if (!l) return;
+  
+    // 1. Update the Centre field itself
+    const centreInp = document.getElementById('inp-centre');
+    if (centreInp) {
+      centreInp.value = l.centre || l.Centre || "";
+    }
+  
+    // 2. DYNAMIC VLOOKUP: Look at Field_Rules instead of a hard-coded list
+    // We find all fields that are set to 'Locked' and have a lookup_tab
+    const dependentFields = fieldRules.filter(r => r.edit_behavior === 'Locked');
+  
+    dependentFields.forEach(rule => {
+      const fId = rule.field_id;
+      const el = document.getElementById(`inp-${fId}`);
+      
+      if (el) {
+        // Get the value from the Master Database object (l) 
+        // using the field_id as the key (e.g., l['state'])
+        const newValue = l[fId] || l[fId.charAt(0).toUpperCase() + fId.slice(1)] || '';
+        el.value = newValue;
+      }
+    });
+  
+    // 3. UI Cleanup
+    const resDiv = document.getElementById('res-centre');
+    if (resDiv) resDiv.style.display = 'none';
+  
+    // 4. Final Validation
     checkAllValidations();
   }
-}
-
-
-
-
-function selectLocation(l) {
-  if (!l) return;
-
-  // 1. Update the Centre field itself
-  const centreInp = document.getElementById('inp-centre');
-  if (centreInp) {
-    centreInp.value = l.centre || l.Centre || "";
-  }
-
-  // 2. DYNAMIC VLOOKUP: Look at Field_Rules instead of a hard-coded list
-  // We find all fields that are set to 'Locked' and have a lookup_tab
-  const dependentFields = fieldRules.filter(r => r.edit_behavior === 'Locked');
-
-  dependentFields.forEach(rule => {
-    const fId = rule.field_id;
-    const el = document.getElementById(`inp-${fId}`);
+  
+  
     
-    if (el) {
-      // Get the value from the Master Database object (l) 
-      // using the field_id as the key (e.g., l['state'])
-      const newValue = l[fId] || l[fId.charAt(0).toUpperCase() + fId.slice(1)] || '';
-      el.value = newValue;
+  function enableEditMode() {
+      document.getElementById('btns-start').style.display = 'none';
+      document.getElementById('btn-master-update').style.display = 'block';
+      
+      fieldRules.forEach(r => {
+          const editLink = document.getElementById(`edit-link-${r.field_id}`);
+          const helpEl = document.getElementById(`help-${r.field_id}`);
+          const canBeEdited = ['Editable', 'Editable_Verify', 'Editable_Lookup'].includes(r.edit_behavior);
+          
+          // Only show the edit link if it's editable AND NOT the full_name field
+          if (editLink && canBeEdited && r.field_id !== 'full_name') {
+              editLink.style.display = 'inline';
+          }
+          
+          if (helpEl && helpEl.innerText.trim() !== "") {
+              helpEl.style.display = 'block';
+          }
+      });
+  }
+  
+  function unlockField(id) {
+    // 1. HARD GUARD: Never unlock the full_name
+    if (id === 'full_name') {
+      alert("Full Name is locked and cannot be changed.");
+      return; 
     }
-  });
-
-  // 3. UI Cleanup
-  const resDiv = document.getElementById('res-centre');
-  if (resDiv) resDiv.style.display = 'none';
-
-  // 4. Final Validation
-  checkAllValidations();
-}
-
-
   
-function enableEditMode() {
-    document.getElementById('btns-start').style.display = 'none';
-    document.getElementById('btn-master-update').style.display = 'block';
-    
-    fieldRules.forEach(r => {
-        const editLink = document.getElementById(`edit-link-${r.field_id}`);
-        const helpEl = document.getElementById(`help-${r.field_id}`);
-        const canBeEdited = ['Editable', 'Editable_Verify', 'Editable_Lookup'].includes(r.edit_behavior);
-        
-        // Only show the edit link if it's editable AND NOT the full_name field
-        if (editLink && canBeEdited && r.field_id !== 'full_name') {
-            editLink.style.display = 'inline';
-        }
-        
-        if (helpEl && helpEl.innerText.trim() !== "") {
-            helpEl.style.display = 'block';
-        }
-    });
-}
-
-function unlockField(id) {
-  // 1. HARD GUARD: Never unlock the full_name
-  if (id === 'full_name') {
-    alert("Full Name is locked and cannot be changed.");
-    return; 
-  }
-
-  const inp = document.getElementById(`inp-${id}`);
-
-
-// ============================================
-// RESTORE ORIGINAL VALUE BEFORE EDITING
-// ============================================
-
-if (
-    inp &&
-    inp.dataset.originalValue
-) {
-
-    inp.value =
-        inp.dataset.originalValue;
-}
-
-    
-  const editLink = document.getElementById(`edit-link-${id}`);
+    const inp = document.getElementById(`inp-${id}`);
   
-  // 2. Standard Unlock Logic
-  inp.disabled = false;
-  inp.focus();
-  if (editLink) editLink.style.display = 'none';
-
-  // 3. CENTRE SEARCH FIX: Re-bind search logic AND refresh master list
-  if (id === 'centre') {
-    inp.setAttribute("oninput", "handleSearch('centre', this.value)");
-    masterData = []; // <--- THIS IS THE ONLY ADDITION: Forces a fresh fetch from Firebase
+  
+  // ============================================
+  // RESTORE ORIGINAL VALUE BEFORE EDITING
+  // ============================================
+  
+  if (
+      inp &&
+      inp.dataset.originalValue
+  ) {
+  
+      inp.value =
+          inp.dataset.originalValue;
   }
-
-  // 4. Existing Email Verification Logic (Preserved)
-  if (id === 'email') {
-    const checkBtn = document.getElementById('vcheck-email');
-    if (checkBtn) checkBtn.style.display = 'block';
-    const vBtn = document.getElementById('vbtn-email');
-    if (vBtn) vBtn.style.display = 'none';
-    const msg = document.getElementById('vmsg-email');
-    if (msg) msg.style.display = 'none';
-  }
-}
- 
+  
+      
+    const editLink = document.getElementById(`edit-link-${id}`);
     
-  function sendCode(type) {
-    verificationAttempts[type] = 0;
-    const msg = document.getElementById(`vmsg-${type}`);
-    if (msg) msg.style.display = "none";
-    const targetEmail = (type === 'email') ? document.getElementById('inp-email').value : originalData['email'];
-    const btn = document.getElementById(`vbtn-${type}`);
-    btn.disabled = true;
-    btn.innerText = "Sending Code...";
-    fetch(`${SCRIPT_URL}?action=sendVerificationCode&email=${encodeURIComponent(targetEmail)}&eventId=${eventId}`, { mode: 'no-cors' });
-    setTimeout(() => {
-      document.getElementById(`panel-${type}`).style.backgroundColor = "#e3f2fd";
-      btn.style.display = "none";
-      document.getElementById(`box-${type}`).style.display = "block";
-      const codeInp = document.getElementById(`code-${type}`);
-      if (codeInp) { codeInp.value = ""; codeInp.disabled = false; }
-      startResendTimer(type);
-    }, 1500);
+    // 2. Standard Unlock Logic
+    inp.disabled = false;
+    inp.focus();
+    if (editLink) editLink.style.display = 'none';
+  
+    // 3. CENTRE SEARCH FIX: Re-bind search logic AND refresh master list
+    if (id === 'centre') {
+      inp.setAttribute("oninput", "handleSearch('centre', this.value)");
+      masterData = []; // <--- THIS IS THE ONLY ADDITION: Forces a fresh fetch from Firebase
+    }
+  
+    // 4. Existing Email Verification Logic (Preserved)
+    if (id === 'email') {
+      const checkBtn = document.getElementById('vcheck-email');
+      if (checkBtn) checkBtn.style.display = 'block';
+      const vBtn = document.getElementById('vbtn-email');
+      if (vBtn) vBtn.style.display = 'none';
+      const msg = document.getElementById('vmsg-email');
+      if (msg) msg.style.display = 'none';
+    }
   }
-
-  function startResendTimer(type) {
-    const container = document.getElementById(`resend-container-${type}`);
-    let seconds = 30;
-    const interval = setInterval(() => {
-      seconds--;
-      if (seconds > 0) { container.innerHTML = `<span class="timer-text">Resend in ${seconds}s</span>`; } 
-      else { clearInterval(interval); container.innerHTML = `<span class="resend-link" onclick="resendCode('${type}')">Resend Code</span>`; }
-    }, 1000);
-  }
-
-  function resendCode(type) {
-    document.getElementById(`box-${type}`).style.display = "none";
-    document.getElementById(`vbtn-${type}`).style.display = "block";
-    sendCode(type);
-  }
-
-  async function verifyCodeInput(type, code) {
-    if (code.length === 6) {
-      const emailKey = ((type === 'email') ? document.getElementById('inp-email').value : originalData['email']).replace(/[.#$[\]]/g, "_");
-      const snap = await db.ref("verificationCodes/" + emailKey).once('value');
-      const data = snap.val();
+   
+      
+    function sendCode(type) {
+      verificationAttempts[type] = 0;
       const msg = document.getElementById(`vmsg-${type}`);
-      const panel = document.getElementById(`panel-${type}`);
-      const codeInp = document.getElementById(`code-${type}`);
-      if (data && data.code === code && (new Date().getTime() - data.timestamp < 300000)) {
-        msg.innerText = "Verified ✅"; msg.style.color = "#2e7d32"; msg.style.display = "block";
-        if (panel) panel.style.display = "none";
-        document.getElementById(`inp-${type}`).disabled = true;
-        verificationStates[type] = true;
-        verificationAttempts[type] = 0;
-        checkAllValidations();
-      } else {
-        verificationAttempts[type]++;
-        if (verificationAttempts[type] >= 3) {
-          msg.innerText = "Too many failed attempts."; msg.style.color = "#d32f2f"; msg.style.display = "block";
-          codeInp.disabled = true; codeInp.value = "LOCKED";
+      if (msg) msg.style.display = "none";
+      const targetEmail = (type === 'email') ? document.getElementById('inp-email').value : originalData['email'];
+      const btn = document.getElementById(`vbtn-${type}`);
+      btn.disabled = true;
+      btn.innerText = "Sending Code...";
+      fetch(`${SCRIPT_URL}?action=sendVerificationCode&email=${encodeURIComponent(targetEmail)}&eventId=${eventId}`, { mode: 'no-cors' });
+      setTimeout(() => {
+        document.getElementById(`panel-${type}`).style.backgroundColor = "#e3f2fd";
+        btn.style.display = "none";
+        document.getElementById(`box-${type}`).style.display = "block";
+        const codeInp = document.getElementById(`code-${type}`);
+        if (codeInp) { codeInp.value = ""; codeInp.disabled = false; }
+        startResendTimer(type);
+      }, 1500);
+    }
+  
+    function startResendTimer(type) {
+      const container = document.getElementById(`resend-container-${type}`);
+      let seconds = 30;
+      const interval = setInterval(() => {
+        seconds--;
+        if (seconds > 0) { container.innerHTML = `<span class="timer-text">Resend in ${seconds}s</span>`; } 
+        else { clearInterval(interval); container.innerHTML = `<span class="resend-link" onclick="resendCode('${type}')">Resend Code</span>`; }
+      }, 1000);
+    }
+  
+    function resendCode(type) {
+      document.getElementById(`box-${type}`).style.display = "none";
+      document.getElementById(`vbtn-${type}`).style.display = "block";
+      sendCode(type);
+    }
+  
+    async function verifyCodeInput(type, code) {
+      if (code.length === 6) {
+        const emailKey = ((type === 'email') ? document.getElementById('inp-email').value : originalData['email']).replace(/[.#$[\]]/g, "_");
+        const snap = await db.ref("verificationCodes/" + emailKey).once('value');
+        const data = snap.val();
+        const msg = document.getElementById(`vmsg-${type}`);
+        const panel = document.getElementById(`panel-${type}`);
+        const codeInp = document.getElementById(`code-${type}`);
+        if (data && data.code === code && (new Date().getTime() - data.timestamp < 300000)) {
+          msg.innerText = "Verified ✅"; msg.style.color = "#2e7d32"; msg.style.display = "block";
+          if (panel) panel.style.display = "none";
+          document.getElementById(`inp-${type}`).disabled = true;
+          verificationStates[type] = true;
+          verificationAttempts[type] = 0;
+          checkAllValidations();
         } else {
-          msg.innerText = `Invalid Code. Attempt ${verificationAttempts[type]} of 3.`;
-          msg.style.color = "#d32f2f"; msg.style.display = "block";
-          setTimeout(() => { codeInp.value = ""; codeInp.focus(); }, 1000);
+          verificationAttempts[type]++;
+          if (verificationAttempts[type] >= 3) {
+            msg.innerText = "Too many failed attempts."; msg.style.color = "#d32f2f"; msg.style.display = "block";
+            codeInp.disabled = true; codeInp.value = "LOCKED";
+          } else {
+            msg.innerText = `Invalid Code. Attempt ${verificationAttempts[type]} of 3.`;
+            msg.style.color = "#d32f2f"; msg.style.display = "block";
+            setTimeout(() => { codeInp.value = ""; codeInp.focus(); }, 1000);
+          }
+          verificationStates[type] = false;
         }
-        verificationStates[type] = false;
       }
     }
+  
+  
+  
+  function checkAllValidations() {
+      let allValid = true;
+      fieldRules.forEach(r => {
+        const input = document.getElementById(`inp-${r.field_id}`);
+        const errDiv = document.getElementById(`err-${r.field_id}`);
+        if (input) {
+          let isValid = validateField(r.field_id, input.value, r.field_validation);
+        //  let isChanged = input.value !== (originalData[r.field_id] || "");
+  
+  let compareValue = input.value;
+  
+  // ============================================
+  // USE ORIGINAL VALUE FOR MASKED FIELDS
+  // ============================================
+  
+  
+  if (
+  
+      input.disabled &&
+  
+      ['mobile', 'email']
+      .includes(r.field_id) &&
+  
+      input.dataset.originalValue
+  
+  ) {
+  
+      compareValue =
+          input.dataset.originalValue;
   }
-
-
-
-function checkAllValidations() {
-    let allValid = true;
-    fieldRules.forEach(r => {
-      const input = document.getElementById(`inp-${r.field_id}`);
-      const errDiv = document.getElementById(`err-${r.field_id}`);
-      if (input) {
-        let isValid = validateField(r.field_id, input.value, r.field_validation);
-      //  let isChanged = input.value !== (originalData[r.field_id] || "");
-
-let compareValue = input.value;
-
-// ============================================
-// USE ORIGINAL VALUE FOR MASKED FIELDS
-// ============================================
-
-
-if (
-
+     
+          
+  
+  let isChanged =
+      compareValue !==
+      (originalData[r.field_id] || "");
+  
+  
+  
+          
+          // =====================================================
+  // SKIP VALIDATION FOR LOCKED MASKED FIELDS
+  // =====================================================
+  
+  const isMaskedLockedField =
+  
+      input.disabled &&
+  
+      input.dataset.originalValue &&
+  
+      (
+          r.field_id === 'mobile' ||
+          r.field_id === 'email'
+      );
+  
+  if (isMaskedLockedField) {
+  
+      input.style.border =
+          '1px solid #ced4da';
+  
+      if (errDiv) {
+  
+          errDiv.style.display =
+              'none';
+      }
+  
+  }
+  
+  else if (
+      !isValid &&
+      input.value.trim() !== ""
+  ) {
+  
+      input.style.border =
+          '2px solid red';
+  
+      if (errDiv) {
+  
+          errDiv.innerText =
+              r.error_msg ||
+              "Invalid input";
+  
+          errDiv.style.display =
+              'block';
+      }
+  
+      allValid = false;
+  
+  }
+  
+  else {
+  
+      input.style.border =
+          '1px solid #ced4da';
+  
+      if (errDiv) {
+  
+          errDiv.style.display =
+              'none';
+      }
+  }
+         
+           if (r.field_id === 'email' || r.field_id === 'mobile') {
+            const panel = document.getElementById(`panel-${r.field_id}`);
+            const vBtn = document.getElementById(`vbtn-${r.field_id}`);
+            const msg = document.getElementById(`vmsg-${r.field_id}`);
+  
+  
+  
+  
+  
+  
+  
+  // =====================================================
+  // MASKED + LOCKED STATE
+  // =====================================================
+  
+  const isMaskedLockedField =
+  
     input.disabled &&
-
-    ['mobile', 'email']
-    .includes(r.field_id) &&
-
-    input.dataset.originalValue
-
-) {
-
-    compareValue =
-        input.dataset.originalValue;
-}
-   
+  
+    input.dataset.originalValue &&
+  
+    (
+      r.field_id === 'mobile' ||
+      r.field_id === 'email'
+    );
+  
+  if (isMaskedLockedField) {
+  
+    if (panel)
+      panel.style.display = 'none';
+  
+    if (msg)
+      msg.style.display = 'none';
+  }
+  
+  // =====================================================
+  // VERIFIED STATE
+  // =====================================================
+  
+  else if (verificationStates[r.field_id]) {
+  
+    if (msg)
+      msg.style.display = 'block';
+  
+    if (panel)
+      panel.style.display = 'none';
+  }
+  
+  // =====================================================
+  // NEEDS VERIFICATION
+  // =====================================================
+  
+  else if (isValid && isChanged) {
+  
+    vBtn.innerText =
+      `Click here to send Verification Code to ${input.value}`;
+  
+    panel.style.display = 'block';
+  
+    if (msg)
+      msg.style.display = 'none';
+  
+    allValid = false;
+  }
+  
+  // =====================================================
+  // DEFAULT
+  // =====================================================
+  
+  else {
+  
+    if (panel)
+      panel.style.display = 'none';
+  
+    if (!isChanged && msg)
+      msg.style.display = 'none';
+  }
+            
+           }
+            
+          if (input.value.trim() === "" && r.initial_state === 'Visible') allValid = false;
+        }
+      });
+  
+      const masterBtn = document.getElementById('btn-master-update');
+      const regBtn = document.getElementById('btn-register');
+      if (masterBtn) masterBtn.disabled = !allValid;
+      if (regBtn) regBtn.disabled = !allValid;
+    }
+  
+    // 1. THE PAGE TURNER: Moves between Section 1, 2, and 3
+  async function handleSectionNavigation() {
+      console.log("%c MERS PING 3: handleSectionNavigation() was just called!", "color: blue; font-weight: bold;");
+      try {
+          if (typeof currentSection === 'undefined') window.currentSection = 1;
+          
+          // UI Transition: Show loader
+          document.getElementById('app').style.display = 'none';
+          document.getElementById('processing-overlay').style.display = 'block';
+  
+          if (window.currentSection === 1) {
+              // Move to Section 2
+              window.currentSection = 2;
+              await buildExtraSections(2);
+              
+              // Reflow Section 2 based on exact Field_Rule naming
+              if (typeof reflowSectionSequence === "function") {
+                  reflowSectionSequence("Section2"); 
+              } else {
+                  updateButtonState();
+              }
+  
+          } else if (window.currentSection === 2) {
+              // Move to Section 3
+              window.currentSection = 3;
+              await buildExtraSections(3);
+              
+              // --- WATERFALL REFLOW TRIGGER ---
+              // Recovers visibility of previously answered questions in Section 3
+              // Using exact spelling "Section3" from your Field_Rule configuration
+              if (typeof reflowSectionSequence === "function") {
+                  reflowSectionSequence("Section3"); 
+              } else {
+                  updateButtonState();
+              }
+          }
+          
+          // UI Transition: Hide loader
+          document.getElementById('processing-overlay').style.display = 'none';
+          document.getElementById('app').style.display = 'block';
+          
+          // Reset scroll position for the new section
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          
+      } catch (error) {
+          console.error("MERS Navigation Error:", error);
+          document.getElementById('processing-overlay').style.display = 'none';
+          document.getElementById('app').style.display = 'block';
+      }
+  }
+  
+  
+  function maskMobile(mobile) {
+   if (!mobile) return "";
+  
+   mobile = String(mobile).trim();
+  
+   if (mobile.length < 4) return mobile;
+  
+   return mobile.substring(0, 2) +
+          "XXXXXX" +
+          mobile.substring(mobile.length - 2);
+  }
+  
+  function maskEmail(email) {
+   if (!email || !email.includes("@")) return email;
+  
+   const parts = email.split("@");
+   const name = parts[0];
+   const domain = parts[1];
+  
+   if (name.length <= 3) {
+     return name.charAt(0) + "***@" + domain;
+   }
+  
+   return name.substring(0, 3) +
+          "*****@" +
+          domain;
+  }  
+  
+  
+  
+    
+    
+  async function submitData() {
+      console.log("%c [DIAGNOSTIC] submitData started! ", "background: #222; color: #bada55; font-size: 14px;");
+  
+      try {
+          const urlParams = new URLSearchParams(window.location.search);
+          const mode = (urlParams.get('mode') || 'new').toLowerCase();
+          
+          // --- STEP 1: FINAL DATA CAPTURE ---
+          const getFreshVal = (id) => {
+              const el = document.getElementById('inp-' + id) || document.getElementById(id);
+  
+            
+           //   if (el) return el.value ? el.value.trim() : "";
+  
+  
+            if (el) {
+  
+      // ============================================
+      // IF FIELD IS STILL MASKED,
+      // RETURN ORIGINAL VALUE
+      // ============================================
+  
+      if (
+  
+          el.dataset.originalValue &&
+  
+          el.dataset.maskedValue &&
+  
+          el.value === el.dataset.maskedValue
+  
+      ) {
+  
+          return el.dataset.originalValue.trim();
+      }
+  
+      return el.value
+          ? el.value.trim()
+          : "";
+  }
+  
+  
+  
+  
+            
+              if (typeof mersTempData !== 'undefined' && typeof mersTempData[id] !== 'undefined') return mersTempData[id];
+              if (typeof originalData !== 'undefined' && typeof originalData[id] !== 'undefined') return originalData[id];
+              return "";
+          };
+  
+          const updatedSection1 = {
+              full_name: getFreshVal('full_name'),
+  
+            
+            email: getFreshVal('email'),
+  mobile: getFreshVal('mobile'),
+  
+            
+              organization: getFreshVal('organization'),
+              designation: getFreshVal('designation'),
+              pincode: getFreshVal('pincode'),
+              full_address: getFreshVal('full_address'),
+              centre: getFreshVal('centre'),
+              zone: getFreshVal('zone'),
+              district: getFreshVal('district'),
+              state: getFreshVal('state'),
+              country: getFreshVal('country')
+          };
+  
+  // =====================================================
+  // MASKED VALUES FOR EMAIL COMMUNICATION
+  // =====================================================
+  
+  const maskedMobile =
+   maskMobile(updatedSection1.mobile);
+  
+  const maskedEmail =
+   maskEmail(updatedSection1.email);
+  
+  
+  
         
-
-let isChanged =
-    compareValue !==
-    (originalData[r.field_id] || "");
-
-
-
+  
+        // =====================================================
+  // PROFILE CHANGE AUDIT
+  // =====================================================
+  
+  let changedFields = [];
+  
+  Object.keys(updatedSection1).forEach(key => {
+  
+      const oldVal =
+          String(
+              originalData[key] || ""
+          ).trim();
+  
+      const newVal =
+          String(
+              updatedSection1[key] || ""
+          ).trim();
+  
+      if (oldVal !== newVal) {
+  
+          changedFields.push(key);
+      }
+  });
+  
+  if (changedFields.length > 0) {
+  
+      const formattedFields =
+  
+          changedFields
+          .map(field =>
+  
+              field
+              .replace(/_/g, " ")
+              .replace(/\b\w/g,
+                  c => c.toUpperCase()
+              )
+          )
+          .join(", ");
+  
+      updatedSection1.profile_update_remark =
+  
+          formattedFields +
+  
+          " updated on " +
+  
+          new Date()     .toLocaleDateString(         'en-GB',         {             day: '2-digit',             month: 'short',             year: 'numeric'         }     )     .replace(/ /g, '-')     .toUpperCase() +
+  
+          " via " +
+  
+          eventId;
+  }
+          
+          if (!updatedSection1.full_name) {
+              throw new Error("Critical Error: 'full_name' is missing. Please ensure Section 1 is filled.");
+          }
+  
+          const overlay = document.getElementById('processing-overlay');
+          if (overlay) overlay.style.display = 'block';
+  
+          // --- STEP 2: UPDATE MASTER DATABASE (EVENT-TYPE AWARE) ---
+          const masterRef = db.ref('masters/Master_Internal_DB');
+          const eventType = (typeof eventConfig !== 'undefined' && eventConfig.event_type) 
+                            ? eventConfig.event_type.toLowerCase() 
+                            : 'internal'; 
+  
+          if (eventType === 'internal') {
+              const nameSearch = await masterRef.orderByChild('full_name').equalTo(updatedSection1.full_name).once('value');
+              if (nameSearch.exists()) {
+                  const masterKey = Object.keys(nameSearch.val())[0];
+                  await masterRef.child(masterKey).update(updatedSection1);
+              } else {
+                  const mobSearch = await masterRef.orderByChild('mobile').equalTo(updatedSection1.mobile).once('value');
+                  if (mobSearch.exists()) {
+                      const mobKey = Object.keys(mobSearch.val())[0];
+                      await masterRef.child(mobKey).update(updatedSection1);
+                  } else {
+                      await masterRef.push(updatedSection1);
+                  }
+              }
+          } else {
+              const mobSearch = await masterRef.orderByChild('mobile').equalTo(updatedSection1.mobile).once('value');
+              if (mobSearch.exists()) {
+                  const mobKey = Object.keys(mobSearch.val())[0];
+                  await masterRef.child(mobKey).update(updatedSection1);
+              } else {
+                  await masterRef.push(updatedSection1);
+              }
+          }
+  
+          // --- STEP 3: CONSTRUCT FINAL REGISTRATION OBJECT (DUP-FIX) ---
+          let finalRegId = urlParams.get('regId');
+          const eventIdParam = typeof eventId !== 'undefined' ? eventId : (urlParams.get('id') || "EVT001");
+  
+          // Merge all data
+          let formData = {
+              ...originalData,
+              ...mersTempData,
+              ...updatedSection1
+          };
+  
+          // DUP ENTRY FIX: Explicitly consolidate clean keys into "extra_" keys
+          const keysToConsolidate = ['arrival_date', 'arrival_time', 'depart_date', 'depart_time', 'gender', 'travel_mode', 'stay_option'];
+  
+          keysToConsolidate.forEach(key => {
+              const extraKey = 'extra_' + key;
+              // If the clean key exists, move its value to the extra_ key and delete the clean one
+              if (formData[key]) {
+                  formData[extraKey] = formData[key]; 
+                  delete formData[key]; 
+              }
+          });
+  
+          if (!finalRegId || mode === 'new') {
+              const now = new Date();
+              const monthNames = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+              const day = String(now.getUTCDate()).padStart(2, '0');
+              const month = monthNames[now.getUTCMonth()];
+              const year = now.getUTCFullYear();
+              const timePart = `${String(now.getUTCHours()).padStart(2, '0')}${String(now.getUTCMinutes()).padStart(2, '0')}${String(now.getUTCSeconds()).padStart(2, '0')}${String(now.getUTCMilliseconds()).padStart(3, '0')}`;
+              finalRegId = `${eventIdParam}-REG-${day}-${month}-${year}-${timePart}-000`;
+          }
+  
+          formData.registration_id = finalRegId;
+          formData.event_id = eventIdParam;
+          formData.timestamp = new Date().toLocaleString();
+  
+  // =====================================================
+  // MASKED VALUES FOR EMAIL COMMUNICATION
+  // =====================================================
+  
+  formData.masked_mobile = maskedMobile;
+  formData.masked_email = maskedEmail;
+  
+  
+  
+  
+  
+        
+       //   formData.registration_status = (mode === 'new') ? "CONFIRMED" : "EDITED ON " + new Date().toLocaleString();
+  
+        formData.registration_status =
+    (mode === 'new')
+  
+      ? "REGISTERED ON " +
+        new Date().toLocaleString()
+  
+      : "EDITED ON " +
+        new Date().toLocaleString();
+  
+        formData.stay_allocation_code = "";
+  
+        
+        // ===== ACCOMMODATION COUNTER TYPE DETECTION =====
+  
+  const selectedGender = (formData.extra_gender || "").toLowerCase();
+  
+  const selectedStay = (formData.extra_stay_option || "").toLowerCase();
+  
+  let confirmedCounterPath = "";
+  
+        let waitlistCounterPath = "";
+  let stayAllocationCode = "";
+  
+        // =====================================================
+  console.log("FINAL selectedStay =", selectedStay);
+  
+  // RESET PATHS SAFELY
+  confirmedCounterPath = "";
+  waitlistCounterPath = "";
+  
+  
+  
+  // =====================================================
+  // CENTRALIZED STAY CLASSIFICATION
+  // =====================================================
+  
+  const stayInfo =
+      classifyStayOption(selectedStay);
+  
+  // =====================================================
+  // ROOM LOGIC
+  // =====================================================
+  
+  if (stayInfo.type === "room") {
+  
+      // ROOM WAITLIST
+      if (stayInfo.isWaitlist) {
+  
+          waitlistCounterPath =
+              'counters/waitlist_counters/room_' +
+              selectedGender +
+              '/' +
+              eventIdParam;
+      }
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+        
+        
+      // ROOM CONFIRMED
+      else {
+  
+          confirmedCounterPath =
+              'counters/confirmed_counters/room_' +
+              selectedGender +
+              '/' +
+              eventIdParam;
+      }
+  }
+  
+  // =====================================================
+  // DORM LOGIC
+  // =====================================================
+  
+  if (stayInfo.type === "dorm") {
+  
+      // DORM WAITLIST
+      if (stayInfo.isWaitlist) {
+  
+          waitlistCounterPath =
+              'counters/waitlist_counters/dorm_' +
+              selectedGender +
+              '/' +
+              eventIdParam;
+      }
+  
+      // DORM CONFIRMED
+      else {
+  
+          confirmedCounterPath =
+              'counters/confirmed_counters/dorm_' +
+              selectedGender +
+              '/' +
+              eventIdParam;
+      }
+  }
+  
+       
+  console.log(
+      "MERS COUNTER PATH CHECK:",
+      {
+          selectedGender,
+          selectedStay,
+          confirmedCounterPath,
+          waitlistCounterPath,
+          formGender: formData.extra_gender,
+          originalGender: originalData?.extra_gender
+      }
+  );
+  
         
         // =====================================================
-// SKIP VALIDATION FOR LOCKED MASKED FIELDS
-// =====================================================
-
-const isMaskedLockedField =
-
-    input.disabled &&
-
-    input.dataset.originalValue &&
-
-    (
-        r.field_id === 'mobile' ||
-        r.field_id === 'email'
-    );
-
-if (isMaskedLockedField) {
-
-    input.style.border =
-        '1px solid #ced4da';
-
-    if (errDiv) {
-
-        errDiv.style.display =
-            'none';
-    }
-
-}
-
-else if (
-    !isValid &&
-    input.value.trim() !== ""
-) {
-
-    input.style.border =
-        '2px solid red';
-
-    if (errDiv) {
-
-        errDiv.innerText =
-            r.error_msg ||
-            "Invalid input";
-
-        errDiv.style.display =
-            'block';
-    }
-
-    allValid = false;
-
-}
-
-else {
-
-    input.style.border =
-        '1px solid #ced4da';
-
-    if (errDiv) {
-
-        errDiv.style.display =
-            'none';
-    }
-}
-       
-         if (r.field_id === 'email' || r.field_id === 'mobile') {
-          const panel = document.getElementById(`panel-${r.field_id}`);
-          const vBtn = document.getElementById(`vbtn-${r.field_id}`);
-          const msg = document.getElementById(`vmsg-${r.field_id}`);
-
-
-
-
-
-
-
-// =====================================================
-// MASKED + LOCKED STATE
-// =====================================================
-
-const isMaskedLockedField =
-
-  input.disabled &&
-
-  input.dataset.originalValue &&
-
-  (
-    r.field_id === 'mobile' ||
-    r.field_id === 'email'
-  );
-
-if (isMaskedLockedField) {
-
-  if (panel)
-    panel.style.display = 'none';
-
-  if (msg)
-    msg.style.display = 'none';
-}
-
-// =====================================================
-// VERIFIED STATE
-// =====================================================
-
-else if (verificationStates[r.field_id]) {
-
-  if (msg)
-    msg.style.display = 'block';
-
-  if (panel)
-    panel.style.display = 'none';
-}
-
-// =====================================================
-// NEEDS VERIFICATION
-// =====================================================
-
-else if (isValid && isChanged) {
-
-  vBtn.innerText =
-    `Click here to send Verification Code to ${input.value}`;
-
-  panel.style.display = 'block';
-
-  if (msg)
-    msg.style.display = 'none';
-
-  allValid = false;
-}
-
-// =====================================================
-// DEFAULT
-// =====================================================
-
-else {
-
-  if (panel)
-    panel.style.display = 'none';
-
-  if (!isChanged && msg)
-    msg.style.display = 'none';
-}
-          
-         }
-          
-        if (input.value.trim() === "" && r.initial_state === 'Visible') allValid = false;
-      }
-    });
-
-    const masterBtn = document.getElementById('btn-master-update');
-    const regBtn = document.getElementById('btn-register');
-    if (masterBtn) masterBtn.disabled = !allValid;
-    if (regBtn) regBtn.disabled = !allValid;
-  }
-
-  // 1. THE PAGE TURNER: Moves between Section 1, 2, and 3
-async function handleSectionNavigation() {
-    console.log("%c MERS PING 3: handleSectionNavigation() was just called!", "color: blue; font-weight: bold;");
-    try {
-        if (typeof currentSection === 'undefined') window.currentSection = 1;
-        
-        // UI Transition: Show loader
-        document.getElementById('app').style.display = 'none';
-        document.getElementById('processing-overlay').style.display = 'block';
-
-        if (window.currentSection === 1) {
-            // Move to Section 2
-            window.currentSection = 2;
-            await buildExtraSections(2);
-            
-            // Reflow Section 2 based on exact Field_Rule naming
-            if (typeof reflowSectionSequence === "function") {
-                reflowSectionSequence("Section2"); 
-            } else {
-                updateButtonState();
-            }
-
-        } else if (window.currentSection === 2) {
-            // Move to Section 3
-            window.currentSection = 3;
-            await buildExtraSections(3);
-            
-            // --- WATERFALL REFLOW TRIGGER ---
-            // Recovers visibility of previously answered questions in Section 3
-            // Using exact spelling "Section3" from your Field_Rule configuration
-            if (typeof reflowSectionSequence === "function") {
-                reflowSectionSequence("Section3"); 
-            } else {
-                updateButtonState();
-            }
-        }
-        
-        // UI Transition: Hide loader
-        document.getElementById('processing-overlay').style.display = 'none';
-        document.getElementById('app').style.display = 'block';
-        
-        // Reset scroll position for the new section
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        
-    } catch (error) {
-        console.error("MERS Navigation Error:", error);
-        document.getElementById('processing-overlay').style.display = 'none';
-        document.getElementById('app').style.display = 'block';
-    }
-}
-
-
-function maskMobile(mobile) {
- if (!mobile) return "";
-
- mobile = String(mobile).trim();
-
- if (mobile.length < 4) return mobile;
-
- return mobile.substring(0, 2) +
-        "XXXXXX" +
-        mobile.substring(mobile.length - 2);
-}
-
-function maskEmail(email) {
- if (!email || !email.includes("@")) return email;
-
- const parts = email.split("@");
- const name = parts[0];
- const domain = parts[1];
-
- if (name.length <= 3) {
-   return name.charAt(0) + "***@" + domain;
- }
-
- return name.substring(0, 3) +
-        "*****@" +
-        domain;
-}  
-
-
-
+  // EDIT MODE → RELEASE OLD ACCOMMODATION
+  // =====================================================
+  
+  if (mode === 'edit') {
+  
+      console.log(
+          "MERS EDIT: Releasing old accommodation allocation..."
+      );
+  
+      const oldAllocation =
+          originalData?.stay_allocation_code || "";
+  
+      const oldGender =
+          (originalData?.extra_gender || "").toLowerCase();
+  
+      console.log(
+          "MERS EDIT OLD DATA:",
+          {
+              oldAllocation,
+              oldGender
+          }
+      );
+  
+      let oldCounterPath = "";
+  
+    const oldIsRoom =
+      oldAllocation.includes("ROOM");
+  
+  const oldIsWaitlist =
+      oldAllocation.includes("WAITLIST");
   
   
-async function submitData() {
-    console.log("%c [DIAGNOSTIC] submitData started! ", "background: #222; color: #bada55; font-size: 14px;");
-
-    try {
-        const urlParams = new URLSearchParams(window.location.search);
-        const mode = (urlParams.get('mode') || 'new').toLowerCase();
-        
-        // --- STEP 1: FINAL DATA CAPTURE ---
-        const getFreshVal = (id) => {
-            const el = document.getElementById('inp-' + id) || document.getElementById(id);
-
-          
-         //   if (el) return el.value ? el.value.trim() : "";
-
-
-          if (el) {
-
-    // ============================================
-    // IF FIELD IS STILL MASKED,
-    // RETURN ORIGINAL VALUE
-    // ============================================
-
-    if (
-
-        el.dataset.originalValue &&
-
-        el.dataset.maskedValue &&
-
-        el.value === el.dataset.maskedValue
-
-    ) {
-
-        return el.dataset.originalValue.trim();
-    }
-
-    return el.value
-        ? el.value.trim()
-        : "";
-}
-
-
-
-
-          
-            if (typeof mersTempData !== 'undefined' && typeof mersTempData[id] !== 'undefined') return mersTempData[id];
-            if (typeof originalData !== 'undefined' && typeof originalData[id] !== 'undefined') return originalData[id];
-            return "";
-        };
-
-        const updatedSection1 = {
-            full_name: getFreshVal('full_name'),
-
-          
-          email: getFreshVal('email'),
-mobile: getFreshVal('mobile'),
-
-          
-            organization: getFreshVal('organization'),
-            designation: getFreshVal('designation'),
-            pincode: getFreshVal('pincode'),
-            full_address: getFreshVal('full_address'),
-            centre: getFreshVal('centre'),
-            zone: getFreshVal('zone'),
-            district: getFreshVal('district'),
-            state: getFreshVal('state'),
-            country: getFreshVal('country')
-        };
-
-// =====================================================
-// MASKED VALUES FOR EMAIL COMMUNICATION
-// =====================================================
-
-const maskedMobile =
- maskMobile(updatedSection1.mobile);
-
-const maskedEmail =
- maskEmail(updatedSection1.email);
-
-
-
-      
-
-      // =====================================================
-// PROFILE CHANGE AUDIT
-// =====================================================
-
-let changedFields = [];
-
-Object.keys(updatedSection1).forEach(key => {
-
-    const oldVal =
-        String(
-            originalData[key] || ""
-        ).trim();
-
-    const newVal =
-        String(
-            updatedSection1[key] || ""
-        ).trim();
-
-    if (oldVal !== newVal) {
-
-        changedFields.push(key);
-    }
-});
-
-if (changedFields.length > 0) {
-
-    const formattedFields =
-
-        changedFields
-        .map(field =>
-
-            field
-            .replace(/_/g, " ")
-            .replace(/\b\w/g,
-                c => c.toUpperCase()
-            )
-        )
-        .join(", ");
-
-    updatedSection1.profile_update_remark =
-
-        formattedFields +
-
-        " updated on " +
-
-        new Date()     .toLocaleDateString(         'en-GB',         {             day: '2-digit',             month: 'short',             year: 'numeric'         }     )     .replace(/ /g, '-')     .toUpperCase() +
-
-        " via " +
-
-        eventId;
-}
-        
-        if (!updatedSection1.full_name) {
-            throw new Error("Critical Error: 'full_name' is missing. Please ensure Section 1 is filled.");
-        }
-
-        const overlay = document.getElementById('processing-overlay');
-        if (overlay) overlay.style.display = 'block';
-
-        // --- STEP 2: UPDATE MASTER DATABASE (EVENT-TYPE AWARE) ---
-        const masterRef = db.ref('masters/Master_Internal_DB');
-        const eventType = (typeof eventConfig !== 'undefined' && eventConfig.event_type) 
-                          ? eventConfig.event_type.toLowerCase() 
-                          : 'internal'; 
-
-        if (eventType === 'internal') {
-            const nameSearch = await masterRef.orderByChild('full_name').equalTo(updatedSection1.full_name).once('value');
-            if (nameSearch.exists()) {
-                const masterKey = Object.keys(nameSearch.val())[0];
-                await masterRef.child(masterKey).update(updatedSection1);
-            } else {
-                const mobSearch = await masterRef.orderByChild('mobile').equalTo(updatedSection1.mobile).once('value');
-                if (mobSearch.exists()) {
-                    const mobKey = Object.keys(mobSearch.val())[0];
-                    await masterRef.child(mobKey).update(updatedSection1);
-                } else {
-                    await masterRef.push(updatedSection1);
-                }
-            }
-        } else {
-            const mobSearch = await masterRef.orderByChild('mobile').equalTo(updatedSection1.mobile).once('value');
-            if (mobSearch.exists()) {
-                const mobKey = Object.keys(mobSearch.val())[0];
-                await masterRef.child(mobKey).update(updatedSection1);
-            } else {
-                await masterRef.push(updatedSection1);
-            }
-        }
-
-        // --- STEP 3: CONSTRUCT FINAL REGISTRATION OBJECT (DUP-FIX) ---
-        let finalRegId = urlParams.get('regId');
-        const eventIdParam = typeof eventId !== 'undefined' ? eventId : (urlParams.get('id') || "EVT001");
-
-        // Merge all data
-        let formData = {
-            ...originalData,
-            ...mersTempData,
-            ...updatedSection1
-        };
-
-        // DUP ENTRY FIX: Explicitly consolidate clean keys into "extra_" keys
-        const keysToConsolidate = ['arrival_date', 'arrival_time', 'depart_date', 'depart_time', 'gender', 'travel_mode', 'stay_option'];
-
-        keysToConsolidate.forEach(key => {
-            const extraKey = 'extra_' + key;
-            // If the clean key exists, move its value to the extra_ key and delete the clean one
-            if (formData[key]) {
-                formData[extraKey] = formData[key]; 
-                delete formData[key]; 
-            }
-        });
-
-        if (!finalRegId || mode === 'new') {
-            const now = new Date();
-            const monthNames = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-            const day = String(now.getUTCDate()).padStart(2, '0');
-            const month = monthNames[now.getUTCMonth()];
-            const year = now.getUTCFullYear();
-            const timePart = `${String(now.getUTCHours()).padStart(2, '0')}${String(now.getUTCMinutes()).padStart(2, '0')}${String(now.getUTCSeconds()).padStart(2, '0')}${String(now.getUTCMilliseconds()).padStart(3, '0')}`;
-            finalRegId = `${eventIdParam}-REG-${day}-${month}-${year}-${timePart}-000`;
-        }
-
-        formData.registration_id = finalRegId;
-        formData.event_id = eventIdParam;
-        formData.timestamp = new Date().toLocaleString();
-
-// =====================================================
-// MASKED VALUES FOR EMAIL COMMUNICATION
-// =====================================================
-
-formData.masked_mobile = maskedMobile;
-formData.masked_email = maskedEmail;
-
-
-
-
-
-      
-     //   formData.registration_status = (mode === 'new') ? "CONFIRMED" : "EDITED ON " + new Date().toLocaleString();
-
-      formData.registration_status =
-  (mode === 'new')
-
-    ? "REGISTERED ON " +
-      new Date().toLocaleString()
-
-    : "EDITED ON " +
-      new Date().toLocaleString();
-
-      formData.stay_allocation_code = "";
-
-      
-      // ===== ACCOMMODATION COUNTER TYPE DETECTION =====
-
-const selectedGender = (formData.extra_gender || "").toLowerCase();
-
-const selectedStay = (formData.extra_stay_option || "").toLowerCase();
-
-let confirmedCounterPath = "";
-
-      let waitlistCounterPath = "";
-let stayAllocationCode = "";
-
-      // =====================================================
-console.log("FINAL selectedStay =", selectedStay);
-
-// RESET PATHS SAFELY
-confirmedCounterPath = "";
-waitlistCounterPath = "";
-
-
-
-// =====================================================
-// CENTRALIZED STAY CLASSIFICATION
-// =====================================================
-
-const stayInfo =
-    classifyStayOption(selectedStay);
-
-// =====================================================
-// ROOM LOGIC
-// =====================================================
-
-if (stayInfo.type === "room") {
-
-    // ROOM WAITLIST
-    if (stayInfo.isWaitlist) {
-
-        waitlistCounterPath =
-            'counters/waitlist_counters/room_' +
-            selectedGender +
-            '/' +
-            eventIdParam;
-    }
-
-
-
-
-
-
-
-
-
-
-
-      
-      
-    // ROOM CONFIRMED
-    else {
-
-        confirmedCounterPath =
-            'counters/confirmed_counters/room_' +
-            selectedGender +
-            '/' +
-            eventIdParam;
-    }
-}
-
-// =====================================================
-// DORM LOGIC
-// =====================================================
-
-if (stayInfo.type === "dorm") {
-
-    // DORM WAITLIST
-    if (stayInfo.isWaitlist) {
-
-        waitlistCounterPath =
-            'counters/waitlist_counters/dorm_' +
-            selectedGender +
-            '/' +
-            eventIdParam;
-    }
-
-    // DORM CONFIRMED
-    else {
-
-        confirmedCounterPath =
-            'counters/confirmed_counters/dorm_' +
-            selectedGender +
-            '/' +
-            eventIdParam;
-    }
-}
-
-     
-console.log(
-    "MERS COUNTER PATH CHECK:",
-    {
-        selectedGender,
-        selectedStay,
-        confirmedCounterPath,
-        waitlistCounterPath,
-        formGender: formData.extra_gender,
-        originalGender: originalData?.extra_gender
-    }
-);
-
-      
-      // =====================================================
-// EDIT MODE → RELEASE OLD ACCOMMODATION
-// =====================================================
-
-if (mode === 'edit') {
-
-    console.log(
-        "MERS EDIT: Releasing old accommodation allocation..."
-    );
-
-    const oldAllocation =
-        originalData?.stay_allocation_code || "";
-
-    const oldGender =
-        (originalData?.extra_gender || "").toLowerCase();
-
-    console.log(
-        "MERS EDIT OLD DATA:",
-        {
-            oldAllocation,
-            oldGender
-        }
-    );
-
-    let oldCounterPath = "";
-
-  const oldIsRoom =
-    oldAllocation.includes("ROOM");
-
-const oldIsWaitlist =
-    oldAllocation.includes("WAITLIST");
-
-
-
-// =====================================================
-// BUILD OLD COUNTER PATH
-// =====================================================
-
-const oldFacility =
-    oldIsRoom
-    ? "room"
-    : "dorm";
-
-const oldCounterType =
-    oldIsWaitlist
-    ? "waitlist_counters"
-    : "confirmed_counters";
-
-oldCounterPath =
-    'counters/' +
-    oldCounterType +
-    '/' +
-    oldFacility +
-    '_' +
-    oldGender +
-    '/' +
-    eventIdParam;
-
-
-
-
-
-
-
-
   
-    // =====================================================
-    // DECREMENT OLD COUNTER
-    // =====================================================
-
-    if (oldCounterPath) {
-
-        await db.ref(oldCounterPath)
-        .transaction((current) => {
-
-            current = current || 0;
-
-            return current > 0
-                ? current - 1
-                : 0;
-        });
-
-        console.log(
-            "MERS EDIT: Old allocation released:",
-            oldCounterPath
-        );
-    }
-}
-
-// =====================================================
-// EDIT MODE → ASSIGN NEW ACCOMMODATION
-// =====================================================
-
-if (mode === 'edit') {
-
-    console.log(
-        "MERS EDIT: Assigning NEW accommodation..."
-    );
-
-    // =====================================================
-    // CONFIRMED COUNTER
-    // =====================================================
-
-// =====================================================
-// RECALCULATE LIVE AVAILABILITY
-// =====================================================
-
-const latestAvailability =
-    await getStayAvailability(
-        eventIdParam,
-        selectedGender
-    );
-
-console.log(
-    "MERS EDIT: Latest availability after release:",
-    latestAvailability
-);
-
-// =====================================================
-// DETERMINE LIVE STATUS
-// =====================================================
-
-
+  // =====================================================
+  // BUILD OLD COUNTER PATH
+  // =====================================================
   
-const wantsRoom =
-  stayInfo.type === "room";
-
-  if (!stayInfo.type) {
-
-    console.log(
-        "MERS EDIT: Outside stay detected. No accommodation counter update required."
-    );
-
-    stayAllocationCode =
-        "OUTSIDE-STAY";
-}
-
-
+  const oldFacility =
+      oldIsRoom
+      ? "room"
+      : "dorm";
   
-// =====================================================
-// ROOM LOGIC
-// =====================================================
-
- // if (wantsRoom) {
-
-   else if (wantsRoom) {
-
-    // ROOM AVAILABLE
-    if (latestAvailability.roomSeats > 0) {
-
-        const confirmResult =
-            await db.ref(confirmedCounterPath)
-            .transaction((current) => {
-
-                return (current || 0) + 1;
-
-            });
-
-        const confirmCount =
-            confirmResult.snapshot.val();
-
-        stayAllocationCode =
-            `ROOM-CONFIRM#${confirmCount}`;
-
-        console.log(
-            "MERS EDIT: Assigned ROOM CONFIRM:",
-            stayAllocationCode
-        );
-
-    }
-
-    // ROOM WAITLIST
-    else {
-
-        const waitlistResult =
-            await db.ref(waitlistCounterPath)
-            .transaction((current) => {
-
-                return (current || 0) + 1;
-
-            });
-
-        const waitlistCount =
-            waitlistResult.snapshot.val();
-
-        stayAllocationCode =
-            `ROOM-WAITLIST#${waitlistCount}`;
-
-        console.log(
-            "MERS EDIT: Assigned ROOM WAITLIST:",
-            stayAllocationCode
-        );
-    }
-}
-
-// =====================================================
-// DORM LOGIC
-// =====================================================
-
-else {
-
-    // DORM AVAILABLE
-    if (latestAvailability.dormSeats > 0) {
-
-        const confirmResult =
-            await db.ref(confirmedCounterPath)
-            .transaction((current) => {
-
-                return (current || 0) + 1;
-
-            });
-
-        const confirmCount =
-            confirmResult.snapshot.val();
-
-        stayAllocationCode =
-            `DORM-CONFIRM#${confirmCount}`;
-
-        console.log(
-            "MERS EDIT: Assigned DORM CONFIRM:",
-            stayAllocationCode
-        );
-
-    }
-
-    // DORM WAITLIST
-    else {
-
-        const waitlistResult =
-            await db.ref(waitlistCounterPath)
-            .transaction((current) => {
-
-                return (current || 0) + 1;
-
-            });
-
-        const waitlistCount =
-            waitlistResult.snapshot.val();
-
-        stayAllocationCode =
-            `DORM-WAITLIST#${waitlistCount}`;
-
-        console.log(
-            "MERS EDIT: Assigned DORM WAITLIST:",
-            stayAllocationCode
-        );
-    }
-}
-
-  }
-// --- STEP 4: SAVE DATA & CONDITIONAL COUNTER ---
-        if (mode === 'new') {
-            console.log("MERS: Processing counters for Event:", eventIdParam);
-
-            // A. ID Sequence (Unique Serial - Never goes down)
-            const counterRef = db.ref('counters/' + eventIdParam);
-            const transactionResult = await counterRef.transaction((v) => (v || 0) + 1);
-
-            if (transactionResult.committed) {
-                const paddedCount = String(transactionResult.snapshot.val()).padStart(3, '0');
-                const idParts = formData.registration_id.split('-');
-                idParts[idParts.length - 1] = paddedCount;
-                formData.registration_id = idParts.join('-');
-                console.log("MERS: New ID assigned:", formData.registration_id);
-            }
-
-            // B. ACTIVE SEATS (Capacity Control - Created/Updated here)
-            try {
-               
-              
-              const activeSeatsRef = db.ref('active_seats/' + eventIdParam);
-
-const activeResult = await activeSeatsRef.transaction((current) => {
-    return (current || 0) + 1;
-});
-
-
-
-              
-                console.log("MERS: active_seats incremented successfully.");
-
-
-              // ===== CONFIRMED ACCOMMODATION COUNTER UPDATE =====
-
-
-if (confirmedCounterPath) {
-
-    const confirmResult =
-      await db.ref(confirmedCounterPath)
-      .transaction((current) => {
-
-        return (current || 0) + 1;
-
-      });
-
-    const confirmCount =
-      confirmResult.snapshot.val();
-
-    // =====================================================
-    // BUILD STAY ALLOCATION CODE
-    // =====================================================
-
-   const stayLabel =
-      stayInfo.type === "room"
-      ? "ROOM"
-      : "DORM";
-
-    stayAllocationCode =
-      `${stayLabel}-CONFIRM#${confirmCount}`;
-
-    console.log(
-      "MERS: stayAllocationCode =",
-      stayAllocationCode
-    );
-
-    console.log(
-      "MERS: confirmed accommodation counter incremented."
-    );
-}
-              
-              
-
-
-              
-// ===== WAITLIST COUNTER INCREMENT =====
-
-if (waitlistCounterPath) {
-
-    const waitlistResult =
-      await db.ref(waitlistCounterPath)
-      .transaction((current) => {
-
-        return (current || 0) + 1;
-
-      });
-
-    const waitlistCount =
-      waitlistResult.snapshot.val();
-
-    // =====================================================
-    // BUILD STAY ALLOCATION CODE
-    // =====================================================
-
-   const stayLabel =
-      stayInfo.type === "room"
-      ? "ROOM"
-      : "DORM";
-
+  const oldCounterType =
+      oldIsWaitlist
+      ? "waitlist_counters"
+      : "confirmed_counters";
   
-    stayAllocationCode =
-      `${stayLabel}-WAITLIST#${waitlistCount}`;
-
-    console.log(
-      "MERS: stayAllocationCode =",
-      stayAllocationCode
-    );
-
-    console.log(
-      "MERS: waitlist counter incremented."
-    );
-}
-
-
-                          
-for (const path of counterPaths) {
-
-    const refObj = db.ref(path + eventIdParam);
-
-    const snap = await refObj.once('value');
-
-    if (!snap.exists()) {
-        await refObj.set(0);
-        console.log("MERS: initialized ->", path + eventIdParam);
-    }
-}
-
-
-              
-
-              console.log("STEP-1 PASSED");
-
-console.log("eventConfig.final_html exists?", !!eventConfig.final_html);
-
-console.log("About to call showSuccessScreen()");
-
-              console.log("TYPE OF showSuccessScreen:", typeof showSuccessScreen);
-
-showSuccessScreen();
-
-
-              
-            } catch (seatErr) {
-                console.error("MERS: active_seats transaction failed:", seatErr);
-            }
-        }
-
-
-// =====================================================
-// SAVE FINAL STAY ALLOCATION CODE
-// =====================================================
-
-formData.stay_allocation_code =
-  stayAllocationCode;
-
-
-
-
-
-      
-        await db.ref('registrations/' + eventIdParam + '/' + formData.registration_id).set(formData);
-
-      await updateLiveRegDataProjection(
-    formData,
-    eventIdParam
-);
-
-      
-
-        // --- STEP 5: UI TRANSITION ---
-        ['Section1', 'Section2', 'Section3', 'btn-next-action', 'btn-back-to-profile'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.style.display = 'none';
-        });
-        
-        if (document.querySelector('.event-header')) document.querySelector('.event-header').style.display = 'none';
-
+  oldCounterPath =
+      'counters/' +
+      oldCounterType +
+      '/' +
+      oldFacility +
+      '_' +
+      oldGender +
+      '/' +
+      eventIdParam;
+  
+  
+  
+  
+  
+  
+  
+  
     
-
-        const contentDiv = document.getElementById('success-content');
-
-     
-        if (contentDiv) {
-
-          const finalHTML = (typeof eventConfig !== 'undefined' && eventConfig.final_html) 
-    ? eventConfig.final_html 
-    : "<h2>Registration Successful!</h2>";
-
- contentDiv.innerHTML = finalHTML;
-
-
-
-          
-        }
-
-        document.getElementById('success-screen').style.display = 'block';
-        if (overlay) overlay.style.display = 'none';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-
-        // --- TRIGGER EMAIL ---
-        if (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) {
-            const emailUrl = `${SCRIPT_URL}?action=sendEmail&regId=${encodeURIComponent(formData.registration_id)}&eventId=${eventIdParam}`;
-           // fetch(emailUrl).catch(err => console.error("Email failed:", err));
-
-          fetch(emailUrl, {
-    mode: 'no-cors'
-}).catch(err => console.error("Email failed:", err));
-        }
-        
-    } catch (error) {
-        console.error("CRASH:", error);
-        alert("Save Failed: " + error.message);
-        if (document.getElementById('processing-overlay')) {
-            document.getElementById('processing-overlay').style.display = 'none';
-        }
-    }
-}
-
-
-  async function updateLiveRegDataProjection(
-    formData,
-    eventIdParam
-) {
-
-    try {
-
-        console.log(
-            "MERS LIVE REG: Projection update started..."
-        );
-
-        // ============================================
-        // READ CONFIG
-        // ============================================
-
-        const configSnap =
-            await db.ref(
-                'config/liveRegData'
-            ).once('value');
-
-        if (!configSnap.exists()) {
-
-            console.log(
-                "MERS LIVE REG: No config found."
-            );
-
-            return;
-        }
-
-        const allConfigs =
-            configSnap.val();
-
-        // ============================================
-        // LOOP CONFIGS
-        // ============================================
-
-
-
-      for (const eventKey in allConfigs) {
-
-    const teamConfigs =
-        allConfigs[eventKey] || {};
-
-    for (const teamKey in teamConfigs) {
-
-        const config =
-            teamConfigs[teamKey];
-
-          
-
-            // Skip inactive rows
-            if (
-                String(config.is_active)
-                .toUpperCase() !== "YES"
-            ) {
-                continue;
-            }
-
-            // Skip other events
-            if (
-                config.event_id !== eventIdParam
-            ) {
-                continue;
-            }
-
-            // ============================================
-            // BUILD FILTERED PROJECTION
-            // ============================================
-
-            let selectedColumns = [];
-
-            try {
-
-                selectedColumns =
-                    JSON.parse(
-                        config.selected_columns
-                    );
-
-            } catch (jsonErr) {
-
-                console.error(
-                    "MERS LIVE REG: Invalid JSON:",
-                    config.selected_columns
-                );
-
-                continue;
-            }
-
-            const filteredData = {};
-
-
-          selectedColumns.forEach(col => {
-
-    const normalizedKey =
-        col.replace(/^extra_/, "");
-
-    filteredData[col] =
-        formData[col] ??
-        formData[normalizedKey] ??
-        "";
-
-});
-
-
-
-
-
-
-          
-
-            // Always preserve registration_id
-            filteredData.registration_id =
-                formData.registration_id;
-
-            // ============================================
-            // WRITE TO FIREBASE
-            // ============================================
-
-            const projectionPath =
-                'liveRegData/' +
-                eventIdParam +
-                '/' +
-                config.team_name +
-                '/' +
-                formData.registration_id;
-
-
-
-
-      await db.ref(projectionPath)
-.set(filteredData);
-
-console.log(
- "MERS LIVE REG: Updated:",
- projectionPath
-);
-
-    }
-
-}
-
-} catch (err) {
-
-
-
-
-
-      
-      
-
-      
-
-
-      
-
-        console.error(
-            "MERS LIVE REG ERROR:",
-            err
-        );
-    }
-}
+      // =====================================================
+      // DECREMENT OLD COUNTER
+      // =====================================================
   
+      if (oldCounterPath) {
   
-function manualFormatCheck() {
-  const emailInput = document.getElementById('inp-email');
-  const emailVal = emailInput.value.trim(); 
-  const vBtn = document.getElementById('vbtn-email');
-  const checkBtn = document.getElementById('vcheck-email');
-  const msg = document.getElementById('vmsg-email');
-
-  const strictRegex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,6}$/;
-
-  if (strictRegex.test(emailVal)) {
-    checkBtn.style.display = 'none';
-    vBtn.style.display = 'block';
-    vBtn.innerText = `Format accepted, click here to send verification code to ${emailVal}`;
-    emailInput.style.border = '1px solid #ced4da';
-    if (msg) {
-      msg.innerText = "Format Accepted ✅";
-      msg.style.color = "#2e7d32";
-      msg.style.display = "block";
-    }
-  } else {
-    let errorNote = "Please check for typos or extra characters.";
-    if (!emailVal.includes("@")) errorNote = "Missing '@' symbol.";
-    else if (!emailVal.includes(".")) errorNote = "Missing a dot (e.g., .com).";
-    else if (/\s/.test(emailVal)) errorNote = "Spaces are not allowed within the email.";
-
-    alert("❌ FORMAT ISSUE\n\n" + errorNote);
-    vBtn.style.display = 'none';
-    emailInput.style.border = '2px solid red';
-    emailInput.focus();
+          await db.ref(oldCounterPath)
+          .transaction((current) => {
+  
+              current = current || 0;
+  
+              return current > 0
+                  ? current - 1
+                  : 0;
+          });
+  
+          console.log(
+              "MERS EDIT: Old allocation released:",
+              oldCounterPath
+          );
+      }
   }
-}
-
-
-  function getMaskedDisplayValue(fieldId, value) {
-
-    if (!value) return value;
-
-    // ============================================
-    // MOBILE MASKING
-    // ============================================
-
-    if (
-        fieldId === 'mobile' ||
-        fieldId === 'ext_mobile'
-    ) {
-
-        value = String(value);
-
-        return (
-            value.substring(0, 2) +
-            "XXXXXX" +
-            value.substring(value.length - 2)
-        );
-    }
-
-    // ============================================
-    // EMAIL MASKING
-    // ============================================
-
-    if (
-        fieldId === 'email' ||
-        fieldId === 'ext_email'
-    ) {
-
-        const parts =
-            value.split('@');
-
-        if (parts.length === 2) {
-
-            return (
-                parts[0].substring(0, 3) +
-                "*****@" +
-                parts[1]
-            );
-        }
-    }
-
-    return value;
-}
-
-
-
-
   
-async function loadExistingData(regId, mode) {
-    console.log(`[DIAGNOSTIC] loadExistingData started for ID: ${regId}`);
-    try {
-        const urlParams = new URLSearchParams(window.location.search);
-        const eventIdParam = urlParams.get('id') || "EVT001"; // Fetch current event ID
-
-        // PATH A: Check the Master Internal DB (This uses unique push keys)
-        let snap = await db.ref('masters/Master_Internal_DB/' + regId).once('value');
-        let data = snap.val();
-
-        // PATH B: Check the Event-Specific registrations folder (MERS FOLDER LOGIC)
-        if (!data) {
-            console.log(`MERS: Checking folder: registrations/${eventIdParam}/${regId}`);
-            snap = await db.ref('registrations/' + eventIdParam + '/' + regId).once('value');
-            data = snap.val();
-        }
-
-        // PATH C: FALLBACK (Check root registrations just in case of old legacy data)
-        if (!data) {
-            console.log("MERS: Checking root registrations fallback...");
-            snap = await db.ref('registrations/' + regId).once('value');
-            data = snap.val();
-        }
-
-        if (!data) {
-            console.error("MERS: Registration REALLY not found for ID: " + regId);
-            // Professional UI Error instead of a simple alert
-            const initLoading = document.getElementById('loading-init');
-            if (initLoading) {
-                initLoading.innerHTML = `
-                    <div style="border: 2px solid #cc0000; padding: 20px; background: #fff5f5; border-radius: 8px; text-align: center;">
-                        <h3 style="color: #cc0000;">Registration Not Found</h3>
-                        <p>We could not find ID: <strong>${regId}</strong></p>
-                        <p>Please ensure you are using the correct link from your email.</p>
-                    </div>`;
-            }
-            return;
-        }
-
-        // --- SUCCESS: DATA FOUND ---
-        originalData = data;
-        // Note: Use encodeURIComponent for safety, but we are moving away from snapshot logic
-        profileSnapshotForScript = encodeURIComponent(JSON.stringify(data));
-
-        if (mode === 'edit') {
-            renderForm(); 
-
+  // =====================================================
+  // EDIT MODE → ASSIGN NEW ACCOMMODATION
+  // =====================================================
+  
+  if (mode === 'edit') {
+  
+      console.log(
+          "MERS EDIT: Assigning NEW accommodation..."
+      );
+  
+      // =====================================================
+      // CONFIRMED COUNTER
+      // =====================================================
+  
+  // =====================================================
+  // RECALCULATE LIVE AVAILABILITY
+  // =====================================================
+  
+  const latestAvailability =
+      await getStayAvailability(
+          eventIdParam,
+          selectedGender
+      );
+  
+  console.log(
+      "MERS EDIT: Latest availability after release:",
+      latestAvailability
+  );
+  
+  // =====================================================
+  // DETERMINE LIVE STATUS
+  // =====================================================
+  
+  
+    
+  const wantsRoom =
+    stayInfo.type === "room";
+  
+    if (!stayInfo.type) {
+  
+      console.log(
+          "MERS EDIT: Outside stay detected. No accommodation counter update required."
+      );
+  
+      stayAllocationCode =
+          "OUTSIDE-STAY";
+  }
+  
+  
+    
+  // =====================================================
+  // ROOM LOGIC
+  // =====================================================
+  
+   // if (wantsRoom) {
+  
+     else if (wantsRoom) {
+  
+      // ROOM AVAILABLE
+      if (latestAvailability.roomSeats > 0) {
+  
+          const confirmResult =
+              await db.ref(confirmedCounterPath)
+              .transaction((current) => {
+  
+                  return (current || 0) + 1;
+  
+              });
+  
+          const confirmCount =
+              confirmResult.snapshot.val();
+  
+          stayAllocationCode =
+              `ROOM-CONFIRM#${confirmCount}`;
+  
+          console.log(
+              "MERS EDIT: Assigned ROOM CONFIRM:",
+              stayAllocationCode
+          );
+  
+      }
+  
+      // ROOM WAITLIST
+      else {
+  
+          const waitlistResult =
+              await db.ref(waitlistCounterPath)
+              .transaction((current) => {
+  
+                  return (current || 0) + 1;
+  
+              });
+  
+          const waitlistCount =
+              waitlistResult.snapshot.val();
+  
+          stayAllocationCode =
+              `ROOM-WAITLIST#${waitlistCount}`;
+  
+          console.log(
+              "MERS EDIT: Assigned ROOM WAITLIST:",
+              stayAllocationCode
+          );
+      }
+  }
+  
+  // =====================================================
+  // DORM LOGIC
+  // =====================================================
+  
+  else {
+  
+      // DORM AVAILABLE
+      if (latestAvailability.dormSeats > 0) {
+  
+          const confirmResult =
+              await db.ref(confirmedCounterPath)
+              .transaction((current) => {
+  
+                  return (current || 0) + 1;
+  
+              });
+  
+          const confirmCount =
+              confirmResult.snapshot.val();
+  
+          stayAllocationCode =
+              `DORM-CONFIRM#${confirmCount}`;
+  
+          console.log(
+              "MERS EDIT: Assigned DORM CONFIRM:",
+              stayAllocationCode
+          );
+  
+      }
+  
+      // DORM WAITLIST
+      else {
+  
+          const waitlistResult =
+              await db.ref(waitlistCounterPath)
+              .transaction((current) => {
+  
+                  return (current || 0) + 1;
+  
+              });
+  
+          const waitlistCount =
+              waitlistResult.snapshot.val();
+  
+          stayAllocationCode =
+              `DORM-WAITLIST#${waitlistCount}`;
+  
+          console.log(
+              "MERS EDIT: Assigned DORM WAITLIST:",
+              stayAllocationCode
+          );
+      }
+  }
+  
+    }
+  // --- STEP 4: SAVE DATA & CONDITIONAL COUNTER ---
+          if (mode === 'new') {
+              console.log("MERS: Processing counters for Event:", eventIdParam);
+  
+              // A. ID Sequence (Unique Serial - Never goes down)
+              const counterRef = db.ref('counters/' + eventIdParam);
+              const transactionResult = await counterRef.transaction((v) => (v || 0) + 1);
+  
+              if (transactionResult.committed) {
+                  const paddedCount = String(transactionResult.snapshot.val()).padStart(3, '0');
+                  const idParts = formData.registration_id.split('-');
+                  idParts[idParts.length - 1] = paddedCount;
+                  formData.registration_id = idParts.join('-');
+                  console.log("MERS: New ID assigned:", formData.registration_id);
+              }
+  
+              // B. ACTIVE SEATS (Capacity Control - Created/Updated here)
+              try {
+                 
+                
+                const activeSeatsRef = db.ref('active_seats/' + eventIdParam);
+  
+  const activeResult = await activeSeatsRef.transaction((current) => {
+      return (current || 0) + 1;
+  });
+  
+  
+  
+                
+                  console.log("MERS: active_seats incremented successfully.");
+  
+  
+                // ===== CONFIRMED ACCOMMODATION COUNTER UPDATE =====
+  
+  
+  if (confirmedCounterPath) {
+  
+      const confirmResult =
+        await db.ref(confirmedCounterPath)
+        .transaction((current) => {
+  
+          return (current || 0) + 1;
+  
+        });
+  
+      const confirmCount =
+        confirmResult.snapshot.val();
+  
+      // =====================================================
+      // BUILD STAY ALLOCATION CODE
+      // =====================================================
+  
+     const stayLabel =
+        stayInfo.type === "room"
+        ? "ROOM"
+        : "DORM";
+  
+      stayAllocationCode =
+        `${stayLabel}-CONFIRM#${confirmCount}`;
+  
+      console.log(
+        "MERS: stayAllocationCode =",
+        stayAllocationCode
+      );
+  
+      console.log(
+        "MERS: confirmed accommodation counter incremented."
+      );
+  }
+                
+                
+  
+  
+                
+  // ===== WAITLIST COUNTER INCREMENT =====
+  
+  if (waitlistCounterPath) {
+  
+      const waitlistResult =
+        await db.ref(waitlistCounterPath)
+        .transaction((current) => {
+  
+          return (current || 0) + 1;
+  
+        });
+  
+      const waitlistCount =
+        waitlistResult.snapshot.val();
+  
+      // =====================================================
+      // BUILD STAY ALLOCATION CODE
+      // =====================================================
+  
+     const stayLabel =
+        stayInfo.type === "room"
+        ? "ROOM"
+        : "DORM";
+  
+    
+      stayAllocationCode =
+        `${stayLabel}-WAITLIST#${waitlistCount}`;
+  
+      console.log(
+        "MERS: stayAllocationCode =",
+        stayAllocationCode
+      );
+  
+      console.log(
+        "MERS: waitlist counter incremented."
+      );
+  }
+  
+  
+                            
+  for (const path of counterPaths) {
+  
+      const refObj = db.ref(path + eventIdParam);
+  
+      const snap = await refObj.once('value');
+  
+      if (!snap.exists()) {
+          await refObj.set(0);
+          console.log("MERS: initialized ->", path + eventIdParam);
+      }
+  }
+  
+  
+                
+  
+                console.log("STEP-1 PASSED");
+  
+  console.log("eventConfig.final_html exists?", !!eventConfig.final_html);
+  
+  console.log("About to call showSuccessScreen()");
+  
+                console.log("TYPE OF showSuccessScreen:", typeof showSuccessScreen);
+  
+  showSuccessScreen();
+  
+  
+                
+              } catch (seatErr) {
+                  console.error("MERS: active_seats transaction failed:", seatErr);
+              }
+          }
+  
+  
+  // =====================================================
+  // SAVE FINAL STAY ALLOCATION CODE
+  // =====================================================
+  
+  formData.stay_allocation_code =
+    stayAllocationCode;
+  
+  
+  
+  
+  
+        
+          await db.ref('registrations/' + eventIdParam + '/' + formData.registration_id).set(formData);
+  
+        await updateLiveRegDataProjection(
+      formData,
+      eventIdParam
+  );
+  
+        
+  
+          // --- STEP 5: UI TRANSITION ---
+          ['Section1', 'Section2', 'Section3', 'btn-next-action', 'btn-back-to-profile'].forEach(id => {
+              const el = document.getElementById(id);
+              if (el) el.style.display = 'none';
+          });
           
+          if (document.querySelector('.event-header')) document.querySelector('.event-header').style.display = 'none';
+  
+      
+  
+          const contentDiv = document.getElementById('success-content');
+  
+       
+          if (contentDiv) {
+  
+            const finalHTML = (typeof eventConfig !== 'undefined' && eventConfig.final_html) 
+      ? eventConfig.final_html 
+      : "<h2>Registration Successful!</h2>";
+  
+   contentDiv.innerHTML = finalHTML;
+  
+  
+  
+            
+          }
+  
+          document.getElementById('success-screen').style.display = 'block';
+          if (overlay) overlay.style.display = 'none';
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+  
+          // --- TRIGGER EMAIL ---
+          if (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) {
+              const emailUrl = `${SCRIPT_URL}?action=sendEmail&regId=${encodeURIComponent(formData.registration_id)}&eventId=${eventIdParam}`;
+             // fetch(emailUrl).catch(err => console.error("Email failed:", err));
+  
+            fetch(emailUrl, {
+      mode: 'no-cors'
+  }).catch(err => console.error("Email failed:", err));
+          }
+          
+      } catch (error) {
+          console.error("CRASH:", error);
+          alert("Save Failed: " + error.message);
+          if (document.getElementById('processing-overlay')) {
+              document.getElementById('processing-overlay').style.display = 'none';
+          }
+      }
+  }
+  
+  
+    async function updateLiveRegDataProjection(
+      formData,
+      eventIdParam
+  ) {
+  
+      try {
+  
+          console.log(
+              "MERS LIVE REG: Projection update started..."
+          );
+  
+          // ============================================
+          // READ CONFIG
+          // ============================================
+  
+          const configSnap =
+              await db.ref(
+                  'config/liveRegData'
+              ).once('value');
+  
+          if (!configSnap.exists()) {
+  
+              console.log(
+                  "MERS LIVE REG: No config found."
+              );
+  
+              return;
+          }
+  
+          const allConfigs =
+              configSnap.val();
+  
+          // ============================================
+          // LOOP CONFIGS
+          // ============================================
+  
+  
+  
+        for (const eventKey in allConfigs) {
+  
+      const teamConfigs =
+          allConfigs[eventKey] || {};
+  
+      for (const teamKey in teamConfigs) {
+  
+          const config =
+              teamConfigs[teamKey];
+  
+            
+  
+              // Skip inactive rows
+              if (
+                  String(config.is_active)
+                  .toUpperCase() !== "YES"
+              ) {
+                  continue;
+              }
+  
+              // Skip other events
+              if (
+                  config.event_id !== eventIdParam
+              ) {
+                  continue;
+              }
+  
+              // ============================================
+              // BUILD FILTERED PROJECTION
+              // ============================================
+  
+              let selectedColumns = [];
+  
+              try {
+  
+                  selectedColumns =
+                      JSON.parse(
+                          config.selected_columns
+                      );
+  
+              } catch (jsonErr) {
+  
+                  console.error(
+                      "MERS LIVE REG: Invalid JSON:",
+                      config.selected_columns
+                  );
+  
+                  continue;
+              }
+  
+              const filteredData = {};
+  
+  
+            selectedColumns.forEach(col => {
+  
+      const normalizedKey =
+          col.replace(/^extra_/, "");
+  
+      filteredData[col] =
+          formData[col] ??
+          formData[normalizedKey] ??
+          "";
+  
+  });
+  
+  
+  
+  
+  
+  
+            
+  
+              // Always preserve registration_id
+              filteredData.registration_id =
+                  formData.registration_id;
+  
+              // ============================================
+              // WRITE TO FIREBASE
+              // ============================================
+  
+              const projectionPath =
+                  'liveRegData/' +
+                  eventIdParam +
+                  '/' +
+                  config.team_name +
+                  '/' +
+                  formData.registration_id;
+  
+  
+  
+  
+        await db.ref(projectionPath)
+  .set(filteredData);
+  
+  console.log(
+   "MERS LIVE REG: Updated:",
+   projectionPath
+  );
+  
+      }
+  
+  }
+  
+  } catch (err) {
+  
+  
+  
+  
+  
+        
+        
+  
+        
+  
+  
+        
+  
+          console.error(
+              "MERS LIVE REG ERROR:",
+              err
+          );
+      }
+  }
+    
+    
+  function manualFormatCheck() {
+    const emailInput = document.getElementById('inp-email');
+    const emailVal = emailInput.value.trim(); 
+    const vBtn = document.getElementById('vbtn-email');
+    const checkBtn = document.getElementById('vcheck-email');
+    const msg = document.getElementById('vmsg-email');
+  
+    const strictRegex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,6}$/;
+  
+    if (strictRegex.test(emailVal)) {
+      checkBtn.style.display = 'none';
+      vBtn.style.display = 'block';
+      vBtn.innerText = `Format accepted, click here to send verification code to ${emailVal}`;
+      emailInput.style.border = '1px solid #ced4da';
+      if (msg) {
+        msg.innerText = "Format Accepted ✅";
+        msg.style.color = "#2e7d32";
+        msg.style.display = "block";
+      }
+    } else {
+      let errorNote = "Please check for typos or extra characters.";
+      if (!emailVal.includes("@")) errorNote = "Missing '@' symbol.";
+      else if (!emailVal.includes(".")) errorNote = "Missing a dot (e.g., .com).";
+      else if (/\s/.test(emailVal)) errorNote = "Spaces are not allowed within the email.";
+  
+      alert("❌ FORMAT ISSUE\n\n" + errorNote);
+      vBtn.style.display = 'none';
+      emailInput.style.border = '2px solid red';
+      emailInput.focus();
+    }
+  }
+  
+  
+    function getMaskedDisplayValue(fieldId, value) {
+  
+      if (!value) return value;
+  
+      // ============================================
+      // MOBILE MASKING
+      // ============================================
+  
+      if (
+          fieldId === 'mobile' ||
+          fieldId === 'ext_mobile'
+      ) {
+  
+          value = String(value);
+  
+          return (
+              value.substring(0, 2) +
+              "XXXXXX" +
+              value.substring(value.length - 2)
+          );
+      }
+  
+      // ============================================
+      // EMAIL MASKING
+      // ============================================
+  
+      if (
+          fieldId === 'email' ||
+          fieldId === 'ext_email'
+      ) {
+  
+          const parts =
+              value.split('@');
+  
+          if (parts.length === 2) {
+  
+              return (
+                  parts[0].substring(0, 3) +
+                  "*****@" +
+                  parts[1]
+              );
+          }
+      }
+  
+      return value;
+  }
+  
+  
+  
+  
+    
+  async function loadExistingData(regId, mode) {
+      console.log(`[DIAGNOSTIC] loadExistingData started for ID: ${regId}`);
+      try {
+          const urlParams = new URLSearchParams(window.location.search);
+          const eventIdParam = urlParams.get('id') || "EVT001"; // Fetch current event ID
+  
+          // PATH A: Check the Master Internal DB (This uses unique push keys)
+          let snap = await db.ref('masters/Master_Internal_DB/' + regId).once('value');
+          let data = snap.val();
+  
+          // PATH B: Check the Event-Specific registrations folder (MERS FOLDER LOGIC)
+          if (!data) {
+              console.log(`MERS: Checking folder: registrations/${eventIdParam}/${regId}`);
+              snap = await db.ref('registrations/' + eventIdParam + '/' + regId).once('value');
+              data = snap.val();
+          }
+  
+          // PATH C: FALLBACK (Check root registrations just in case of old legacy data)
+          if (!data) {
+              console.log("MERS: Checking root registrations fallback...");
+              snap = await db.ref('registrations/' + regId).once('value');
+              data = snap.val();
+          }
+  
+          if (!data) {
+              console.error("MERS: Registration REALLY not found for ID: " + regId);
+              // Professional UI Error instead of a simple alert
+              const initLoading = document.getElementById('loading-init');
+              if (initLoading) {
+                  initLoading.innerHTML = `
+                      <div style="border: 2px solid #cc0000; padding: 20px; background: #fff5f5; border-radius: 8px; text-align: center;">
+                          <h3 style="color: #cc0000;">Registration Not Found</h3>
+                          <p>We could not find ID: <strong>${regId}</strong></p>
+                          <p>Please ensure you are using the correct link from your email.</p>
+                      </div>`;
+              }
+              return;
+          }
+  
+          // --- SUCCESS: DATA FOUND ---
+          originalData = data;
+          // Note: Use encodeURIComponent for safety, but we are moving away from snapshot logic
+          profileSnapshotForScript = encodeURIComponent(JSON.stringify(data));
+  
+          if (mode === 'edit') {
+              renderForm(); 
+  
+            
+  
+              fieldRules.forEach(r => {
+                  const el = document.getElementById(`inp-${r.field_id}`);
+                  if (el && data[r.field_id] !== undefined) {
+  
+  
+                 //  el.value = data[r.field_id];
+  
+  
+  
+                    el.value = data[r.field_id];
+  
+  // ============================================
+  // MASK ONLY LOCKED DISPLAY
+  // ============================================
 
-            fieldRules.forEach(r => {
-                const el = document.getElementById(`inp-${r.field_id}`);
-                if (el && data[r.field_id] !== undefined) {
-
-
-               //  el.value = data[r.field_id];
-
-
-
-                  el.value = data[r.field_id];
-
-// ============================================
-// MASK ONLY LOCKED DISPLAY
-// ============================================
 
 if (
     ['mobile', 'email']
@@ -2633,37 +2634,54 @@ if (
     el.dataset.originalValue =
         data[r.field_id];
 
+    // ============================================
+    // STORE MASKED VERSION ALSO
+    // ============================================
+
+    if (r.field_id === 'mobile') {
+
+        el.dataset.maskedValue =
+            maskMobile(
+                data[r.field_id]
+            );
+    }
+
+    if (r.field_id === 'email') {
+
+        el.dataset.maskedValue =
+            maskEmail(
+                data[r.field_id]
+            );
+    }
+
+    // ============================================
+    // DISPLAY MASKED VALUE ONLY
+    // ============================================
+
     if (el.disabled) {
 
-        if (r.field_id === 'mobile') {
-
-            el.value =
-                maskMobile(
-                    data[r.field_id]
-                );
-
-        }
-
-        if (r.field_id === 'email') {
-
-            el.value =
-                maskEmail(
-                    data[r.field_id]
-                );
-        }
+        el.value =
+            el.dataset.maskedValue;
     }
 }
-                  
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
                     // Lock core identity fields in Edit Mode
-                    if (['full_name', 'mobile', 'email'].includes(r.field_id)) {
-                        el.disabled = true;
-                        el.style.background = "#f9f9f9";
-                    }
-                }
-            });
-
-
-          // =====================================================
+                      if (['full_name', 'mobile', 'email'].includes(r.field_id)) {
+                          el.disabled = true;
+                          el.style.background = "#f9f9f9";
+                      }
+                  }
+              });
+  
+  
+            // =====================================================
 // MERS: TRIGGER SECTION 2 REACTIVE FLOW IN EDIT MODE
 // =====================================================
 
