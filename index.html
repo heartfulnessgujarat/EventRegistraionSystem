@@ -1232,6 +1232,37 @@ async function handleSectionNavigation() {
 }
 
 
+function maskMobile(mobile) {
+ if (!mobile) return "";
+
+ mobile = String(mobile).trim();
+
+ if (mobile.length < 4) return mobile;
+
+ return mobile.substring(0, 2) +
+        "XXXXXX" +
+        mobile.substring(mobile.length - 2);
+}
+
+function maskEmail(email) {
+ if (!email || !email.includes("@")) return email;
+
+ const parts = email.split("@");
+ const name = parts[0];
+ const domain = parts[1];
+
+ if (name.length <= 3) {
+   return name.charAt(0) + "***@" + domain;
+ }
+
+ return name.substring(0, 3) +
+        "*****@" +
+        domain;
+}  
+
+
+
+  
   
 async function submitData() {
     console.log("%c [DIAGNOSTIC] submitData started! ", "background: #222; color: #bada55; font-size: 14px;");
@@ -1264,7 +1295,19 @@ async function submitData() {
             country: getFreshVal('country')
         };
 
+// =====================================================
+// MASKED VALUES FOR EMAIL COMMUNICATION
+// =====================================================
 
+const maskedMobile =
+ maskMobile(updatedSection1.mobile);
+
+const maskedEmail =
+ maskEmail(updatedSection1.email);
+
+
+
+      
 
       // =====================================================
 // PROFILE CHANGE AUDIT
@@ -1391,6 +1434,19 @@ if (changedFields.length > 0) {
         formData.registration_id = finalRegId;
         formData.event_id = eventIdParam;
         formData.timestamp = new Date().toLocaleString();
+
+// =====================================================
+// MASKED VALUES FOR EMAIL COMMUNICATION
+// =====================================================
+
+formData.masked_mobile = maskedMobile;
+formData.masked_email = maskedEmail;
+
+
+
+
+
+      
      //   formData.registration_status = (mode === 'new') ? "CONFIRMED" : "EDITED ON " + new Date().toLocaleString();
 
       formData.registration_status =
