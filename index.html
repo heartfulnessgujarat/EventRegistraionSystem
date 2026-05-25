@@ -2391,29 +2391,7 @@ async function loadExistingData(regId, mode) {
                 if (el && data[r.field_id] !== undefined) {
 
 
-                  if (r.field_id === 'mobile') {
-
-    el.value =
-        maskMobile(
-            data[r.field_id]
-        );
-
-} else if (
-    r.field_id === 'email'
-) {
-
-    el.value =
-        maskEmail(
-            data[r.field_id]
-        );
-
-} else {
-
-    el.value =
-        data[r.field_id];
-}
-
-
+                 el.value = data[r.field_id];
                   
                     // Lock core identity fields in Edit Mode
                     if (['full_name', 'mobile', 'email'].includes(r.field_id)) {
