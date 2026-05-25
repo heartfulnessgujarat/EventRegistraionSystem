@@ -1244,14 +1244,23 @@ let compareValue = input.value;
 // USE ORIGINAL VALUE FOR MASKED FIELDS
 // ============================================
 
+
 if (
+
+    input.disabled &&
+
     ['mobile', 'email']
     .includes(r.field_id) &&
+
     input.dataset.originalValue
+
 ) {
+
     compareValue =
         input.dataset.originalValue;
 }
+   
+        
 
 let isChanged =
     compareValue !==
