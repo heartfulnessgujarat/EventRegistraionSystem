@@ -1524,25 +1524,9 @@ async function submitData() {
         const updatedSection1 = {
             full_name: getFreshVal('full_name'),
 
-          email:
-    document.getElementById('email')
-        .dataset.originalValue ||
-
-    getFreshVal('email'),
-
-mobile:
-    document.getElementById('mobile')
-        .dataset.originalValue ||
-
-    getFreshVal('mobile'),
-
-
           
-
-          
-          
-
-
+          email: getFreshVal('email'),
+mobile: getFreshVal('mobile'),
 
           
             organization: getFreshVal('organization'),
