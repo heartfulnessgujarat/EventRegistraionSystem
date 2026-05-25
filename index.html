@@ -1318,8 +1318,62 @@ else if (type === 'mobile') {
   
     async function verifyCodeInput(type, code) {
       if (code.length === 6) {
-        const emailKey = ((type === 'email') ? document.getElementById('inp-email').value : originalData['email']).replace(/[.#$[\]]/g, "_");
-        const snap = await db.ref("verificationCodes/" + emailKey).once('value');
+
+
+        
+      //  const emailKey = ((type === 'email') ? document.getElementById('inp-email').value : originalData['email']).replace(/[.#$[\]]/g, "_");
+   
+     //   const snap = await db.ref("verificationCodes/" + emailKey).once('value');
+
+
+
+
+        let verifyKey = "";
+
+if (type === 'email') {
+
+  verifyKey =
+    document.getElementById('inp-email')
+    .value
+    .replace(/[.#$[\]]/g, "_");
+
+}
+
+else if (type === 'mobile') {
+
+  verifyKey =
+    "mobile_" +
+    document.getElementById('inp-mobile')
+    .value
+    .trim();
+
+}
+
+const snap =
+  await db.ref("verificationCodes/" + verifyKey).once('value');
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+
+
+        
         const data = snap.val();
         const msg = document.getElementById(`vmsg-${type}`);
         const panel = document.getElementById(`panel-${type}`);
