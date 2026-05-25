@@ -1162,7 +1162,9 @@ function selectParticipant(p) {
   }
    
       
-    function sendCode(type) {
+ 
+  async function sendCode(type) {
+    
       verificationAttempts[type] = 0;
       const msg = document.getElementById(`vmsg-${type}`);
       if (msg) msg.style.display = "none";
