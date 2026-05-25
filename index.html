@@ -1321,34 +1321,93 @@ else {
             'none';
     }
 }
-        
        
-
-
-
-        
-
-        if (r.field_id === 'email' || r.field_id === 'mobile') {
+         if (r.field_id === 'email' || r.field_id === 'mobile') {
           const panel = document.getElementById(`panel-${r.field_id}`);
           const vBtn = document.getElementById(`vbtn-${r.field_id}`);
           const msg = document.getElementById(`vmsg-${r.field_id}`);
 
-          if (verificationStates[r.field_id]) {
-            if (msg) msg.style.display = 'block'; 
-            if (panel) panel.style.display = 'none';
-          } 
-          else if (isValid && isChanged) {
-            vBtn.innerText = `Click here to send Verification Code to ${input.value}`;
-            panel.style.display = 'block';
-            if (msg) msg.style.display = 'none';
-            allValid = false;
-          } 
-          else {
-            if (panel) panel.style.display = 'none';
-            if (!isChanged && msg) msg.style.display = 'none';
-          }
-        }
+
+
+
+
+
+
+// =====================================================
+// MASKED + LOCKED STATE
+// =====================================================
+
+const isMaskedLockedField =
+
+  input.disabled &&
+
+  input.dataset.originalValue &&
+
+  (
+    r.field_id === 'mobile' ||
+    r.field_id === 'email'
+  );
+
+if (isMaskedLockedField) {
+
+  if (panel)
+    panel.style.display = 'none';
+
+  if (msg)
+    msg.style.display = 'none';
+}
+
+// =====================================================
+// VERIFIED STATE
+// =====================================================
+
+else if (verificationStates[r.field_id]) {
+
+  if (msg)
+    msg.style.display = 'block';
+
+  if (panel)
+    panel.style.display = 'none';
+}
+
+// =====================================================
+// NEEDS VERIFICATION
+// =====================================================
+
+else if (isValid && isChanged) {
+
+  vBtn.innerText =
+    `Click here to send Verification Code to ${input.value}`;
+
+  panel.style.display = 'block';
+
+  if (msg)
+    msg.style.display = 'none';
+
+  allValid = false;
+}
+
+// =====================================================
+// DEFAULT
+// =====================================================
+
+else {
+
+  if (panel)
+    panel.style.display = 'none';
+
+  if (!isChanged && msg)
+    msg.style.display = 'none';
+}
+          
+         
+
+
         
+
+
+        
+          
         if (input.value.trim() === "" && r.initial_state === 'Visible') allValid = false;
       }
     });
