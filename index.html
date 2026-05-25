@@ -1236,7 +1236,28 @@ function checkAllValidations() {
       const errDiv = document.getElementById(`err-${r.field_id}`);
       if (input) {
         let isValid = validateField(r.field_id, input.value, r.field_validation);
-        let isChanged = input.value !== (originalData[r.field_id] || "");
+      //  let isChanged = input.value !== (originalData[r.field_id] || "");
+
+let compareValue = input.value;
+
+// ============================================
+// USE ORIGINAL VALUE FOR MASKED FIELDS
+// ============================================
+
+if (
+    ['mobile', 'email']
+    .includes(r.field_id) &&
+    input.dataset.originalValue
+) {
+    compareValue =
+        input.dataset.originalValue;
+}
+
+let isChanged =
+    compareValue !==
+    (originalData[r.field_id] || "");
+
+        
         
         if (!isValid && input.value.trim() !== "") {
           input.style.border = '2px solid red';
