@@ -1201,8 +1201,24 @@ else if (type === 'mobile') {
   const mobileInput =
     document.getElementById('inp-mobile').value.trim();
 
-  const otp =
-    Math.floor(100000 + Math.random() * 900000).toString();
+ // =====================================================
+// GENERATE VERIFICATION TICKET
+// =====================================================
+
+// event_code already loaded from Firebase/eventConfig
+const eventCode = eventConfig.event_code || "VC";
+
+// Generate random number between 1 and 99
+const randomNumber = Math.floor(Math.random() * 99) + 1;
+
+// Convert to 2-digit format
+const paddedNumber = String(randomNumber).padStart(2, "0");
+
+// Final ticket
+const verificationTicket = eventCode + paddedNumber;
+
+
+  console.log("Generated Ticket:", verificationTicket);
 
   // =====================================================
   // SAVE OTP IN FIREBASE
