@@ -1730,13 +1730,18 @@ if (
       // ============================================
 
 
-     if (
+    if (
 
     el.dataset.originalValue &&
 
-    el.value.includes('*')
+    el.dataset.maskedValue &&
 
-) {
+    el.value === el.dataset.maskedValue
+
+)
+     
+     
+     {
   
           return el.dataset.originalValue.trim();
       }
