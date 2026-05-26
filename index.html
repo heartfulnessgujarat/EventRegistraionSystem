@@ -1011,6 +1011,8 @@ function selectParticipant(p) {
   
           el.value =
               maskMobile(masterValue);
+        el.dataset.maskedValue =
+        el.value;
       }
 
 
@@ -1298,7 +1300,7 @@ console.log(eventConfig);
     }
   
     async function verifyCodeInput(type, code) {
-      if (code.length === 6) {
+      if (   (type === 'email' && code.trim().length === 6) ||   (type === 'mobile' && code.trim().length >= 4) ) {
 
 
         
