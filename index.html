@@ -1344,7 +1344,53 @@ const snap =
         const msg = document.getElementById(`vmsg-${type}`);
         const panel = document.getElementById(`panel-${type}`);
         const codeInp = document.getElementById(`code-${type}`);
-        if (data && data.verification_ticket === code && (new Date().getTime() - data.timestamp < 300000)) {
+
+
+
+        
+     //   if (data && data.verification_ticket === code && (new Date().getTime() - data.timestamp < 300000)) {
+
+        let matched = false;
+
+// =====================================================
+// EMAIL VERIFICATION
+// =====================================================
+
+if (
+  type === 'email' &&
+  data &&
+  data.code === code
+) {
+
+  matched = true;
+}
+
+// =====================================================
+// MOBILE VERIFICATION
+// =====================================================
+
+if (
+  type === 'mobile' &&
+  data &&
+  data.verification_ticket === code
+) {
+
+  matched = true;
+}
+
+// =====================================================
+// FINAL VALIDATION
+// =====================================================
+
+if (
+  matched &&
+  (new Date().getTime() - data.timestamp < 300000)
+) {
+
+
+
+
+          
           msg.innerText = "Verified ✅"; msg.style.color = "#2e7d32"; msg.style.display = "block";
           if (panel) panel.style.display = "none";
           document.getElementById(`inp-${type}`).disabled = true;
