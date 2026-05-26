@@ -1012,12 +1012,27 @@ function selectParticipant(p) {
           el.value =
               maskMobile(masterValue);
       }
-  
-      if (r.field_id === 'email') {
-  
-          el.value =
-              maskEmail(masterValue);
-      }
+
+
+
+
+
+    if (r.field_id === 'email') {
+
+    el.value =
+        maskEmail(masterValue);
+
+    el.dataset.maskedValue =
+        el.value;
+}
+
+
+
+
+
+
+
+    
   }
         
         // Sync to originalData for change tracking
