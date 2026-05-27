@@ -1272,26 +1272,25 @@ console.log(eventConfig);
 
 //  );
 
+fetch(
 
-  db.ref("whatsapp_queue").push({
+ `${SCRIPT_URL}?action=sendWhatsAppOTP&mobile=${mobileInput}&ticket=${verificationTicket}&eventTitle=${eventConfig.event_code}`,
 
-    mobile:
-        mobileInput,
+ {
 
-    ticket:
-        verificationTicket,
+   method: "GET",
 
-    eventTitle:
-       // eventConfig[event_id].event_code,
+   mode: "no-cors"
 
-      eventConfig.event_code,
+ }
 
-    status:
-        "PENDING",
+);
 
-    created_at:
-        Date.now()
-});
+
+
+
+
+  
 
 }
       
