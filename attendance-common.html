@@ -1,1 +1,585 @@
+<!DOCTYPE html>
+<html>
+<head>
 
+<meta charset="UTF-8">
+
+<title>MERS Attendance</title>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<style>
+
+body{
+    font-family: Arial;
+    text-align:center;
+    padding:40px;
+    background:#f4f4f4;
+}
+
+.card{
+    background:white;
+    padding:30px;
+    border-radius:12px;
+    max-width:500px;
+    margin:auto;
+    box-shadow:0 2px 10px rgba(0,0,0,0.1);
+}
+
+.success{
+    color:green;
+    font-size:24px;
+    font-weight:bold;
+}
+
+.error{
+    color:red;
+    font-size:22px;
+    font-weight:bold;
+}
+
+.small{
+    margin-top:15px;
+    color:#666;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="card">
+
+<div id="status">
+
+</div>
+
+<div style="margin-top:20px;">
+
+<input
+    type="text"
+    id="mobileInput"
+    placeholder="Enter Mobile Number"
+    style="
+        width:90%;
+        padding:12px;
+        font-size:16px;
+        margin-bottom:15px;
+    "
+>
+
+<br>
+
+<button
+    onclick="markAttendance()"
+    style="
+        padding:12px 20px;
+        font-size:16px;
+        cursor:pointer;
+    "
+>
+    Mark Attendance
+</button>
+
+</div>
+
+</div>
+
+    <script>
+
+// =====================================================
+// FIREBASE CONFIG
+// =====================================================
+
+const firebaseConfig = {
+    databaseURL:
+    "https://ferrari-reg-2026-default-rtdb.asia-southeast1.firebasedatabase.app"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const db =
+    firebase.database();
+
+// =====================================================
+// URL PARAMS
+// =====================================================
+
+const params =
+    new URLSearchParams(
+        window.location.search
+    );
+
+const eventId =
+    params.get("event");
+
+const token =
+    params.get("token");
+
+
+
+
+
+
+
+
+
+
+
+
+        
+
+// =====================================================
+// TOKEN AUTO ATTENDANCE
+// =====================================================
+
+if (token) {
+
+    document.getElementById(
+        "mobileInput"
+    ).style.display = "none";
+
+    document.querySelector(
+        "button"
+    ).style.display = "none";
+
+    verifyTokenAttendance();
+}
+
+// =====================================================
+// VERIFY TOKEN ATTENDANCE
+// =====================================================
+
+async function verifyTokenAttendance() {
+
+    
+    const statusDiv =
+
+document.getElementById(
+            "status"
+        );
+
+       
+
+    try {
+
+        // =====================================================
+        // LOAD TOKEN
+        // =====================================================
+
+        const tokenSnap =
+            await db.ref(
+                'attendance_tokens/' +
+                token.trim()
+            ).once('value');
+
+        if (!tokenSnap.exists()) {
+
+            statusDiv.innerHTML =
+
+            `
+            <div class="error">
+                Invalid Attendance Link
+            </div>
+            `;
+
+            return;
+        }
+
+        const tokenData =
+            tokenSnap.val();
+
+        const attendeeId =
+            tokenData.attendee_id;
+
+        const tokenEventId =
+            tokenData.event_id;
+
+        // =====================================================
+        // LOAD ATTENDEE
+        // =====================================================
+
+        const attendeeSnap =
+            await db.ref(
+                'attendee_registry/' +
+                tokenEventId +
+                '/' +
+                attendeeId
+            ).once('value');
+
+        if (!attendeeSnap.exists()) {
+
+            statusDiv.innerHTML =
+
+            `
+            <div class="error">
+                Attendee Not Found
+            </div>
+            `;
+
+            return;
+        }
+
+        const attendee =
+            attendeeSnap.val();
+
+
+        // =====================================================
+// LOAD EVENT CONFIG
+// =====================================================
+
+const configSnap =
+    await db.ref(
+        'config/eventConfig'
+    ).once('value');
+
+if (!configSnap.exists()) {
+
+    statusDiv.innerHTML =
+
+    `
+    <div class="error">
+        Event Config Missing
+    </div>
+    `;
+
+    return;
+}
+
+const configs =
+    configSnap.val();
+
+const eventConfig =
+    Object.values(configs).find(
+
+        cfg =>
+        cfg.event_id === tokenEventId
+    );
+
+if (!eventConfig) {
+
+    statusDiv.innerHTML =
+
+    `
+    <div class="error">
+        Event Config Not Found
+    </div>
+    `;
+
+    return;
+}
+
+// =====================================================
+// ATTENDANCE ENABLE CHECK
+// =====================================================
+
+const attendanceEnabled =
+    String(
+        eventConfig.attendance_enabled || ""
+    ).toUpperCase() === "TRUE";
+
+if (!attendanceEnabled) {
+
+    statusDiv.innerHTML =
+
+    `
+    <div class="error">
+        Self Attendance Disabled
+    </div>
+    `;
+
+    return;
+}
+
+// =====================================================
+// BUILD EVENT DATETIME
+// =====================================================
+
+const startDate =
+    eventConfig.event_start_date;
+
+const startTime =
+    eventConfig.event_start_time;
+
+const endDate =
+    eventConfig.event_end_date;
+
+const endTime =
+    eventConfig.event_end_time;
+
+// =====================================================
+// CONVERT DD-MMM-YY TO DATE
+// =====================================================
+
+function parseEventDate(dateStr, timeStr) {
+
+    const months = {
+
+        Jan: "01",
+        Feb: "02",
+        Mar: "03",
+        Apr: "04",
+        May: "05",
+        Jun: "06",
+        Jul: "07",
+        Aug: "08",
+        Sep: "09",
+        Oct: "10",
+        Nov: "11",
+        Dec: "12"
+    };
+
+    const parts =
+        dateStr.split("-");
+
+    const day =
+        parts[0];
+
+    const month =
+        months[
+            parts[1]
+        ];
+
+  const year =
+    parts[2].length === 2
+    ? "20" + parts[2]
+    : parts[2];
+    
+    return new Date(
+
+        `${year}-${month}-${day}T${timeStr}:00`
+    );
+}
+
+const eventStart =
+    parseEventDate(
+        startDate,
+        startTime
+    );
+
+const eventEnd =
+    parseEventDate(
+        endDate,
+        endTime
+    );
+
+// =====================================================
+// ATTENDANCE WINDOW
+// =====================================================
+
+const attendanceStart =
+    new Date(
+        eventStart.getTime() -
+        (2 * 60 * 60 * 1000)
+    );
+
+const attendanceEnd =
+    new Date(
+        eventEnd.getTime() +
+        (2 * 60 * 60 * 1000)
+    );
+
+const now =
+    new Date();
+
+// =====================================================
+// GOVERNANCE CHECK
+// =====================================================
+
+if (now < attendanceStart) {
+
+    statusDiv.innerHTML =
+
+    `
+    <div class="error">
+        Attendance Not Started Yet
+    </div>
+    `;
+
+    return;
+}
+
+if (now > attendanceEnd) {
+
+    statusDiv.innerHTML =
+
+    `
+    <div class="error">
+        Attendance Window Closed
+    </div>
+    `;
+
+    return;
+}
+
+      
+        // =====================================================
+        // WRITE ATTENDANCE LOG
+        // =====================================================
+
+        await db.ref(
+
+            'attendance_logs/' +
+            tokenEventId
+
+        ).push({
+
+            attendee_id:
+                attendeeId,
+
+            attendee_name:
+                attendee.full_name || "",
+
+            attendee_type:
+                attendee.attendee_type || "",
+
+            attendance_mode:
+                "SELF",
+
+            marked_at:
+                new Date().toISOString()
+        });
+
+        // =====================================================
+        // SUCCESS
+        // =====================================================
+
+        statusDiv.innerHTML =
+
+        `
+        <div class="success">
+            Attendance Marked
+        </div>
+
+        <div class="small">
+            ${attendee.full_name}
+        </div>
+
+        <div class="small">
+            ${attendee.attendee_type}
+        </div>
+        `;
+
+    } catch (err) {
+
+        console.error(err);
+
+        statusDiv.innerHTML =
+
+        `
+        <div class="error">
+            Attendance Failed
+        </div>
+        `;
+    }
+}
+
+// =====================================================
+// MANUAL MOBILE ATTENDANCE
+// =====================================================
+
+async function markAttendance() {
+
+    const statusDiv =
+        document.getElementById(
+            "status"
+        );
+
+    const mobile =
+        document.getElementById(
+            "mobileInput"
+        ).value.trim();
+
+    if (!mobile) {
+
+        statusDiv.innerHTML =
+
+        `
+        <div class="error">
+            Enter Mobile Number
+        </div>
+        `;
+
+        return;
+    }
+
+    try {
+
+        const snap =
+            await db.ref(
+                'attendee_registry/' +
+                eventId
+            ).once('value');
+
+        if (!snap.exists()) {
+
+            statusDiv.innerHTML =
+
+            `
+            <div class="error">
+                No Attendees Found
+            </div>
+            `;
+
+            return;
+        }
+
+        const attendees =
+            snap.val();
+
+        const attendee =
+            Object.values(attendees).find(
+
+                a =>
+
+                String(
+                    a.mobile || ""
+                ).trim() === mobile
+            );
+
+        if (!attendee) {
+
+            statusDiv.innerHTML =
+
+            `
+            <div class="error">
+                Registration Not Found
+            </div>
+            `;
+
+            return;
+        }
+
+        statusDiv.innerHTML =
+
+        `
+        <div class="success">
+            Registration Verified
+        </div>
+
+        <div class="small">
+            ${attendee.full_name}
+        </div>
+
+        <div class="small">
+            ${attendee.attendee_type}
+        </div>
+        `;
+
+    } catch (err) {
+
+        console.error(err);
+
+        statusDiv.innerHTML =
+
+        `
+        <div class="error">
+            Attendance Failed
+        </div>
+        `;
+    }
+}
+
+</script>
