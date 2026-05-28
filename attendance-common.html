@@ -144,20 +144,22 @@ const eventId =
         const venueSecret =
     params.get("venue");
 
-       
+
+const cachedToken =
+    localStorage.getItem(
+        
+        "mers_attendance_token"
+    );
+        let currentAttendee = null;
+        let currentAttendeeId = null;
+        let currentAttendeeType = null;
+        
+        
 // =====================================================
 // TOKEN AUTO ATTENDANCE
 // =====================================================
 
-
-      
-const cachedToken =
-    localStorage.getItem(
-        "mers_attendance_token"
-    );
-
-
-
+            
 
 /*
         
