@@ -448,6 +448,43 @@ if (now > attendanceEnd) {
 }
 
 
+
+        
+statusDiv.innerHTML =
+
+`
+<div class="success">
+    Identity Verified
+</div>
+
+<div class="small">
+    ${attendee.full_name}
+</div>
+
+<div class="small">
+    Ready To Scan Venue QR
+</div>
+
+<br><br>
+
+<button
+    onclick="startVenueScan()"
+    style="
+        padding:12px 20px;
+        font-size:16px;
+        cursor:pointer;
+    "
+>
+    Scan Venue QR
+</button>
+`;
+
+
+
+
+
+        
+        
 // =====================================================
 // TEMPORARILY REMOVED
 // WAITING FOR VENUE QR VALIDATION
