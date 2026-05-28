@@ -137,7 +137,14 @@ const eventId =
 // =====================================================
 
 
-        if (cachedToken) {
+      
+const cachedToken =
+    localStorage.getItem(
+        "mers_attendance_token"
+    );
+
+
+  if (cachedToken) {
 
     verifyTokenAttendance(
         cachedToken
@@ -164,14 +171,6 @@ else {
     </div>
     `;
 }
-
-
-const cachedToken =
-    localStorage.getItem(
-        "mers_attendance_token"
-    );
-
-
 
 
 
