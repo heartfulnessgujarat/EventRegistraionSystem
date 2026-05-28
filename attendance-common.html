@@ -137,6 +137,35 @@ const eventId =
 // =====================================================
 
 
+        if (cachedToken) {
+
+    verifyTokenAttendance(
+        cachedToken
+    );
+
+}
+else {
+
+    document.getElementById(
+        "fallbackBox"
+    ).style.display = "block";
+
+    document.getElementById(
+        "status"
+    ).innerHTML =
+
+    `
+    <div class="error">
+        Identity Not Found
+    </div>
+
+    <div class="small">
+        Please enter your mobile number
+    </div>
+    `;
+}
+
+
 const cachedToken =
     localStorage.getItem(
         "mers_attendance_token"
@@ -155,7 +184,9 @@ const cachedToken =
 // VERIFY TOKEN ATTENDANCE
 // =====================================================
 
-async function verifyTokenAttendance() {
+        async function verifyTokenAttendance(
+    attendanceToken
+) {
 
     
     const statusDiv =
