@@ -466,6 +466,7 @@ if (now > attendanceEnd) {
 
 
 
+
         
 statusDiv.innerHTML =
 
@@ -485,18 +486,21 @@ statusDiv.innerHTML =
 <br><br>
 
 <button
-    onclick="startVenueScan()"
+    onclick="validateVenueQR(venueSecret)"
     style="
         padding:12px 20px;
         font-size:16px;
         cursor:pointer;
     "
 >
-    Scan Venue QR
+    Simulate Venue QR Scan
 </button>
 `;
 
 
+
+
+        
 
 
 
