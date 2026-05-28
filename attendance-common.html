@@ -913,13 +913,31 @@ db.ref(
 </div>
 `;
 
+})
+.catch(err => {
 
+    console.error(err);
+
+    statusDiv.innerHTML =
+
+    `
+    <div class="error">
+        Venue Validation Failed
+    </div>
+    `;
+});
+
+
+    
+
+
+
+
+
+
+
+    
 }
-
-
-
-
-
 
         
 </script>
