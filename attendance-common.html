@@ -778,15 +778,22 @@ db.ref(
 
 ).push({
 
+    attendee_id:
+        currentAttendeeId,
+
+    attendee_name:
+        currentAttendee.full_name || "",
+
+    attendee_type:
+        currentAttendeeType,
+
     attendance_mode:
         "COMMON_QR",
 
     marked_at:
         new Date().toISOString()
 });
-
-
-    
+        
 
 
     
