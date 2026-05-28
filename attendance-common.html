@@ -822,9 +822,35 @@ function validateVenueQR(
             "status"
         );
 
+
+
+
+// =====================================================
+// LOAD OFFICIAL VENUE CONFIG
+// =====================================================
+
+db.ref(
+    'config/attendanceConfig/' +
+    eventId
+).once('value')
+
+.then(configSnap => {
+
+    const config =
+        configSnap.val() || {};
+
+    const officialVenueSecret =
+        String(
+            config.venue_secret || ""
+        ).trim();
+
+    // =====================================================
+    // INVALID QR
+    // =====================================================
+
     if (
         scannedVenueSecret !==
-        venueSecret
+        officialVenueSecret
     ) {
 
         statusDiv.innerHTML =
@@ -842,6 +868,12 @@ function validateVenueQR(
         return;
     }
 
+
+    
+
+
+
+    
 
 db.ref(
 
