@@ -52,17 +52,27 @@ body{
 
 <div class="card">
 
+
 <div id="status">
 
     <div class="small">
-        Checking your attendance...
+        Ready to verify your attendance
     </div>
 
+    <br><br>
+
+    <button
+        onclick="startVenueScan()"
+        style="
+            padding:12px 20px;
+            font-size:16px;
+            cursor:pointer;
+        "
+    >
+        Start Attendance Verification
+    </button>
+
 </div>
-
-
-
-
     
 // <div style="margin-top:20px;">
 
@@ -131,6 +141,9 @@ const params =
 const eventId =
     params.get("event");
 
+        const venueSecret =
+    params.get("venue");
+
        
 // =====================================================
 // TOKEN AUTO ATTENDANCE
@@ -144,6 +157,10 @@ const cachedToken =
     );
 
 
+
+
+/*
+        
   if (cachedToken) {
 
     verifyTokenAttendance(
@@ -173,7 +190,7 @@ else {
 }
 
 
-
+*/
 
 
 
@@ -664,4 +681,55 @@ async function markAttendance() {
     }
 }
 
+
+// =====================================================
+// START VENUE SCAN
+// =====================================================
+
+function startVenueScan() {
+
+    const statusDiv =
+        document.getElementById(
+            "status"
+        );
+
+    if (!cachedToken) {
+
+        document.getElementById(
+            "fallbackBox"
+        ).style.display = "block";
+
+        statusDiv.innerHTML =
+
+        `
+        <div class="error">
+            Identity Not Found
+        </div>
+
+        <div class="small">
+            Please enter your mobile number
+        </div>
+        `;
+
+        return;
+    }
+
+    verifyTokenAttendance(
+        cachedToken
+    );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
 </script>
