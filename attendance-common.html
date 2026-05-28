@@ -834,6 +834,83 @@ function startVenueScan() {
 
 
 // =====================================================
+// CAMERA QR SCANNER
+// =====================================================
+
+function startCameraScanner() {
+
+```
+const html5QrCode =
+    new Html5Qrcode("reader");
+
+Html5Qrcode.getCameras()
+
+.then(devices => {
+
+    if (!devices.length) {
+
+        alert(
+            "No camera found"
+        );
+
+        return;
+    }
+
+    const cameraId =
+        devices[0].id;
+
+    html5QrCode.start(
+
+        cameraId,
+
+        {
+            fps: 10,
+            qrbox: 250
+        },
+
+        (decodedText) => {
+
+            html5QrCode.stop();
+
+            document.getElementById(
+                "venueQRInput"
+            ).value = decodedText;
+
+            validateVenueQR(
+                decodedText
+            );
+        },
+
+        (errorMessage) => {
+
+            // ignore scan errors
+
+        }
+
+    );
+
+})
+
+.catch(err => {
+
+    console.error(err);
+
+    alert(
+        "Camera access failed"
+    );
+
+});
+```
+
+}
+
+
+
+
+
+        
+
+// =====================================================
 // VALIDATE VENUE QR
 // =====================================================
 
