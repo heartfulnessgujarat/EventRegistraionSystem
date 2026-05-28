@@ -688,22 +688,72 @@ document.getElementById(
 
 
         
+
+
+
+        
         statusDiv.innerHTML =
 
-        `
-        <div class="success">
-            Registration Verified
-        </div>
+       currentAttendee =
+    attendee;
 
-        <div class="small">
-            ${attendee.full_name}
-        </div>
+currentAttendeeId =
+    attendee.attendee_id || "";
 
-        <div class="small">
-            ${attendee.attendee_type}
-        </div>
-        `;
+currentAttendeeType =
+    attendee.attendee_type || "";
 
+statusDiv.innerHTML =
+
+`
+<div class="success">
+    Identity Verified
+</div>
+
+<div class="small">
+    ${attendee.full_name}
+</div>
+
+<div class="small">
+    Ready To Scan Venue QR
+</div>
+
+<br><br>
+
+<input
+    type="text"
+    id="venueQRInput"
+    placeholder="Paste Scanned Venue QR"
+    style="
+        width:90%;
+        padding:12px;
+        font-size:16px;
+        margin-bottom:15px;
+    "
+>
+
+<br>
+
+<button
+    onclick="validateVenueQR(
+
+        document.getElementById(
+            'venueQRInput'
+        ).value.trim()
+
+    )"
+
+    style="
+        padding:12px 20px;
+        font-size:16px;
+        cursor:pointer;
+    "
+>
+    Validate Venue QR
+</button>
+`;
+        
+        
                 
 
     } catch (err) {
