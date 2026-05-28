@@ -206,7 +206,7 @@ document.getElementById(
         const tokenSnap =
             await db.ref(
                 'attendance_tokens/' +
-                token.trim()
+                attendanceToken.trim()
             ).once('value');
 
         if (!tokenSnap.exists()) {
