@@ -447,12 +447,19 @@ if (now > attendanceEnd) {
     return;
 }
 
+
+// =====================================================
+// TEMPORARILY REMOVED
+// WAITING FOR VENUE QR VALIDATION
+// =====================================================
+
+        
       
         // =====================================================
         // WRITE ATTENDANCE LOG
         // =====================================================
 
-        await db.ref(
+  /*      await db.ref(
 
             'attendance_logs/' +
             tokenEventId
@@ -494,6 +501,9 @@ if (now > attendanceEnd) {
             ${attendee.attendee_type}
         </div>
         `;
+
+*/
+
 
     } catch (err) {
 
@@ -600,6 +610,8 @@ async function markAttendance() {
             ${attendee.attendee_type}
         </div>
         `;
+
+                
 
     } catch (err) {
 
