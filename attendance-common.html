@@ -778,19 +778,19 @@ Html5Qrcode.getCameras()
             qrbox: 250
         },
 
-        (decodedText) => {
 
-            html5QrCode.stop();
+(decodedText) => {
 
-            document.getElementById(
-                "venueQRInput"
-            ).value = decodedText;
+    html5QrCode.stop();
 
-            validateVenueQR(
-                decodedText
-            );
-        },
+    validateVenueQR(
+        decodedText
+    );
+},
 
+  
+
+        
         (errorMessage) => {
 
             // ignore scan errors
