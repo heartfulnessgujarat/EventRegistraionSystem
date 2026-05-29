@@ -928,10 +928,7 @@ function validateVenueQR(
     scannedVenueSecret
 ) {
 
-alert(
-    "SCANNED QR = " +
-    scannedVenueSecret
-);
+
 
     
     const statusDiv =
@@ -962,12 +959,6 @@ db.ref(
         ).trim();
 
 
-    alert(
-    "OFFICIAL = " +
-    officialVenueSecret
-);
-
-
         
     // =====================================================
 // EXTRACT VENUE SECRET FROM URL QR
@@ -989,10 +980,7 @@ if (
                 match[1]
             ).trim();
 
-alert(
-    "AFTER EXTRACTION = " +
-    scannedVenueSecret
-);
+
         
     }
 }
@@ -1010,15 +998,6 @@ alert(
     // =====================================================
     // INVALID QR
     // =====================================================
-
-alert(
-    "COMPARE:\n[" +
-    scannedVenueSecret +
-    "]\nvs\n[" +
-    officialVenueSecret +
-    "]"
-);
-
 
 
     
