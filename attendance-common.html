@@ -962,7 +962,40 @@ db.ref(
     if (
         scannedVenueSecret !==
         officialVenueSecret
-    ) {
+    )
+    
+    // =====================================================
+// EXTRACT VENUE SECRET FROM URL QR
+// =====================================================
+
+if (
+    scannedVenueSecret.includes("venue=")
+) {
+
+    const match =
+        scannedVenueSecret.match(
+            /venue=([^&]+)/i
+        );
+
+    if (match) {
+
+        scannedVenueSecret =
+            decodeURIComponent(
+                match[1]
+            ).trim();
+    }
+}
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    {
 
         statusDiv.innerHTML =
 
