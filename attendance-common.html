@@ -446,9 +446,20 @@ if (now > attendanceEnd) {
     return;
 }
 
-statusDiv.innerHTML =
+
+ statusDiv.innerHTML =
 
 `
+<div class="small">
+    Opening camera...
+</div>
+
+<div class="small">
+    Please allow camera access and scan the Attendance QR Code to verify your attendance.
+</div>
+
+<br>
+
 <div
 id="reader"
 style="
@@ -456,17 +467,18 @@ width:100%;
 max-width:350px;
 margin:auto;
 margin-top:20px;
-
 "
 ></div>
-`;
+`;       
 
 
-
-startCameraScanner();
 
 
         
+
+startCameraScanner();
+
+       
                 
 // =====================================================
 // TEMPORARILY REMOVED
