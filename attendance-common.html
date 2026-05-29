@@ -851,6 +851,11 @@ Html5Qrcode.getCameras()
 
 .then(devices => {
 
+    console.log(
+    "CAMERAS:",
+    devices
+);
+
     if (!devices.length) {
 
         alert(
