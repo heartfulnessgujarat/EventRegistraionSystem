@@ -460,36 +460,22 @@ if (now > attendanceEnd) {
     return;
 }
 
+
 statusDiv.innerHTML =
 
 `
-<div class="success">
-    Identity Verified
-</div>
-
-<div class="small">
-    ${attendee.full_name}
-</div>
-
-<div class="small">
-    Ready To Scan Venue QR
-</div>
-
-<br><br>
-
 <div
 id="reader"
 style="
 width:100%;
 max-width:350px;
 margin:auto;
-margin-bottom:20px;
+margin-top:20px;
 "
 ></div>
-
 `;
 
-
+       
 
 startCameraScanner();
 
