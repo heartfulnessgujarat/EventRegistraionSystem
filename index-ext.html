@@ -851,6 +851,81 @@ ${fieldControl}
     `;
     container.appendChild(div);
 
+
+    // =====================================================
+// SECTION1 LOOKUP DROPDOWN LOADER
+// =====================================================
+
+if (
+    r.edit_behavior &&
+    r.edit_behavior.includes(
+        'Editable_lookup_Dropdown'
+    )
+) {
+
+    const selectEl =
+        document.getElementById(
+            `inp-${r.field_id}`
+        );
+
+    if (
+        selectEl &&
+        r.lookup_tab &&
+        r.lookup_column
+    ) {
+
+        try {
+
+            const lookupSnap =
+                await db.ref(
+                    `masters/${r.lookup_tab}`
+                ).once('value');
+
+            const lookupData =
+                lookupSnap.val();
+
+            if (lookupData) {
+
+                const choices =
+                    Object.values(
+                        lookupData
+                    )
+                    .map(
+                        row =>
+                        row[r.lookup_column]
+                    )
+                    .filter(v => v);
+
+                [...new Set(choices)]
+                .forEach(choice => {
+
+                    const opt =
+                        document.createElement(
+                            'option'
+                        );
+
+                    opt.value = choice;
+                    opt.text = choice;
+
+                    selectEl.appendChild(opt);
+
+                });
+
+            }
+
+        } catch (err) {
+
+            console.error(
+                'SECTION1 LOOKUP ERROR',
+                err
+            );
+
+        }
+
+    }
+
+}
+
     // =====================================================
 // EXTERNAL FLOW AUTO-UNLOCK
 // =====================================================
