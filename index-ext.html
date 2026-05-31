@@ -3181,11 +3181,14 @@ if (originalData) {
         r => r.section_number === targetSectionNumber
     );
     
-    if (sectionFields.length > 0) {
-       titleHeader.innerText =
-    targetSectionNumber || "Details";
+ if (sectionFields.length > 0) {
 
-const sectionRules = sectionFields;
+   const sectionRules = sectionFields;
+
+   titleHeader.innerText =
+       sectionRules[0]?.section_name ||
+       targetSectionNumber ||
+       "Details";
 
 console.log(
     "SECTION RULE SAMPLE:",
