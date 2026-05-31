@@ -851,7 +851,6 @@ ${fieldControl}
     container.appendChild(div);
 
 
-
 // =====================================================
 // SECTION1 LOOKUP DROPDOWN LOADER
 // =====================================================
@@ -874,64 +873,55 @@ if (
         r.lookup_column
     ) {
 
-        try {
-
-            const lookupSnap =
-                await db.ref(
-                    `masters/${r.lookup_tab}`
-                ).once('value');
+        db.ref(
+            `masters/${r.lookup_tab}`
+        )
+        .once('value')
+        .then(lookupSnap => {
 
             const lookupData =
                 lookupSnap.val();
 
-            if (lookupData) {
+            if (!lookupData) return;
 
-                const choices =
-                    Object.values(
-                        lookupData
-                    )
-                    .map(
-                        row =>
-                        row[r.lookup_column]
-                    )
-                    .filter(v => v);
+            const choices =
+                Object.values(
+                    lookupData
+                )
+                .map(
+                    row =>
+                    row[r.lookup_column]
+                )
+                .filter(v => v);
 
-                [...new Set(choices)]
-                .forEach(choice => {
+            [...new Set(choices)]
+            .forEach(choice => {
 
-                    const opt =
-                        document.createElement(
-                            'option'
-                        );
+                const opt =
+                    document.createElement(
+                        'option'
+                    );
 
-                    opt.value = choice;
-                    opt.text = choice;
+                opt.value = choice;
+                opt.text = choice;
 
-                    selectEl.appendChild(opt);
+                selectEl.appendChild(opt);
 
-                });
+            });
 
-            }
-
-        } catch (err) {
+        })
+        .catch(err => {
 
             console.error(
                 'SECTION1 LOOKUP ERROR',
                 err
             );
 
-        }
+        });
 
     }
 
 }
-
-
-
-
-
-    
-
     
 
     // =====================================================
