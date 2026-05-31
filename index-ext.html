@@ -296,7 +296,7 @@ function formatFirebaseDate(fbDate) {
   let fieldRules = [],
     masterData = [],
     eventConfig = {},
-    moreSections = [],
+   
     sectionList = [];
 
 
@@ -658,21 +658,6 @@ console.log(
             fieldRules = [];
         }
 
-        // 2. Load More Sections (Correcting path to camelCase 'moreSections')
-        try {
-            const sectionsSnap = await db.ref('config/moreSections').once('value');
-            if (sectionsSnap.exists()) {
-                const allSections = sectionsSnap.val() || {};
-                moreSections = Object.values(allSections);
-                console.log("MERS: moreSections Loaded from Firebase:", moreSections.length);
-            } else {
-                console.warn("MERS: No data found at 'config/moreSections'.");
-                moreSections = [];
-            }
-        } catch (secErr) {
-            console.error("MERS: moreSections fetch error:", secErr);
-            moreSections = [];
-        }
 
         // --- END MERS DATA BRIDGE ---
         
@@ -702,6 +687,9 @@ console.log(
     
 }
 
+
+
+  
   async function renderForm() {
     
     const section1Rule =
@@ -979,11 +967,6 @@ if (
       }
 
   }, 500);
-
-
-
-
-
 
     
 }
@@ -3536,25 +3519,28 @@ backBtn.onclick = () => {
 
    //     actionBtn.innerText = (targetSectionNumber === "Section2") ? "PROCEED TO TRAVEL DETAILS" : "CONFIRM & REGISTER";
 
-
-
-
-
 const nextSectionForLabel =
     getNextSection(targetSectionNumber);
 
 if (nextSectionForLabel) {
 
-    const nextSectionObj =
-        moreSections.find(
-            s => s.section_number === nextSectionForLabel
-        );
 
-    actionBtn.innerText =
-        `PROCEED TO ${(
-            nextSectionObj?.section_name ||
-            "NEXT SECTION"
-        ).toUpperCase()}`;
+const nextSectionRule =
+    fieldRules.find(
+        r =>
+            r.section_number ===
+            nextSectionForLabel
+    );
+
+actionBtn.innerText =
+    `PROCEED TO ${(
+        nextSectionRule?.section_name ||
+        nextSectionForLabel ||
+        "NEXT SECTION"
+    ).toUpperCase()}`;
+
+
+  
 
 } else {
 
@@ -3827,16 +3813,27 @@ input.id.replace('inp-', '');
 
 if (nextSectionForButton) {
 
-    const nextSectionObj =
-        moreSections.find(
-            s => s.section_number === nextSectionForButton
-        );
 
-    actionBtn.innerText =
-        `PROCEED TO ${(
-            nextSectionObj?.section_name ||
-            "NEXT SECTION"
-        ).toUpperCase()}`;
+
+
+  const nextSectionRule =
+    fieldRules.find(
+        r =>
+            r.section_number ===
+            nextSectionForButton
+    );
+
+actionBtn.innerText =
+    `PROCEED TO ${(
+        nextSectionRule?.section_name ||
+        nextSectionForButton ||
+        "NEXT SECTION"
+    ).toUpperCase()}`;
+
+
+
+
+  
 
 } else {
 
