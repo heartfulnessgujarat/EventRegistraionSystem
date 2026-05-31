@@ -4815,46 +4815,48 @@ function filterRoomChoices(fieldId, choices) {
 }
 
 
-
 function getSectionIndex(sectionNumber) {
 
-    return moreSections.findIndex(
-        s => s.section_number === sectionNumber
+    return sectionList.indexOf(
+        sectionNumber
     );
 }
 
 function getNextSection(currentSection) {
 
     const currentIndex =
-        getSectionIndex(currentSection);
+        getSectionIndex(
+            currentSection
+        );
 
     if (currentIndex === -1) {
         return null;
     }
 
-    const nextSection =
-        moreSections[currentIndex + 1];
-
-    return nextSection
-        ? nextSection.section_number
-        : null;
+    return (
+        sectionList[
+            currentIndex + 1
+        ] || null
+    );
 }
 
-function getPreviousSection(currentSection) {
+  
+  function getPreviousSection(currentSection) {
 
     const currentIndex =
-        getSectionIndex(currentSection);
+        getSectionIndex(
+            currentSection
+        );
 
     if (currentIndex <= 0) {
         return null;
     }
 
-    const previousSection =
-        moreSections[currentIndex - 1];
-
-    return previousSection
-        ? previousSection.section_number
-        : null;
+    return (
+        sectionList[
+            currentIndex - 1
+        ] || null
+    );
 }
 
 
