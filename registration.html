@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MERS V2 Registration</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f5f5f5;padding:20px}
+.card{background:#fff;padding:20px;border-radius:8px;max-width:1000px;margin:auto}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<div class="card">
+<h1>MERS V2 Registration (Blueprint Skeleton)</h1>
+<div id="loadingScreen">Loading Metadata...</div>
+<div id="registrationContainer" class="hidden">
+<div id="moduleHeader"></div>
+<div id="moduleContent"></div>
+<button id="btnBack">Back</button>
+<button id="btnNext">Next</button>
+</div>
+</div>
+
+<script>
+const registrationContext={
+ eventConfig:{},
+ fieldRules:[],
+ modules:[],
+ participant:{},
+ currentModule:null
+};
+
+async function loadMetadata(){
+ console.log("MERS V2 : Loading Metadata");
+}
+
+function parseFieldRule(rule){
+ return {
+  editable:rule.edit_behavior||null,
+  validation:rule.field_validation||null,
+  lookup:rule.lookup_tab||null
+ };
+}
+
+function determineNextModule(answer,currentModule){
+ // Future Section Jump Engine
+}
+
+function createFieldUI(rule){
+ const wrapper=document.createElement("div");
+ const label=document.createElement("label");
+ label.innerText=rule.display_label||rule.field_id;
+ wrapper.appendChild(label);
+ const input=document.createElement("input");
+ input.id="fld_"+rule.field_id;
+ wrapper.appendChild(input);
+ return wrapper;
+}
+
+function renderModule(moduleId){
+ console.log("MERS V2 MODULE:",moduleId);
+}
+
+function renderKnownContact(){}
+function renderNewContact(){}
+
+async function submitRegistration(){}
+
+async function init(){
+ await loadMetadata();
+ document.getElementById("loadingScreen").classList.add("hidden");
+ document.getElementById("registrationContainer").classList.remove("hidden");
+ console.log("MERS V2 Ready");
+}
+
+init();
+</script>
+</body>
+</html>
