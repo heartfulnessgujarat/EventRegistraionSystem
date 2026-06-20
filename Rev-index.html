@@ -936,6 +936,21 @@ function handleParticipantClassificationChange() {
 
         sectionJumpRules.find(
 
+          console.log(
+    'Practitioner:',
+    practitioner
+);
+
+console.log(
+    'Attended:',
+    attended
+);
+
+console.log(
+    'Jump Rules:',
+    sectionJumpRules
+);
+
             r =>
 
                 r.is_practitioner ===
@@ -960,6 +975,13 @@ function handleParticipantClassificationChange() {
         );
 
     if(route){
+
+console.log(
+    'Matched Route:',
+    route
+);
+
+      
 
         btn.style.display =
             'block';
