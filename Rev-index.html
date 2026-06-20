@@ -423,7 +423,7 @@ function formatFirebaseDate(fbDate) {
   let mersTempData = {};
 
   
-  let fieldRules = [], masterData = [], eventConfig = {}, moreSections = [];
+  let fieldRules = [], masterData = [], eventConfig = {}, moreSections = [], let sectionJumpRules = [];
 
 function classifyStayOption(stayLabel) {
 
@@ -845,6 +845,39 @@ function renderParticipantClassification() {
         "TEST-2 Total Field Rules:",
         fieldRules.length
     );
+
+try {
+
+    const jumpSnap =
+        await db.ref(
+            'config/sectionJumpRules'
+        ).once('value');
+
+    sectionJumpRules =
+        Object.values(
+            jumpSnap.val() || {}
+        );
+
+    console.log(
+        'MERS: Section Jump Rules Loaded:',
+        sectionJumpRules.length
+    );
+
+} catch(err){
+
+    console.error(
+        'MERS: Section Jump Rules Error',
+        err
+    );
+
+    sectionJumpRules = [];
+
+}
+
+
+
+
+  
 
     console.log(
         "TEST-3 First Rule:",
