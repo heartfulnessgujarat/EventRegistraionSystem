@@ -818,12 +818,19 @@ console.log("STEP-B");
 }
 
 
+
+
 function renderParticipantClassification() {
 
     const container =
         document.getElementById(
             'participant-classification-container'
         );
+
+    console.log(
+        "TEST-1 Container:",
+        container
+    );
 
     if (!container) return;
 
@@ -834,8 +841,27 @@ function renderParticipantClassification() {
                 'PARTICIPANT_CLASSIFICATION'
         );
 
+    console.log(
+        "TEST-2 Total Field Rules:",
+        fieldRules.length
+    );
+
+    console.log(
+        "TEST-3 First Rule:",
+        fieldRules[0]
+    );
+
+    console.log(
+        "TEST-4 Filtered Rules:",
+        rules
+    );
+
     let html = '';
 
+
+
+
+  
     rules.forEach(rule => {
 
         html += `
