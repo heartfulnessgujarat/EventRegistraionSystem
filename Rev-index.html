@@ -1051,40 +1051,33 @@ console.log(
 
 }
 
-  function proceedFromClassification(
-    route
-){
+
+  function proceedFromClassification(route){
 
     console.log(
         'Selected Route:',
         route
     );
 
-    if(
-        route.next_section_id ===
-        'Section1EI'
-    ){
+    console.log(
+        'next_section_id =',
+        '[' + route.next_section_id + ']'
+    );
 
-        document
-            .getElementById(
-                'Section0'
-            )
-            .style.display =
-                'none';
+    document
+        .getElementById('Section0')
+        .style.display = 'none';
 
-        document
-            .getElementById(
-                'Section1'
-            )
-            .style.display =
-                'block';
+    document
+        .getElementById('Section1')
+        .style.display = 'block';
 
-        renderForm();
+    console.log(
+        'Calling renderForm()'
+    );
 
-    }
-
+    renderForm();
 }
-  
   
   function renderForm() {
   const container = document.getElementById('dynamic-fields');
