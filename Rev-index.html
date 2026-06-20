@@ -106,22 +106,11 @@
   }
 
 })();
+
+  
 </script>
 
 
-
-
-  
-
-
-
-
-
-
-
-  
-  
-  
 <style>
     body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; margin: 0; }
     
@@ -229,14 +218,34 @@
     
     <h2 id="title"></h2>
 
+
+
+<p class="subtitle" id="subtitle"></p>
+
+<!-- SECTION 0 -->
+<div id="Section0">
+
+    <div id="participant-classification-container"></div>
+
+    <button
+        id="btn-section0-next"
+        class="primary-btn"
+        style="display:none;"
+    >
+        CONTINUE
+    </button>
+
+</div>
+
+<!-- SECTION 1 -->
+<div id="Section1" style="display:none;">
+
+    <div id="dynamic-fields"></div>
+
+
+
+
   
-        <p class="subtitle" id="subtitle"></p>
-
-
-
-
-    
-<div id="Section1">
     
     <div id="dynamic-fields"></div>
 
@@ -372,10 +381,6 @@
 
   return value || "";
 }
-
-
-
-
 
 
   
@@ -783,7 +788,12 @@ console.log("%c MERS PING 1: Init sequence started. CurrentSection is: " + (type
             }
         } else {
             // Normal New Registration
-            renderForm();
+          
+          
+          renderParticipantClassification();
+          // renderForm();
+
+          
             document.getElementById('loading-init').style.display = 'none';
             document.getElementById('form-content').style.display = 'block';
         }
@@ -799,6 +809,180 @@ console.log("%c MERS PING 1: Init sequence started. CurrentSection is: " + (type
     
 }
 
+
+function renderParticipantClassification() {
+
+    const container =
+        document.getElementById(
+            'participant-classification-container'
+        );
+
+    if (!container) return;
+
+    const rules =
+        fieldRules.filter(
+            r =>
+                r.section_id ===
+                'PARTICIPANT_CLASSIFICATION'
+        );
+
+    let html = '';
+
+    rules.forEach(rule => {
+
+        html += `
+
+        <div
+            class="field-container"
+            style="margin-bottom:20px;"
+        >
+
+            <label>
+                ${rule.display_label}
+            </label>
+
+            <br><br>
+
+            <select
+                id="pc_${rule.field_id}"
+                onchange="handleParticipantClassificationChange()"
+                style="
+                    width:100%;
+                    padding:10px;
+                    border:1px solid #ced4da;
+                    border-radius:8px;
+                "
+            >
+
+                <option value="">
+                    Select
+                </option>
+
+                <option value="YES">
+                    YES
+                </option>
+
+                <option value="NO">
+                    NO
+                </option>
+
+            </select>
+
+        </div>
+
+        `;
+
+    });
+
+    container.innerHTML = html;
+
+}
+
+function handleParticipantClassificationChange() {
+
+    const practitioner =
+
+        document.getElementById(
+            'pc_is_practitioner'
+        )?.value || '';
+
+    const attended =
+
+        document.getElementById(
+            'pc_attended_before'
+        )?.value || '';
+
+    mersTempData.is_practitioner =
+        practitioner;
+
+    mersTempData.attended_before =
+        attended;
+
+    const route =
+
+        sectionJumpRules.find(
+
+            r =>
+
+                r.is_practitioner ===
+                practitioner
+
+                &&
+
+                r.attended_before ===
+                attended
+
+                &&
+
+                r.route_active ===
+                'YES'
+
+        );
+
+    const btn =
+
+        document.getElementById(
+            'btn-section0-next'
+        );
+
+    if(route){
+
+        btn.style.display =
+            'block';
+
+        btn.onclick =
+
+            function(){
+
+                proceedFromClassification(
+                    route
+                );
+
+            };
+
+    } else {
+
+        btn.style.display =
+            'none';
+
+    }
+
+}
+
+  function proceedFromClassification(
+    route
+){
+
+    console.log(
+        'Selected Route:',
+        route
+    );
+
+    if(
+        route.next_section_id ===
+        'Section1EI'
+    ){
+
+        document
+            .getElementById(
+                'Section0'
+            )
+            .style.display =
+                'none';
+
+        document
+            .getElementById(
+                'Section1'
+            )
+            .style.display =
+                'block';
+
+        renderForm();
+
+    }
+
+}
+  
   
   function renderForm() {
   const container = document.getElementById('dynamic-fields');
