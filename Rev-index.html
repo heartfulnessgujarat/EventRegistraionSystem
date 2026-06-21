@@ -3832,11 +3832,25 @@ if (nextSectionForButton) {
             s => s.section_number === nextSectionForButton
         );
 
-    actionBtn.innerText =
-        `PROCEED TO ${(
-            nextSectionObj?.section_name ||
-            "NEXT SECTION"
-        ).toUpperCase()}`;
+
+
+const nextSectionRules =
+    fieldRules.filter(
+        r =>
+            r.section_id ===
+            nextSectionForButton
+    );
+
+const nextSectionName =
+    nextSectionRules[0]
+        ?.section_name ||
+    nextSectionForButton;
+
+actionBtn.innerText =
+    `PROCEED TO ${nextSectionName.toUpperCase()}`;
+
+
+  
 
 } else {
 
