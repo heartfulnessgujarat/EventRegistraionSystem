@@ -1939,6 +1939,7 @@ if (
     }
   
     // 1. THE PAGE TURNER: Moves between Section 1, 2, and 3
+  
   async function handleSectionNavigation() {
       console.log("%c MERS PING 3: handleSectionNavigation() was just called!", "color: blue; font-weight: bold;");
       try {
@@ -3775,10 +3776,24 @@ function updateButtonState() {
             
             if (rule) {
                 // Once we find one rule, we know which section we are validating
-                if (!dynamicSectionName) dynamicSectionName = rule.section_number;
+             
+                
+
+              if (!dynamicSectionName)
+    dynamicSectionName =
+        rule.section_id;
                 
                 // Only validate fields for the ACTIVE section
-                if (rule.section_number === dynamicSectionName) {
+
+
+              if (
+    rule.section_id ===
+    dynamicSectionName
+)
+              
+ 
+
+                  
                     totalVisibleRequired++;
                     const val = input.value.trim();
                     if (val !== "" && val !== "-- Select --") {
