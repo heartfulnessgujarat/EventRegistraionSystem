@@ -3277,6 +3277,26 @@ function processFinalDeletion(regId, eventId, gender) {
     });
 
     container.innerHTML = ""; 
+
+console.log(
+    "TARGET SECTION:",
+    targetSectionNumber
+);
+
+const sectionRules =
+    fieldRules.filter(
+        r => r.section_id === targetSectionNumber
+    );
+
+console.log(
+    "SECTION RULES FOUND:",
+    sectionRules
+);
+
+
+
+
+    
     actionBtn.disabled = true;
 
 
@@ -3301,6 +3321,12 @@ if (sectionRules.length > 0) {
     targetSectionNumber;
 
 for (const rule of sectionRules) {
+
+
+  console.log(
+    "RENDERING FIELD:",
+    rule.field_id
+);
 
     const fieldId =
         rule.field_id;
@@ -3501,11 +3527,25 @@ const nextSectionForLabel =
 
 if (nextSectionForLabel) {
 
-    const nextSectionObj =
-        moreSections.find(
-            s => s.section_number === nextSectionForLabel
-        );
 
+const nextSectionRules =
+    fieldRules.filter(
+        r =>
+            r.section_id ===
+            nextSectionForLabel
+    );
+
+const nextSectionName =
+    nextSectionRules[0]
+        ?.section_name ||
+    nextSectionForLabel;
+
+
+  
+
+
+
+  
     actionBtn.innerText =
         `PROCEED TO ${(
             nextSectionObj?.section_name ||
@@ -3777,6 +3817,9 @@ function updateButtonState() {
 
 if (nextSectionForButton) {
 
+
+
+  
     const nextSectionObj =
         moreSections.find(
             s => s.section_number === nextSectionForButton
