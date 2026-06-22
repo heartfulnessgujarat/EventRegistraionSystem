@@ -3974,24 +3974,62 @@ console.log(
     if (rule === 'PIN') return /^\d{6}$/.test(val);
     if (rule === 'EMAIL') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
 
-    // --- ARRIVAL DATE (ESD) - UNTOUCHED ---
-    if (rule.includes("ESD")) {
-        const isoInput = translateToISO(val);
-        const isoConfig = translateToISO(eventConfig.event_start_date);
-        if (isoInput && isoConfig && isoInput > isoConfig) {
+ 
+  // --- ARRIVAL DATE (ESD) ---
+if (rule.includes("ESD")) {
 
-          
-         //   alert("❌ " + errorMsg);
-          showValidationPopup(errorMsg, "date");
-          
-            let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
-            if (targetBox) targetBox.value = "";
+    const isoInput =
+        translateToISO(val);
+
+    const isoConfig =
+        translateToISO(
+            eventConfig.event_start_date
+        );
+
+    if (isoInput && isoConfig) {
+
+        const arrivalDate =
+            new Date(isoInput);
+
+        const eventStartDate =
+            new Date(isoConfig);
+
+        const earliestAllowed =
+            new Date(eventStartDate);
+
+        earliestAllowed.setDate(
+            earliestAllowed.getDate() - 1
+        );
+
+        if (
+            arrivalDate < earliestAllowed ||
+            arrivalDate > eventStartDate
+        ) {
+
+            showValidationPopup(
+                errorMsg,
+                "date"
+            );
+
+            let targetBox =
+                document.getElementById(id) ||
+                document.getElementById(
+                    'extra_' + id
+                );
+
+            if (targetBox)
+                targetBox.value = "";
+
             updateButtonState();
+
             return false;
         }
     }
+}
 
 
+
+  
 
 // --- SMART ARRIVAL TIME (T SHOULD BE <EST) ---
     if (rule.includes("T SHOULD BE <EST")) {
@@ -4027,22 +4065,62 @@ console.log(
         }
     }
 
-      
-    // --- DEPARTURE DATE (EED) - UNTOUCHED ---
-    if (rule.includes("EED")) {
-        const isoInput = translateToISO(val);
-        const isoConfig = translateToISO(eventConfig.event_end_date);
-        if (isoInput && isoConfig && isoInput < isoConfig) {
-          
-         //   alert("❌ " + errorMsg);
-          showValidationPopup(errorMsg, "date");
-          
-            let targetBox = document.getElementById(id) || document.getElementById('extra_' + id); 
-            if (targetBox) targetBox.value = "";
+    
+    
+  // --- DEPARTURE DATE (EED) ---
+if (rule.includes("EED")) {
+
+    const isoInput =
+        translateToISO(val);
+
+    const isoConfig =
+        translateToISO(
+            eventConfig.event_end_date
+        );
+
+    if (isoInput && isoConfig) {
+
+        const departureDate =
+            new Date(isoInput);
+
+        const eventEndDate =
+            new Date(isoConfig);
+
+        const latestAllowed =
+            new Date(eventEndDate);
+
+        latestAllowed.setDate(
+            latestAllowed.getDate() + 1
+        );
+
+        if (
+            departureDate < eventEndDate ||
+            departureDate > latestAllowed
+        ) {
+
+            showValidationPopup(
+                errorMsg,
+                "date"
+            );
+
+            let targetBox =
+                document.getElementById(id) ||
+                document.getElementById(
+                    'extra_' + id
+                );
+
+            if (targetBox)
+                targetBox.value = "";
+
             updateButtonState();
+
             return false;
         }
     }
+}
+
+
+  
 // --- SMART DEPARTURE TIME (T SHOULD BE >EET) ---
     if (rule.includes("T SHOULD BE >EET")) {
         const dateEl = document.getElementById('depart_date') || document.getElementById('extra_depart_date');
