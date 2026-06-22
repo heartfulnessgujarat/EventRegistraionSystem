@@ -3949,12 +3949,11 @@ actionBtn.innerText =
 function validateField(id, value, rule) {
 
 console.log(
-    "VALIDATE CALLED",
-    {
-        field: id,
-        value: value,
-        rule: rule
-    }
+    JSON.stringify({
+        field:id,
+        value:value,
+        rule:rule
+    })
 );
 
 
