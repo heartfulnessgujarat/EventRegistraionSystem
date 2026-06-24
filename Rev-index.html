@@ -3343,6 +3343,22 @@ for (const rule of sectionRules) {
                     valToSet = mersTempData[inputId] || "";
                 }
 
+console.log(
+    "FIELD VISIBILITY CHECK:",
+    fieldId,
+    "value=",
+    valToSet,
+    "initial=",
+    rule.initial_state
+);
+
+
+
+
+
+
+              
+
                 if (valToSet && valToSet !== "") {
                     fieldWrapper.style.display = 'block';
                 } else {
