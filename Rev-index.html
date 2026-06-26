@@ -3641,6 +3641,12 @@ async function handleFieldChange(inputElement, rule) {
     const fId = rule.field_id;
     const section = rule.section_number; 
 
+  console.log(
+    "SECTION DETECTED:",
+    section,
+    rule.section_id
+);
+
     updateButtonState(); 
     if (!val) return;
 
