@@ -3421,7 +3421,12 @@ if (valToSet && valToSet !== "") {
 
                 let input;
 
-               if (rule.edit_behavior && rule.edit_behavior.includes('Editable_lookup_Dropdown')) {
+            //   if (rule.edit_behavior && rule.edit_behavior.includes('Editable_lookup_Dropdown')) {
+
+              if (
+    rule.lookup_tab &&
+    rule.lookup_column
+) {
 
                   
                     input = document.createElement('select');
