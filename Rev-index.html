@@ -3352,18 +3352,35 @@ console.log(
     rule.initial_state
 );
 
+             
+// ----------------------------------------------------
+// MERS V2 : Metadata-driven initial visibility
+// ----------------------------------------------------
 
+let showField = true;
 
+// Existing registrations always show populated fields
+if (valToSet && valToSet !== "") {
 
+    showField = true;
 
+} else {
+
+    // First question of the section follows initial_state
+    if (rule.initial_state === "Hidden") {
+
+        showField = false;
+
+    } else {
+
+        showField = true;
+    }
+}
+
+fieldWrapper.style.display =
+    showField ? "block" : "none";
 
               
-
-                if (valToSet && valToSet !== "") {
-                    fieldWrapper.style.display = 'block';
-                } else {
-                    fieldWrapper.style.display = (rule.initial_state === "Hidden") ? 'none' : 'block';
-                }
 
                 const isMandatory = (rule.field_validation && rule.field_validation !== "NULL" && rule.field_validation !== "N/A");
                 const label = document.createElement('label');
