@@ -3323,7 +3323,17 @@ for (const rule of sectionRules) {
     const fieldId =
         rule.field_id;
 
+  // ----------------------------------------------------
+// MERS V2 : Previous-field dependency
+// ----------------------------------------------------
 
+const currentIndex =
+    sectionRules.indexOf(rule);
+
+const previousRule =
+    currentIndex > 0
+        ? sectionRules[currentIndex - 1]
+        : null;
 
           
             
@@ -3366,19 +3376,41 @@ if (valToSet && valToSet !== "") {
 
 } else {
 
-    // First question of the section follows initial_state
-    if (rule.initial_state === "Hidden") {
+    // First field follows initial_state
+    if (!previousRule) {
 
-        showField = false;
+        showField =
+            rule.initial_state !== "Hidden";
+
+    }
+    // Subsequent fields follow previous-answer metadata
+    else if (
+        rule.edit_behavior &&
+        rule.edit_behavior.includes(
+            "after previous input"
+        )
+    ) {
+
+        const prevValue =
+            originalData?.[previousRule.field_id] ||
+            mersTempData?.[previousRule.field_id] ||
+            document.getElementById(
+                "extra_" + previousRule.field_id
+            )?.value ||
+            "";
+
+        showField =
+            prevValue.trim() !== "";
 
     } else {
 
-        showField = true;
+        showField =
+            rule.initial_state !== "Hidden";
     }
 }
 
-fieldWrapper.style.display =
-    showField ? "block" : "none";
+
+              
 
               
 
