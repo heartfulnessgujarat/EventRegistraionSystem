@@ -3717,6 +3717,13 @@ if (nextRule) {
 
         nextWrapper.style.display = "block";
 
+
+      console.log(
+    "AFTER UNHIDE:",
+    nextWrapper.style.display,
+    nextWrapper.outerHTML
+);
+
         nextWrapper.scrollIntoView({
             behavior: "smooth",
             block: "center"
