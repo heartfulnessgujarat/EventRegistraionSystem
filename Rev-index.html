@@ -3341,13 +3341,51 @@ const previousRule =
                 fieldWrapper.style.textAlign = "left";
 
                 const inputId = `extra_${fieldId}`;
-                let valToSet = "";
-                
-                if (originalData && (originalData[fieldId] !== undefined || originalData[inputId] !== undefined)) {
-                    valToSet = originalData[fieldId] || originalData[inputId];
-                } else {
-                    valToSet = mersTempData[inputId] || "";
-                }
+
+let valToSet = "";
+
+// 1. Existing registration
+if (originalData) {
+
+    if (originalData[fieldId] !== undefined) {
+
+        valToSet = originalData[fieldId];
+
+    } else if (originalData[inputId] !== undefined) {
+
+        valToSet = originalData[inputId];
+
+    }
+
+}
+
+// 2. Temporary data while navigating Back/Next
+if (
+    (valToSet === "" || valToSet === undefined)
+    && mersTempData
+) {
+
+    if (mersTempData[fieldId] !== undefined) {
+
+        valToSet = mersTempData[fieldId];
+
+    } else if (mersTempData[inputId] !== undefined) {
+
+        valToSet = mersTempData[inputId];
+
+    }
+
+}
+
+// Final safety
+if (valToSet === undefined || valToSet === null) {
+    valToSet = "";
+}
+
+
+
+
+              
 
 console.log(
     "FIELD VISIBILITY CHECK:",
