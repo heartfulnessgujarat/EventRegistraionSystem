@@ -3369,6 +3369,15 @@ console.log(
 
 let showField = true;
 
+
+
+
+
+
+
+
+
+
 // Existing registrations always show populated fields
 if (valToSet && valToSet !== "") {
 
@@ -3376,35 +3385,17 @@ if (valToSet && valToSet !== "") {
 
 } else {
 
-    // First field follows initial_state
     if (!previousRule) {
 
+        // First question
         showField =
             rule.initial_state !== "Hidden";
 
-    }
-    // Subsequent fields follow previous-answer metadata
+    } else if (
+        rule.visibility_rule ===
+        "AFTER_PREVIOUS_COMPLETED"
+    ) {
 
-else if (
-    rule.visibility_rule ===
-    "AFTER_PREVIOUS_COMPLETED"
-) {
-
-    const prevValue =
-        originalData?.[previousRule.field_id] ||
-        mersTempData?.[previousRule.field_id] ||
-        document.getElementById(
-            "extra_" + previousRule.field_id
-        )?.value ||
-        "";
-
-    showField =
-        prevValue.trim() !== "";
-
-}
-
-
-  
         const prevValue =
             originalData?.[previousRule.field_id] ||
             mersTempData?.[previousRule.field_id] ||
@@ -3418,11 +3409,38 @@ else if (
 
     } else {
 
+        // ALWAYS or DEFAULT
         showField =
             rule.initial_state !== "Hidden";
+
     }
+
 }
 
+// Apply calculated visibility
+fieldWrapper.style.display =
+    showField
+        ? "block"
+        : "none";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
 // Apply calculated visibility
 fieldWrapper.style.display =
     showField
