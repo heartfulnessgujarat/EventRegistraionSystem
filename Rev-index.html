@@ -3450,7 +3450,11 @@ const previousRule =
             if (rule) {
                 const fieldWrapper = document.createElement('div');
                 fieldWrapper.className = 'form-group';
-                fieldWrapper.id = `wrapper_extra_${fieldId}`; 
+              
+            //    fieldWrapper.id = `wrapper_extra_${fieldId}`; 
+
+              fieldWrapper.id =
+    `wrapper_${fieldId}`;
                 fieldWrapper.style.marginBottom = "20px";
                 fieldWrapper.style.textAlign = "left";
 
