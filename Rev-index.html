@@ -3297,6 +3297,83 @@ function getFieldValue(fieldId) {
 }
 
 
+// ----------------------------------------------------
+// MERS V2 : Centralized Visibility Engine
+// ----------------------------------------------------
+function shouldFieldBeVisible(
+    rule,
+    sectionRules,
+    currentIndex
+) {
+
+    // Existing value always remains visible
+    if (
+        getFieldValue(rule.field_id)
+            .toString()
+            .trim() !== ""
+    ) {
+        return true;
+    }
+
+    // First question
+    if (currentIndex === 0) {
+
+        return (
+            rule.initial_state !==
+            "Hidden"
+        );
+
+    }
+
+    //--------------------------------------------------
+    // AFTER_PREVIOUS_COMPLETED
+    //--------------------------------------------------
+
+    if (
+        rule.visibility_rule ===
+        "AFTER_PREVIOUS_COMPLETED"
+    ) {
+
+        const previousRule =
+            sectionRules[currentIndex - 1];
+
+        return (
+            getFieldValue(
+                previousRule.field_id
+            )
+            .toString()
+            .trim() !== ""
+        );
+
+    }
+
+    //--------------------------------------------------
+    // ALWAYS
+    //--------------------------------------------------
+
+    if (
+        rule.visibility_rule ===
+        "ALWAYS"
+    ) {
+
+        return true;
+
+    }
+
+    //--------------------------------------------------
+    // Default
+    //--------------------------------------------------
+
+    return (
+        rule.initial_state !==
+        "Hidden"
+    );
+
+}
+
+
+
+  
 
   
 
@@ -3778,11 +3855,15 @@ async function handleFieldChange(inputElement, rule) {
   
                   const prevField =
                       sectionRules[index - 1];
-  
-                  const prevValue =
-                      document.getElementById(
-                          "extra_" + prevField.field_id
-                      )?.value || "";
+
+
+
+const prevValue =
+    getFieldValue(
+        prevField.field_id
+    );
+
+                
   
                   show =
                       prevValue.trim() !== "";
