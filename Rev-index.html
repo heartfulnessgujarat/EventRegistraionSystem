@@ -3258,6 +3258,47 @@ function processFinalDeletion(regId, eventId, gender) {
 }
 
 
+// ----------------------------------------------------
+// MERS V2 : Centralized Field Value Resolver
+// ----------------------------------------------------
+function getFieldValue(fieldId) {
+
+    // 1. Existing profile / registration
+    if (
+        originalData &&
+        originalData[fieldId] !== undefined &&
+        originalData[fieldId] !== null
+    ) {
+        return originalData[fieldId];
+    }
+
+    // 2. Temporary values while navigating Back/Next
+    if (
+        mersTempData &&
+        mersTempData[fieldId] !== undefined &&
+        mersTempData[fieldId] !== null
+    ) {
+        return mersTempData[fieldId];
+    }
+
+    // 3. Current value on screen
+    const input =
+        document.getElementById(
+            "extra_" + fieldId
+        );
+
+    if (input) {
+        return input.value || "";
+    }
+
+    // 4. Nothing available
+    return "";
+
+}
+
+
+
+  
 
   async function buildExtraSections(targetSectionNumber) {
     if (!targetSectionNumber) targetSectionNumber = "Section2";
@@ -3342,48 +3383,19 @@ const previousRule =
 
                 const inputId = `extra_${fieldId}`;
 
-let valToSet = "";
 
-// 1. Existing registration
-if (originalData) {
 
-    if (originalData[fieldId] !== undefined) {
-
-        valToSet = originalData[fieldId];
-
-    } else if (originalData[inputId] !== undefined) {
-
-        valToSet = originalData[inputId];
-
-    }
-
-}
-
-// 2. Temporary data while navigating Back/Next
-if (
-    (valToSet === "" || valToSet === undefined)
-    && mersTempData
-) {
-
-    if (mersTempData[fieldId] !== undefined) {
-
-        valToSet = mersTempData[fieldId];
-
-    } else if (mersTempData[inputId] !== undefined) {
-
-        valToSet = mersTempData[inputId];
-
-    }
-
-}
-
-// Final safety
-if (valToSet === undefined || valToSet === null) {
-    valToSet = "";
-}
+const valToSet =
+    getFieldValue(fieldId);
 
 
 
+
+
+
+
+
+              
 
               
 
@@ -3718,89 +3730,89 @@ async function handleFieldChange(inputElement, rule) {
 
 }
 
-
   
-  function refreshSectionVisibility(sectionId) {
-
-    const sectionRules =
-        fieldRules.filter(
-            r => r.section_id === sectionId
-        );
-
-    sectionRules.forEach((rule, index) => {
-
-        const wrapper =
-            document.getElementById(
-                "wrapper_extra_" + rule.field_id
-            );
-
-        if (!wrapper) return;
-
-        let show = false;
-
-        //--------------------------------------------------
-        // Rule 1 : ALWAYS
-        //--------------------------------------------------
-
-        if (
-            rule.visibility_rule === "ALWAYS"
-        ) {
-
-            show = true;
-
-        }
-
-        //--------------------------------------------------
-        // Rule 2 : AFTER_PREVIOUS_COMPLETED
-        //--------------------------------------------------
-
-        else if (
-            rule.visibility_rule ===
-            "AFTER_PREVIOUS_COMPLETED"
-        ) {
-
-            if (index === 0) {
-
-                show = true;
-
-            } else {
-
-                const prevField =
-                    sectionRules[index - 1];
-
-                const prevValue =
-                    document.getElementById(
-                        "extra_" + prevField.field_id
-                    )?.value || "";
-
-                show =
-                    prevValue.trim() !== "";
-
-            }
-
-        }
-
-        //--------------------------------------------------
-        // Default
-        //--------------------------------------------------
-
-        else {
-
-            show =
-                rule.initial_state !== "Hidden";
-
-        }
-
-        wrapper.style.display =
-            show
-                ? "block"
-                : "none";
-
-    });
-
-}
-
-
+    
+    function refreshSectionVisibility(sectionId) {
+  
+      const sectionRules =
+          fieldRules.filter(
+              r => r.section_id === sectionId
+          );
+  
+      sectionRules.forEach((rule, index) => {
+  
+          const wrapper =
+              document.getElementById(
+                  "wrapper_extra_" + rule.field_id
+              );
+  
+          if (!wrapper) return;
+  
+          let show = false;
+  
+          //--------------------------------------------------
+          // Rule 1 : ALWAYS
+          //--------------------------------------------------
+  
+          if (
+              rule.visibility_rule === "ALWAYS"
+          ) {
+  
+              show = true;
+  
+          }
+  
+          //--------------------------------------------------
+          // Rule 2 : AFTER_PREVIOUS_COMPLETED
+          //--------------------------------------------------
+  
+          else if (
+              rule.visibility_rule ===
+              "AFTER_PREVIOUS_COMPLETED"
+          ) {
+  
+              if (index === 0) {
+  
+                  show = true;
+  
+              } else {
+  
+                  const prevField =
+                      sectionRules[index - 1];
+  
+                  const prevValue =
+                      document.getElementById(
+                          "extra_" + prevField.field_id
+                      )?.value || "";
+  
+                  show =
+                      prevValue.trim() !== "";
+  
+              }
+  
+          }
+  
+          //--------------------------------------------------
+          // Default
+          //--------------------------------------------------
+  
+          else {
+  
+              show =
+                  rule.initial_state !== "Hidden";
+  
+          }
+  
+          wrapper.style.display =
+              show
+                  ? "block"
+                  : "none";
+  
+      });
+  
+  }
+  
+  
 
   
     
