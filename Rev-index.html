@@ -3754,7 +3754,36 @@ async function handleFieldChange(inputElement, rule) {
 
 }
 
+function getFieldValue(fieldId) {
 
+    // Existing registration
+    if (
+        originalData &&
+        originalData[fieldId] !== undefined &&
+        originalData[fieldId] !== null
+    ) {
+        return String(originalData[fieldId]);
+    }
+
+    // Temporary values while navigating
+    if (
+        mersTempData &&
+        mersTempData[fieldId] !== undefined &&
+        mersTempData[fieldId] !== null
+    ) {
+        return String(mersTempData[fieldId]);
+    }
+
+    // Current value on screen
+    const control =
+        document.getElementById(fieldId);
+
+    if (control) {
+        return control.value || "";
+    }
+
+    return "";
+}
 
 
   function refreshSectionVisibility(sectionId) {
