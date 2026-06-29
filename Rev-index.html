@@ -3371,11 +3371,7 @@ function shouldFieldBeVisible(
 
 }
 
-
-
-  
-
-  
+ 
 
   async function buildExtraSections(targetSectionNumber) {
     if (!targetSectionNumber) targetSectionNumber = "Section2";
@@ -3460,21 +3456,10 @@ const previousRule =
 
                 const inputId = `extra_${fieldId}`;
 
-
-
 const valToSet =
     getFieldValue(fieldId);
 
-
-
-
-
-
-
-
-              
-
-              
+                     
 
 console.log(
     "FIELD VISIBILITY CHECK:",
@@ -3484,59 +3469,22 @@ console.log(
     "initial=",
     rule.initial_state
 );
-             
-// ----------------------------------------------------
-// MERS V2 : Metadata-driven initial visibility
-// ----------------------------------------------------
-
-let showField = true;
 
 
-// Existing registrations always show populated fields
-if (valToSet && valToSet !== "") {
-
-    showField = true;
-
-} else {
-
-    if (!previousRule) {
-
-        // First question
-        showField =
-            rule.initial_state !== "Hidden";
-
-    } else if (
-        rule.visibility_rule ===
-        "AFTER_PREVIOUS_COMPLETED"
-    ) {
-
-
-      const prevValue =
-    getFieldValue(
-        previousRule.field_id
+const showField =
+    shouldFieldBeVisible(
+        rule,
+        sectionRules,
+        currentIndex
     );
 
-      
-        showField =
-            prevValue.trim() !== "";
-
-    } else {
-
-        // ALWAYS or DEFAULT
-        showField =
-            rule.initial_state !== "Hidden";
-
-    }
-
-}
-  
-// Apply calculated visibility
 fieldWrapper.style.display =
     showField
         ? "block"
         : "none";
-              
-             
+
+
+                        
 
                 const isMandatory = (rule.field_validation && rule.field_validation !== "NULL" && rule.field_validation !== "N/A");
                 const label = document.createElement('label');
