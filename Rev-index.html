@@ -3433,14 +3433,13 @@ if (valToSet && valToSet !== "") {
         "AFTER_PREVIOUS_COMPLETED"
     ) {
 
-        const prevValue =
-            originalData?.[previousRule.field_id] ||
-            mersTempData?.[previousRule.field_id] ||
-            document.getElementById(
-                "extra_" + previousRule.field_id
-            )?.value ||
-            "";
 
+      const prevValue =
+    getFieldValue(
+        previousRule.field_id
+    );
+
+      
         showField =
             prevValue.trim() !== "";
 
