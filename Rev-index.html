@@ -3754,92 +3754,42 @@ async function handleFieldChange(inputElement, rule) {
 
 }
 
-  
-    
-    function refreshSectionVisibility(sectionId) {
-  
-      const sectionRules =
-          fieldRules.filter(
-              r => r.section_id === sectionId
-          );
-  
-      sectionRules.forEach((rule, index) => {
-  
-          const wrapper =
-              document.getElementById(
-                  "wrapper_extra_" + rule.field_id
-              );
-  
-          if (!wrapper) return;
-  
-          let show = false;
-  
-          //--------------------------------------------------
-          // Rule 1 : ALWAYS
-          //--------------------------------------------------
-  
-          if (
-              rule.visibility_rule === "ALWAYS"
-          ) {
-  
-              show = true;
-  
-          }
-  
-          //--------------------------------------------------
-          // Rule 2 : AFTER_PREVIOUS_COMPLETED
-          //--------------------------------------------------
-  
-          else if (
-              rule.visibility_rule ===
-              "AFTER_PREVIOUS_COMPLETED"
-          ) {
-  
-              if (index === 0) {
-  
-                  show = true;
-  
-              } else {
-  
-                  const prevField =
-                      sectionRules[index - 1];
 
 
 
-const prevValue =
-    getFieldValue(
-        prevField.field_id
-    );
+  function refreshSectionVisibility(sectionId) {
 
-                
-  
-                  show =
-                      prevValue.trim() !== "";
-  
-              }
-  
-          }
-  
-          //--------------------------------------------------
-          // Default
-          //--------------------------------------------------
-  
-          else {
-  
-              show =
-                  rule.initial_state !== "Hidden";
-  
-          }
-  
-          wrapper.style.display =
-              show
-                  ? "block"
-                  : "none";
-  
-      });
-  
-  }
-  
+    const sectionRules =
+        fieldRules.filter(
+            r => r.section_id === sectionId
+        );
+
+    sectionRules.forEach((rule, index) => {
+
+        const wrapper =
+            document.getElementById(
+                "wrapper_extra_" +
+                rule.field_id
+            );
+
+        if (!wrapper) return;
+
+        const show =
+            shouldFieldBeVisible(
+                rule,
+                sectionRules,
+                index
+            );
+
+        wrapper.style.display =
+            show
+                ? "block"
+                : "none";
+
+    });
+
+}
+
   
 
   
