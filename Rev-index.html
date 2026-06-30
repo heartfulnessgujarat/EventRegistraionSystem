@@ -1149,7 +1149,7 @@ if (
     container.appendChild(div);
     if (r.field_id === 'full_name') {
       div.style.display = 'block';
-      document.getElementById('inp-full_name').disabled = false;
+      getFieldElement('inp-full_name').disabled = false;
     }
   });
 }
@@ -1276,7 +1276,7 @@ function selectParticipant(p) {
   // --------------------------------------------------
 
   fieldRules.forEach(r => {
-    const el = document.getElementById(`inp-${r.field_id}`);
+    const el = getFieldElement(`inp-${r.field_id}`);
     const cont = document.getElementById(`cont-${r.field_id}`);
     const editLink = document.getElementById(`edit-link-${r.field_id}`);
     
@@ -1356,7 +1356,7 @@ function selectParticipant(p) {
     if (btnsStart) btnsStart.style.display = 'flex';
     
     // Ensure the primary ID field is explicitly disabled
-    const inpFullName = document.getElementById('inp-full_name');
+    const inpFullName = getFieldElement('inp-full_name');
     if (inpFullName) inpFullName.disabled = true;
     
     // Trigger validation check to enable "DETAILS ARE OKAY"
@@ -1372,7 +1372,7 @@ function selectParticipant(p) {
     if (!l) return;
   
     // 1. Update the Centre field itself
-    const centreInp = document.getElementById('inp-centre');
+    const centreInp = getFieldElement('inp-centre');
     if (centreInp) {
       centreInp.value = l.centre || l.Centre || "";
     }
@@ -1383,7 +1383,7 @@ function selectParticipant(p) {
   
     dependentFields.forEach(rule => {
       const fId = rule.field_id;
-      const el = document.getElementById(`inp-${fId}`);
+      const el = getFieldElement(`inp-${fId}`);
       
       if (el) {
         // Get the value from the Master Database object (l) 
@@ -1430,7 +1430,7 @@ function selectParticipant(p) {
       return; 
     }
   
-    const inp = document.getElementById(`inp-${id}`);
+    const inp = getFieldElement(`inp-${id}`);
   
   
   // ============================================
@@ -1478,7 +1478,7 @@ function selectParticipant(p) {
       verificationAttempts[type] = 0;
       const msg = document.getElementById(`vmsg-${type}`);
       if (msg) msg.style.display = "none";
-      const targetEmail = (type === 'email') ? document.getElementById('inp-email').value : originalData['email'];
+      const targetEmail = (type === 'email') ? getFieldElement('inp-email').value : originalData['email'];
       const btn = document.getElementById(`vbtn-${type}`);
       btn.disabled = true;
       btn.innerText = "Sending Code...";
@@ -1509,7 +1509,7 @@ if (type === 'email') {
 else if (type === 'mobile') {
 
   const mobileInput =
-    document.getElementById('inp-mobile').value.trim();
+    getFieldElement('inp-mobile').value.trim();
 
  // =====================================================
 // GENERATE VERIFICATION TICKET
@@ -1631,7 +1631,7 @@ fetch(
 if (type === 'email') {
 
   verifyKey =
-    document.getElementById('inp-email')
+    getFieldElement('inp-email')
     .value
     .replace(/[.#$[\]]/g, "_");
 
@@ -1641,7 +1641,7 @@ else if (type === 'mobile') {
 
   verifyKey =
     "mobile_" +
-    document.getElementById('inp-mobile')
+    getFieldElement('inp-mobile')
     .value
     .trim();
 
@@ -1725,7 +1725,7 @@ if (
           
           msg.innerText = "Verified ✅"; msg.style.color = "#2e7d32"; msg.style.display = "block";
           if (panel) panel.style.display = "none";
-          document.getElementById(`inp-${type}`).disabled = true;
+          getFieldElement(`inp-${type}`).disabled = true;
           verificationStates[type] = true;
           verificationAttempts[type] = 0;
           checkAllValidations();
@@ -1749,7 +1749,7 @@ if (
   function checkAllValidations() {
       let allValid = true;
       fieldRules.forEach(r => {
-        const input = document.getElementById(`inp-${r.field_id}`);
+        const input = getFieldElement(`inp-${r.field_id}`);
         const errDiv = document.getElementById(`err-${r.field_id}`);
         if (input) {
           let isValid = validateField(r.field_id, input.value, r.field_validation);
@@ -2032,7 +2032,7 @@ if (
           
           // --- STEP 1: FINAL DATA CAPTURE ---
           const getFreshVal = (id) => {
-              const el = document.getElementById('inp-' + id) || document.getElementById(id);
+              const el = getFieldElement('inp-' + id) || getFieldElement(id);
   
             
            //   if (el) return el.value ? el.value.trim() : "";
@@ -2788,7 +2788,7 @@ if (
   
           // --- STEP 5: UI TRANSITION ---
           ['Section1', 'Section2', 'Section3', 'btn-next-action', 'btn-back-to-profile'].forEach(id => {
-              const el = document.getElementById(id);
+              const el = getFieldElement(id);
               if (el) el.style.display = 'none';
           });
           
