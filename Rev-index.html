@@ -3296,7 +3296,33 @@ function getFieldValue(fieldId) {
 
 }
 
+// ----------------------------------------------------
+// MERS V2 : Universal Field Lookup
+// ----------------------------------------------------
+function getFieldElement(fieldId) {
 
+    return document.getElementById(fieldId);
+
+}
+
+
+  // ----------------------------------------------------
+// MERS V2 : Universal Wrapper Lookup
+// ----------------------------------------------------
+function getFieldWrapper(fieldId) {
+
+    return document.getElementById(
+        "wrapper_" + fieldId
+    );
+
+}
+
+
+
+
+
+
+  
 // ----------------------------------------------------
 // MERS V2 : Centralized Visibility Engine
 // ----------------------------------------------------
