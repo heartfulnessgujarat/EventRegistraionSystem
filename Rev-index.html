@@ -1276,7 +1276,8 @@ function selectParticipant(p) {
   // --------------------------------------------------
 
   fieldRules.forEach(r => {
-    const el = getFieldElement(`inp-${r.field_id}`);
+
+    const el = getFieldElement(r.field_id);
     const cont = document.getElementById(`cont-${r.field_id}`);
     const editLink = document.getElementById(`edit-link-${r.field_id}`);
     
