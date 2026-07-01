@@ -3418,7 +3418,7 @@ function shouldFieldBeVisible(
     const backBtn = document.getElementById('btn-back-to-profile');
 
     // --- 1. SYNC CURRENT SECTION INPUTS BEFORE REDRAWING ---
-    const currentInputs = document.querySelectorAll('[id^="extra_"]');
+    const currentInputs = container.querySelectorAll("input, select, textarea");
     currentInputs.forEach(input => { 
         const cleanId = input.id.replace('extra_', '');
         mersTempData[cleanId] = input.value; 
@@ -3614,7 +3614,7 @@ if (fieldId === 'stay_option') {
 
         actionBtn.onclick = function() {
             // THE "FINAL SYNC" LOCK
-            const finalInputs = document.querySelectorAll('[id^="extra_"]');
+            const finalInputs = container.querySelectorAll("input, select, textarea");
             finalInputs.forEach(input => { 
                 const cleanId = input.id.replace('extra_', '');
                 mersTempData[cleanId] = input.value; 
