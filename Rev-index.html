@@ -3515,6 +3515,15 @@ function filterAccommodationChoices(
 
 }
 
+
+function refreshAccommodationChoices() {
+
+    buildExtraSections(
+        window.currentSection
+    );
+
+}
+  
   
   async function buildExtraSections(targetSectionNumber) {
     if (!targetSectionNumber) targetSectionNumber = "Section2";
