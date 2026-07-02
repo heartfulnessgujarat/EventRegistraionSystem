@@ -4894,10 +4894,8 @@ ${status.dormSeats > 0
 
     // ✅ WAIT for dropdown render, then update safely
     setTimeout(() => {
-
-     const stayEl =
-  document.getElementById('extra_stay_option') ||
-  document.getElementById('inp-extra_stay_option');
+const stayEl =
+    getFieldElement("stay_option");
 
 console.log(
   "MERS STAY FIELD:",
